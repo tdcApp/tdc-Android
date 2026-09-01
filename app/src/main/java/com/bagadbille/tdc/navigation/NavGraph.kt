@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.bagadbille.tdc.ui.assignments.AssignmentDetailScreen
 import com.bagadbille.tdc.ui.auth.LoginScreen
 import com.bagadbille.tdc.ui.auth.SignupScreen
 import com.bagadbille.tdc.ui.auth.SplashScreen
@@ -14,6 +15,7 @@ import com.bagadbille.tdc.ui.home.classes.ClassDetailScreen
 import com.bagadbille.tdc.ui.home.quiz.QuizResultScreen
 import com.bagadbille.tdc.ui.home.quiz.QuizTakingScreen
 import com.bagadbille.tdc.ui.main.MainScreen
+import com.bagadbille.tdc.ui.notifications.NotificationsScreen
 
 @Composable
 fun TdcNavGraph(navController: NavHostController = rememberNavController()) {
@@ -41,6 +43,8 @@ fun TdcNavGraph(navController: NavHostController = rememberNavController()) {
                 onNavigateToClassDetail = { navController.navigate("classDetail/$it") },
                 onNavigateToQuizTaking = { navController.navigate("quizTaking/$it") },
                 onNavigateToQuizResult = { navController.navigate("quizResult/$it") },
+                onNavigateToAssignmentDetail = { navController.navigate(Screen.AssignmentDetail.createRoute(it)) },
+                onNavigateToNotifications = { navController.navigate(Screen.Notifications.route) },
                 onLogout = { navController.navigate(Screen.Login.route) { popUpTo(Screen.Main.route) { inclusive = true } } }
             )
         }
@@ -55,5 +59,15 @@ fun TdcNavGraph(navController: NavHostController = rememberNavController()) {
         composable("quizResult/{quizId}", arguments = listOf(navArgument("quizId") { type = NavType.StringType })) {
             QuizResultScreen(quizId = it.arguments?.getString("quizId") ?: "", onNavigateBack = { navController.popBackStack() })
         }
+        composable(Screen.Notifications.route) {
+            NotificationsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable(
+            Screen.AssignmentDetail.route,
+            arguments = listOf(navArgument("assignmentId") { type = NavType.StringType })
+        ) {
+            AssignmentDetailScreen(onNavigateBack = { navController.popBackStack() })
+        }
     }
 }
+

@@ -4,10 +4,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import com.bagadbille.tdc.navigation.BottomNavItem
+import com.bagadbille.tdc.ui.assignments.AssignmentsScreen
 import com.bagadbille.tdc.ui.home.HomeScreen
-import com.bagadbille.tdc.ui.notifications.NotificationsScreen
 import com.bagadbille.tdc.ui.profile.ProfileScreen
 
 @Composable
@@ -15,9 +16,11 @@ fun MainScreen(
     onNavigateToClassDetail: (String) -> Unit,
     onNavigateToQuizTaking: (String) -> Unit,
     onNavigateToQuizResult: (String) -> Unit,
+    onNavigateToAssignmentDetail: (String) -> Unit,
+    onNavigateToNotifications: () -> Unit,
     onLogout: () -> Unit
 ) {
-    var selectedTab by remember { mutableIntStateOf(1) }
+    var selectedTab by rememberSaveable { mutableIntStateOf(1) }
     val tabs = BottomNavItem.entries
 
     Scaffold(
@@ -44,8 +47,13 @@ fun MainScreen(
         Box(Modifier.padding(innerPadding)) {
             when (selectedTab) {
                 0 -> ProfileScreen(onLogout = onLogout)
-                1 -> HomeScreen(onNavigateToClassDetail, onNavigateToQuizTaking, onNavigateToQuizResult)
-                2 -> NotificationsScreen()
+                1 -> HomeScreen(
+                    onNavigateToClassDetail = onNavigateToClassDetail,
+                    onNavigateToQuizTaking = onNavigateToQuizTaking,
+                    onNavigateToQuizResult = onNavigateToQuizResult,
+                    onNotificationClick = onNavigateToNotifications
+                )
+                2 -> AssignmentsScreen(onNavigateToAssignmentDetail = onNavigateToAssignmentDetail)
             }
         }
     }

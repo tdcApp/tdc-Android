@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -22,17 +23,45 @@ import com.bagadbille.tdc.ui.components.EmptyStateScreen
 import com.bagadbille.tdc.ui.components.ErrorScreen
 import com.bagadbille.tdc.ui.components.LoadingScreen
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationsScreen(viewModel: NotificationsViewModel = hiltViewModel()) {
+fun NotificationsScreen(
+    onNavigateBack: () -> Unit = {},
+    viewModel: NotificationsViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    Column(Modifier.fillMaxSize()) {
-        Text("Notifications", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp))
-        when (val s = uiState) {
-            is NotificationsUiState.Loading -> LoadingScreen()
-            is NotificationsUiState.Error -> ErrorScreen(s.message, onRetry = { viewModel.loadNotifications() })
-            is NotificationsUiState.Success -> if (s.notifications.isEmpty()) EmptyStateScreen(Icons.Outlined.NotificationsNone, "No Notifications", "You're all caught up!")
-            else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(s.notifications, key = { it.id }) { NotifCard(it) { viewModel.markAsRead(it.id) } }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Notifications") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        }
+    ) { innerPadding ->
+        Box(Modifier.padding(innerPadding).fillMaxSize()) {
+            when (val s = uiState) {
+                is NotificationsUiState.Loading -> LoadingScreen()
+                is NotificationsUiState.Error -> ErrorScreen(s.message, onRetry = { viewModel.loadNotifications() })
+                is NotificationsUiState.Success -> if (s.notifications.isEmpty()) {
+                    EmptyStateScreen(Icons.Outlined.NotificationsNone, "No Notifications", "You're all caught up!")
+                } else {
+                    LazyColumn(
+                        Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(s.notifications, key = { it.id }) { NotifCard(it) { viewModel.markAsRead(it.id) } }
+                    }
+                }
             }
         }
     }

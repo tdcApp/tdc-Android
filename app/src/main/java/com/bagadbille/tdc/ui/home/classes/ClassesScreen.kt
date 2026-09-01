@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -85,7 +86,7 @@ private fun ClassDetailContent(d: ClassDetail) {
 
 @Composable
 private fun MaterialCard(m: ClassMaterial) {
-    val icon = when (m.type) { "document" -> Icons.Outlined.Description; "video" -> Icons.Outlined.VideoLibrary; "link" -> Icons.Outlined.Link; else -> Icons.Outlined.InsertDriveFile }
+    val icon = when (m.type) { "document" -> Icons.Outlined.Description; "video" -> Icons.Outlined.VideoLibrary; "link" -> Icons.Outlined.Link; else -> Icons.AutoMirrored.Outlined.InsertDriveFile }
     Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)), shape = MaterialTheme.shapes.medium) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, m.type, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
