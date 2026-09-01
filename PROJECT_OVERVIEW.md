@@ -40,18 +40,19 @@ app/src/main/java/com/bagadbille/tdc/
 │   │   ├── SignupScreen.kt       # Registration form
 │   │   └── AuthViewModel.kt      # Auth state management
 │   ├── main/
-│   │   └── MainScreen.kt         # Scaffold with Material 3 NavigationBar (Profile, Home, Notifications)
+│   │   └── MainScreen.kt         # Scaffold with Material 3 NavigationBar (Profile, Home, Assignments)
 │   ├── home/
-│   │   ├── HomeScreen.kt         # Top tabs: General, Classes, Quiz (HorizontalPager)
+│   │   ├── HomeScreen.kt         # Header (Logo, "TDC", Notification Bell) + Top tabs: General, Classes, Quiz
 │   │   ├── general/              # Announcements feed screen & ViewModel
 │   │   ├── classes/              # Enrolled classes list & detail view screen & ViewModel
 │   │   └── quiz/                 # Quiz list, full test-taking screen, results screen & ViewModels
+│   ├── assignments/              # Ongoing & Past assignments list, detail screen with attachments & ViewModels
 │   ├── profile/                  # User profile details, settings, and logout
-│   ├── notifications/            # Read/unread notification feed
+│   ├── notifications/            # Full-screen read/unread notification feed (accessed via header bell)
 │   ├── theme/                    # Color.kt (Dark teal palette), Theme.kt, Type.kt
 │   └── components/               # TdcButton, TdcTextField, LoadingScreen, ErrorScreen, EmptyStateScreen
 ├── data/
-│   ├── repository/               # Auth, Profile, Announcement, Class, Quiz, Notification Repositories
+│   ├── repository/               # Auth, Profile, Announcement, Class, Quiz, Notification, Assignment Repositories
 │   ├── remote/
 │   │   ├── api/                  # Retrofit interfaces (AuthApi, ProfileApi, QuizApi, etc.)
 │   │   └── dto/                  # Serializable DTOs for server payload matching
@@ -60,7 +61,7 @@ app/src/main/java/com/bagadbille/tdc/
 │   │   ├── DataStoreManager.kt   # Preference DataStore wrapper
 │   │   ├── entity/               # QuizQuestionEntity & PendingSubmissionEntity
 │   │   └── dao/                  # QuizDao for local caching & offline queue
-│   └── model/                    # Clean domain models (UserProfile, ClassInfo, Quiz, etc.)
+│   └── model/                    # Clean domain models (UserProfile, ClassInfo, Quiz, Assignment, AppNotification, etc.)
 └── di/
     ├── NetworkModule.kt          # Retrofit, OkHttp with Auth Interceptor, API providers
     ├── DatabaseModule.kt         # Room DB & DAO providers
@@ -74,7 +75,7 @@ app/src/main/java/com/bagadbille/tdc/
 ```
 Splash Screen
     │
-    ├── Token in DataStore? ──► MainScreen (3-Tab Shell)
+    ├── Token in DataStore? ──► MainScreen (3-Tab Shell: Profile, Home, Assignments)
     │
     └── No Token ───────────► LoginScreen / SignupScreen
                                    │
@@ -88,13 +89,14 @@ Splash Screen
                               Store App JWT in DataStore ──► MainScreen
 ```
 
-Auth acts as a **gate**, not a bottom tab. The 3-tab shell (`Profile`, `Home`, `Notifications`) is accessible only after a valid session token is established.
+Auth acts as a **gate**, not a bottom tab. The 3-tab shell (`Profile`, `Home`, `Assignments`) is accessible only after a valid session token is established.
 
 ---
 
 ## 📝 Features & Screen Details
 
 ### 1. Home Tab Shell
+- **Header Bar**: Displays the School logo (left), "TDC" title (center), and an unread Notification Bell icon with a red badge (right) that navigates to `NotificationsScreen`.
 - **General Tab**: Feed of school/class announcements with category badges, author names, and timestamps.
 - **Classes Tab**: Enrolled class cards (subject, teacher, schedule, room). Tapping a class opens `ClassDetailScreen` displaying course information and downloadable materials (notes, video lectures, practice sets).
 - **Quiz Tab**:
@@ -102,15 +104,21 @@ Auth acts as a **gate**, not a bottom tab. The 3-tab shell (`Profile`, `Home`, `
   - **Quiz Taking**: Full-screen experience with countdown timer, progress bar, single-choice and multi-select MCQs, answer state tracking, and auto-submit on timer expiration.
   - **Quiz Results**: Handles delayed scoring states (`PENDING` / *"Results Not Out Yet"* vs `RELEASED` breakdown).
 
-### 2. Notifications Tab
+### 2. Assignments Tab
+- **Tabbed Structure**: Two tabs for *Ongoing* and *Past* assignments.
+- **Assignment Cards**: Subject badge, assignment title, short description, due date, and attachment count indicator.
+- **Assignment Detail Screen**: Full assignment view with detailed description, list of attached files, and a `+` Floating Action Button for submitting/attaching work.
+
+### 3. Notifications Screen
+- Full-screen destination accessible via the Home screen header notification bell.
 - Read vs. unread visual indicators (teal dot + highlighted surface).
 - Tapping a notification marks it as read.
 
-### 3. Profile Tab
+### 4. Profile Tab
 - Displays avatar initials, full name, email, phone number, class, and section.
 - Settings section with Dark Theme toggle and Logout action.
 
-### 4. Room Offline Quiz Engine
+### 5. Room Offline Quiz Engine
 - `QuizQuestionEntity`: Caches quiz questions locally when a user opens a quiz.
 - `PendingSubmissionEntity`: Queues user answers if network disconnects during a quiz, ready to sync when back online.
 
