@@ -26,6 +26,7 @@ class AuthViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
     val isLoggedIn: Flow<Boolean> = authRepository.isLoggedIn()
+    val isProfileComplete: Flow<Boolean> = authRepository.isProfileComplete()
 
     fun signInWithEmail(email: String, password: String) {
         if (email.isBlank() || password.isBlank()) { _uiState.value = AuthUiState.Error("Email and password are required"); return }
@@ -34,27 +35,6 @@ class AuthViewModel @Inject constructor(
             authRepository.signInWithEmail(email, password)
                 .onSuccess { _uiState.value = AuthUiState.Success(it) }
                 .onFailure { _uiState.value = AuthUiState.Error(it.message ?: "Sign in failed") }
-        }
-    }
-
-    fun signUpWithEmail(name: String, email: String, password: String, confirmPassword: String) {
-        if (name.isBlank() || email.isBlank() || password.isBlank()) { _uiState.value = AuthUiState.Error("All fields are required"); return }
-        if (password != confirmPassword) { _uiState.value = AuthUiState.Error("Passwords do not match"); return }
-        if (password.length < 6) { _uiState.value = AuthUiState.Error("Password must be at least 6 characters"); return }
-        viewModelScope.launch {
-            _uiState.value = AuthUiState.Loading
-            authRepository.signUpWithEmail(name, email, password)
-                .onSuccess { _uiState.value = AuthUiState.Success(it) }
-                .onFailure { _uiState.value = AuthUiState.Error(it.message ?: "Sign up failed") }
-        }
-    }
-
-    fun signInWithGoogle() {
-        viewModelScope.launch {
-            _uiState.value = AuthUiState.Loading
-            authRepository.signInWithGoogle()
-                .onSuccess { _uiState.value = AuthUiState.Success(it) }
-                .onFailure { _uiState.value = AuthUiState.Error(it.message ?: "Google Sign-In not available yet") }
         }
     }
 

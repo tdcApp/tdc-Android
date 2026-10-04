@@ -1,30 +1,39 @@
 package com.bagadbille.tdc.data.remote.dto
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class AuthVerifyRequest(val idToken: String)
+data class LoginRequest(val email: String, val password: String)
 
 @Serializable
-data class AuthVerifyResponse(val token: String, val user: UserProfileDto)
+data class LoginResponse(val token: String, val user: UserProfileDto)
 
 @Serializable
 data class UserProfileDto(
     val id: String,
-    val name: String,
     val email: String,
-    val avatarUrl: String? = null,
-    val phone: String? = null,
-    val classInfo: String? = null,
-    val section: String? = null,
-    val createdAt: String? = null
+    val phone: String,
+    val name: String? = null,
+    val role: String = "student",
+    @SerialName("enrollment_number") val enrollmentNumber: String? = null,
+    val year: String? = null,
+    @SerialName("is_profile_complete") val isProfileComplete: Boolean = false,
+    @SerialName("language_class_id") val languageClassId: String? = null,
+    @SerialName("technology_class_id") val technologyClassId: String? = null,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null
+)
+
+@Serializable
+data class SetupProfileRequest(
+    val name: String,
+    @SerialName("enrollment_number") val enrollmentNumber: String,
+    val year: String
 )
 
 @Serializable
 data class UpdateProfileRequest(
     val name: String? = null,
-    val phone: String? = null,
-    val classInfo: String? = null,
-    val section: String? = null,
-    val avatarUrl: String? = null
+    val phone: String? = null
 )

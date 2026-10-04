@@ -13,10 +13,10 @@ interface QuizDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertQuestions(questions: List<QuizQuestionEntity>)
 
-    @Query("SELECT * FROM cached_quiz_questions WHERE quizId = :quizId ORDER BY `order`")
+    @Query("SELECT * FROM cached_quiz_questions WHERE quiz_id = :quizId ORDER BY question_order")
     suspend fun getQuestionsByQuizId(quizId: String): List<QuizQuestionEntity>
 
-    @Query("DELETE FROM cached_quiz_questions WHERE quizId = :quizId")
+    @Query("DELETE FROM cached_quiz_questions WHERE quiz_id = :quizId")
     suspend fun deleteQuestionsByQuizId(quizId: String)
 
     @Insert

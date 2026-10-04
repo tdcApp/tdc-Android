@@ -4,6 +4,61 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [0.3.1] — 2026-10-04
+
+### Added
+- **Profile Screen Redesign & Alignment**:
+  - Re-styled [ProfileScreen.kt](file:///c:/Users/Akash/Desktop/TDC/app/src/main/java/com/bagadbille/tdc/ui/profile/ProfileScreen.kt) to match the exact design language of `HomeScreen` and `AssignmentsScreen` (TDC brand header, school icon, notification bell with unread badge).
+  - Modern hero profile card with dynamic initials avatar, student name, email, and role/year/status chips (`STUDENT`, `3rd Year`, `Active`).
+  - Added **Enrolled Batches** section displaying student's enrolled **Language Track** (e.g. *Python DSA*) and **Technology Track** (e.g. *Android Dev (Kotlin + Jetpack)*) with corresponding icons and badges.
+  - Added categorized **Personal Details** card for phone, enrollment number, academic year, and registered email with clean dividers.
+- **Interactive Edit Profile Dialog**:
+  - Implemented an `EditProfileDialog` with full validation for Name and Phone number updates.
+  - Linked to `ProfileViewModel.updateProfile` and `ProfileRepository.updateProfile` with async loading indicator and snackbar feedback.
+- **Dynamic Dark Theme Toggle**:
+  - Injected `DataStoreManager` into [MainActivity.kt](file:///c:/Users/Akash/Desktop/TDC/app/src/main/java/com/bagadbille/tdc/MainActivity.kt) and observed `isDarkTheme` via `collectAsStateWithLifecycle()`.
+  - Profile screen's "Dark Theme" switch now writes directly to DataStore, instantly updating the app theme dynamically in real-time.
+
+---
+
+## [0.3.0] — 2026-10-01
+
+### Added
+- **Interactive Weekly Schedule Widget**:
+  - Embedded an interactive 7-day week selector (Sun – Sat) at the top of the **General** home tab.
+  - Square/rectangular day cells with real-time class counters, distinct highlights for **Today**, and active **Selected Day** styling.
+  - Tapping any day dynamically reveals that day's scheduled sessions with timings and platform tags (`📍 Google Meet`, `📍 Discord`, `📍 Zoom`).
+- **Upcoming Classes & Quizzes on Dashboard**:
+  - Chronological "Upcoming Classes" section on General screen showing next sessions with relative date chips ("Today", "Tomorrow", day name).
+  - Clickable "Upcoming Quizzes" section launching test-taking directly from the dashboard.
+  - Tab navigation shortcuts ("All Classes", "All Quizzes") to smoothly switch between Home tabs.
+- **First-Time Profile Setup Onboarding**:
+  - Added [`SetupScreen.kt`](file:///c:/Users/Akash/Desktop/TDC/app/src/main/java/com/bagadbille/tdc/ui/auth/SetupScreen.kt) & [`SetupViewModel.kt`](file:///c:/Users/Akash/Desktop/TDC/app/src/main/java/com/bagadbille/tdc/ui/auth/SetupViewModel.kt) for first-time login profile completion (Full Name, Enrollment Number, College Year dropdown).
+  - Extended auth gate pattern in [`SplashScreen.kt`](file:///c:/Users/Akash/Desktop/TDC/app/src/main/java/com/bagadbille/tdc/ui/auth/SplashScreen.kt) and [`NavGraph.kt`](file:///c:/Users/Akash/Desktop/TDC/app/src/main/java/com/bagadbille/tdc/navigation/NavGraph.kt): redirects to `Setup` if `isProfileComplete == false`.
+- **Assignment URL Submissions**:
+  - Implemented URL submission dialog and submission tracking in [`AssignmentDetailViewModel.kt`](file:///c:/Users/Akash/Desktop/TDC/app/src/main/java/com/bagadbille/tdc/ui/assignments/AssignmentDetailViewModel.kt) and [`AssignmentDetailScreen.kt`](file:///c:/Users/Akash/Desktop/TDC/app/src/main/java/com/bagadbille/tdc/ui/assignments/AssignmentDetailScreen.kt) (GitHub repo / hosted link submission).
+- **New Domain Models & Repositories**:
+  - Added [`Schedule.kt`](file:///c:/Users/Akash/Desktop/TDC/app/src/main/java/com/bagadbille/tdc/data/model/Schedule.kt) & [`ScheduleRepository.kt`](file:///c:/Users/Akash/Desktop/TDC/app/src/main/java/com/bagadbille/tdc/data/repository/ScheduleRepository.kt) for timetable management.
+  - Added `AssignmentSubmission` and `QuizSubmission` models matching the backend database schema.
+
+### Changed
+- **Home Screen Structure**:
+  - Consolidated into strictly **3 tabs**: `General`, `Classes`, and `Quiz` (standalone schedule tab merged directly into General dashboard).
+  - Relocated announcement feeds from General screen into the dedicated `NotificationsScreen` (with Notifications and Announcements tabs).
+- **Domain Models & ERD Realignment (NeonDB + Drizzle ORM)**:
+  - `UserProfile`: Added `role` (student/mentor/admin), `phone`, `enrollmentNumber`, `year`, `isProfileComplete`. Removed deprecated `avatar` and `section`.
+  - `Quiz` & `QuizQuestion`: Updated to single-answer MCQ schema (`optionA`..`optionD` + `correctAnswer`), matching the relational schema.
+  - `Assignment`: Simplified schema with URL-based submissions (`submissionUrl`) rather than raw file attachments.
+  - `ClassInfo`: Streamlined to `name`, `type` (language, technology), and timestamps.
+- **Branding & Context Refinement**:
+  - Splash screen branding updated to "TIT Developer Community".
+  - All mock data updated from high-school subjects to TDC developer community context (C++ Fundamentals, Python DSA, Web Dev React, Android Dev Kotlin, LeetCode Challenges, Discord/Google Meet).
+- **UI Enhancements**:
+  - `ClassesScreen`: Added modern enrolled batch cards with technology/language icons and "Enrolled" status badges.
+  - `QuizScreens`: Redesigned quiz cards with audience badges, timestamps, and interactive "Start" actions.
+
+---
+
 ## [0.2.0] — 2026-09-01
 
 ### Added

@@ -1,18 +1,18 @@
 package com.bagadbille.tdc.data.repository
 
 import com.bagadbille.tdc.data.local.DataStoreManager
+import com.bagadbille.tdc.data.mock.MockUsers
 import com.bagadbille.tdc.data.model.UserProfile
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import javax.inject.Inject
 import javax.inject.Singleton
 
 interface AuthRepository {
     fun isLoggedIn(): Flow<Boolean>
+    fun isProfileComplete(): Flow<Boolean>
     suspend fun signInWithEmail(email: String, password: String): Result<UserProfile>
-    suspend fun signUpWithEmail(name: String, email: String, password: String): Result<UserProfile>
-    suspend fun signInWithGoogle(): Result<UserProfile>
     suspend fun logout()
 }
 
@@ -21,23 +21,32 @@ class AuthRepositoryImpl @Inject constructor(
     private val dataStoreManager: DataStoreManager
 ) : AuthRepository {
 
-    override fun isLoggedIn(): Flow<Boolean> = dataStoreManager.authToken.map { it != null }
+    // Requires the email too, so sessions saved before email persistence existed go back to Login.
+    override fun isLoggedIn(): Flow<Boolean> =
+        combine(dataStoreManager.authToken, dataStoreManager.userEmail) { token, email ->
+            token != null && email != null
+        }
 
-    override suspend fun signInWithEmail(email: String, password: String): Result<UserProfile> = try {
-        // TODO: Replace with Firebase Auth + POST /auth/verify token exchange
-        delay(1500)
-        dataStoreManager.saveAuthToken("mock_jwt_token_${System.currentTimeMillis()}")
-        Result.success(UserProfile("user_001", "Test User", email, null, null, "Class 10", "A"))
-    } catch (e: Exception) { Result.failure(e) }
+    override fun isProfileComplete(): Flow<Boolean> = dataStoreManager.isProfileComplete
 
-    override suspend fun signUpWithEmail(name: String, email: String, password: String): Result<UserProfile> = try {
-        delay(1500)
-        dataStoreManager.saveAuthToken("mock_jwt_token_${System.currentTimeMillis()}")
-        Result.success(UserProfile("user_002", name, email))
-    } catch (e: Exception) { Result.failure(e) }
+    override suspend fun signInWithEmail(email: String, password: String): Result<UserProfile> {
+        return try {
+            // TODO: Replace with POST /auth/login to NestJS backend
+            delay(1000)
+            val user = MockUsers.authenticate(email, password)
+                ?: return Result.failure(IllegalArgumentException("Invalid email or password"))
 
-    override suspend fun signInWithGoogle(): Result<UserProfile> =
-        Result.failure(NotImplementedError("Google Sign-In not yet implemented"))
+            dataStoreManager.saveAuthToken("mock_jwt_token_${System.currentTimeMillis()}")
+            dataStoreManager.saveUserEmail(user.email)
+            dataStoreManager.saveUserRole(user.role)
+            dataStoreManager.saveProfileComplete(user.isProfileComplete)
+            Result.success(user)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 
-    override suspend fun logout() { dataStoreManager.clearSession() }
+    override suspend fun logout() {
+        dataStoreManager.clearSession()
+    }
 }

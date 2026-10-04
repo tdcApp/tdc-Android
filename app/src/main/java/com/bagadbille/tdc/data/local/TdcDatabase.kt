@@ -8,7 +8,7 @@ import com.bagadbille.tdc.data.local.entity.QuizQuestionEntity
 
 @Database(
     entities = [QuizQuestionEntity::class, PendingSubmissionEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class TdcDatabase : RoomDatabase() {

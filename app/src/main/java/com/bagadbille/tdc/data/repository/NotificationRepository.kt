@@ -13,12 +13,13 @@ interface NotificationRepository {
 
 @Singleton
 class NotificationRepositoryImpl @Inject constructor() : NotificationRepository {
+    // TODO: Replace with NestJS API calls
     private val mock = mutableListOf(
-        AppNotification("n_001", "New Quiz Available", "Physics - Wave Optics quiz is now available. Due by Aug 25.", NotificationType.QUIZ_REMINDER, false, "2026-08-20T10:00:00Z"),
-        AppNotification("n_002", "Class Schedule Updated", "Mathematics class moved to Room 301 for this week.", NotificationType.CLASS_UPDATE, false, "2026-08-19T16:00:00Z"),
-        AppNotification("n_003", "Mid-Term Schedule", "Mid-term examination schedule has been released.", NotificationType.ANNOUNCEMENT, true, "2026-08-18T09:00:00Z"),
-        AppNotification("n_004", "Study Material Uploaded", "New Chemistry chapter notes available.", NotificationType.CLASS_UPDATE, true, "2026-08-17T14:00:00Z"),
-        AppNotification("n_005", "Quiz Results Released", "Data Structures Basics quiz results are now available.", NotificationType.QUIZ_REMINDER, true, "2026-08-16T11:30:00Z"),
+        AppNotification("n_001", "Selection Quiz Live!", "TDC Selection Round - C++ quiz is now available. Attempt before Aug 25.", NotificationType.QUIZ_REMINDER, false, "2026-08-20T10:00:00Z"),
+        AppNotification("n_002", "Python Batch Schedule Changed", "Python DSA class moved to Thursday 9-10 PM on Discord.", NotificationType.CLASS_UPDATE, false, "2026-08-19T16:00:00Z"),
+        AppNotification("n_003", "New Android Dev Batch", "Registrations for Kotlin + Jetpack Compose batch are now open.", NotificationType.ANNOUNCEMENT, true, "2026-08-18T09:00:00Z"),
+        AppNotification("n_004", "Assignment Due Reminder", "Your React To-Do App assignment is due in 3 days.", NotificationType.CLASS_UPDATE, true, "2026-08-17T14:00:00Z"),
+        AppNotification("n_005", "DSA Challenge Results Out", "LeetCode Challenge results have been posted. Check your score!", NotificationType.QUIZ_REMINDER, true, "2026-08-16T11:30:00Z"),
     )
 
     override suspend fun getNotifications(): Result<List<AppNotification>> { delay(500); return Result.success(mock.toList()) }

@@ -2,7 +2,6 @@ package com.bagadbille.tdc.ui.home.classes
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bagadbille.tdc.data.model.ClassDetail
 import com.bagadbille.tdc.data.model.ClassInfo
 import com.bagadbille.tdc.data.repository.ClassRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,26 +28,6 @@ class ClassesViewModel @Inject constructor(private val repo: ClassRepository) : 
             repo.getClasses()
                 .onSuccess { _uiState.value = ClassesUiState.Success(it) }
                 .onFailure { _uiState.value = ClassesUiState.Error(it.message ?: "Failed to load") }
-        }
-    }
-}
-
-sealed class ClassDetailUiState {
-    data object Loading : ClassDetailUiState()
-    data class Success(val detail: ClassDetail) : ClassDetailUiState()
-    data class Error(val message: String) : ClassDetailUiState()
-}
-
-@HiltViewModel
-class ClassDetailViewModel @Inject constructor(private val repo: ClassRepository) : ViewModel() {
-    private val _uiState = MutableStateFlow<ClassDetailUiState>(ClassDetailUiState.Loading)
-    val uiState: StateFlow<ClassDetailUiState> = _uiState.asStateFlow()
-    fun loadClassDetail(classId: String) {
-        viewModelScope.launch {
-            _uiState.value = ClassDetailUiState.Loading
-            repo.getClassDetail(classId)
-                .onSuccess { _uiState.value = ClassDetailUiState.Success(it) }
-                .onFailure { _uiState.value = ClassDetailUiState.Error(it.message ?: "Failed to load") }
         }
     }
 }

@@ -29,22 +29,31 @@ import kotlinx.coroutines.delay
 @Composable
 fun SplashScreen(
     onNavigateToLogin: () -> Unit,
+    onNavigateToSetup: () -> Unit,
     onNavigateToMain: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val authState by viewModel.isLoggedIn.collectAsState(initial = null)
+    val profileComplete by viewModel.isProfileComplete.collectAsState(initial = null)
     val alpha = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) { alpha.animateTo(1f, animationSpec = tween(1000)); delay(1000) }
-    LaunchedEffect(authState) {
-        if (authState != null) { delay(500); if (authState == true) onNavigateToMain() else onNavigateToLogin() }
+    LaunchedEffect(authState, profileComplete) {
+        if (authState != null && profileComplete != null) {
+            delay(500)
+            when {
+                authState == false -> onNavigateToLogin()
+                profileComplete == true -> onNavigateToMain()
+                else -> onNavigateToSetup()
+            }
+        }
     }
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.alpha(alpha.value)) {
             Text("TDC", style = MaterialTheme.typography.displayLarge.copy(fontSize = 64.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 8.sp), color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(8.dp))
-            Text("Test & Class Manager", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("TIT Developer Community", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(48.dp))
             CircularProgressIndicator(Modifier.size(32.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
         }

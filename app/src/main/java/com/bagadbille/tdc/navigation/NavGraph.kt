@@ -9,12 +9,15 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.bagadbille.tdc.ui.assignments.AssignmentDetailScreen
 import com.bagadbille.tdc.ui.auth.LoginScreen
-import com.bagadbille.tdc.ui.auth.SignupScreen
+import com.bagadbille.tdc.ui.auth.SetupScreen
 import com.bagadbille.tdc.ui.auth.SplashScreen
-import com.bagadbille.tdc.ui.home.classes.ClassDetailScreen
 import com.bagadbille.tdc.ui.home.quiz.QuizResultScreen
 import com.bagadbille.tdc.ui.home.quiz.QuizTakingScreen
 import com.bagadbille.tdc.ui.main.MainScreen
+import com.bagadbille.tdc.ui.mentor.assignments.AssignmentEditorScreen
+import com.bagadbille.tdc.ui.mentor.assignments.AssignmentSubmissionsScreen
+import com.bagadbille.tdc.ui.mentor.quiz.CreateQuizScreen
+import com.bagadbille.tdc.ui.mentor.quiz.QuizResultsScreen
 import com.bagadbille.tdc.ui.notifications.NotificationsScreen
 
 @Composable
@@ -23,33 +26,38 @@ fun TdcNavGraph(navController: NavHostController = rememberNavController()) {
         composable(Screen.Splash.route) {
             SplashScreen(
                 onNavigateToLogin = { navController.navigate(Screen.Login.route) { popUpTo(Screen.Splash.route) { inclusive = true } } },
+                onNavigateToSetup = { navController.navigate(Screen.Setup.route) { popUpTo(Screen.Splash.route) { inclusive = true } } },
                 onNavigateToMain = { navController.navigate(Screen.Main.route) { popUpTo(Screen.Splash.route) { inclusive = true } } }
             )
         }
         composable(Screen.Login.route) {
             LoginScreen(
-                onNavigateToSignup = { navController.navigate(Screen.Signup.route) },
-                onNavigateToMain = { navController.navigate(Screen.Main.route) { popUpTo(Screen.Login.route) { inclusive = true } } }
+                onNavigateToMain = { isProfileComplete ->
+                    if (isProfileComplete) {
+                        navController.navigate(Screen.Main.route) { popUpTo(Screen.Login.route) { inclusive = true } }
+                    } else {
+                        navController.navigate(Screen.Setup.route) { popUpTo(Screen.Login.route) { inclusive = true } }
+                    }
+                }
             )
         }
-        composable(Screen.Signup.route) {
-            SignupScreen(
-                onNavigateToLogin = { navController.popBackStack() },
-                onNavigateToMain = { navController.navigate(Screen.Main.route) { popUpTo(Screen.Login.route) { inclusive = true } } }
+        composable(Screen.Setup.route) {
+            SetupScreen(
+                onSetupComplete = { navController.navigate(Screen.Main.route) { popUpTo(Screen.Setup.route) { inclusive = true } } }
             )
         }
         composable(Screen.Main.route) {
             MainScreen(
-                onNavigateToClassDetail = { navController.navigate("classDetail/$it") },
                 onNavigateToQuizTaking = { navController.navigate("quizTaking/$it") },
                 onNavigateToQuizResult = { navController.navigate("quizResult/$it") },
                 onNavigateToAssignmentDetail = { navController.navigate(Screen.AssignmentDetail.createRoute(it)) },
                 onNavigateToNotifications = { navController.navigate(Screen.Notifications.route) },
+                onNavigateToCreateAssignment = { navController.navigate(Screen.AssignmentEditor.route) },
+                onNavigateToAssignmentSubmissions = { navController.navigate(Screen.AssignmentSubmissions.createRoute(it)) },
+                onNavigateToCreateQuiz = { navController.navigate(Screen.CreateQuiz.route) },
+                onNavigateToQuizResults = { navController.navigate(Screen.QuizResults.createRoute(it)) },
                 onLogout = { navController.navigate(Screen.Login.route) { popUpTo(Screen.Main.route) { inclusive = true } } }
             )
-        }
-        composable("classDetail/{classId}", arguments = listOf(navArgument("classId") { type = NavType.StringType })) {
-            ClassDetailScreen(classId = it.arguments?.getString("classId") ?: "", onNavigateBack = { navController.popBackStack() })
         }
         composable("quizTaking/{quizId}", arguments = listOf(navArgument("quizId") { type = NavType.StringType })) {
             val qId = it.arguments?.getString("quizId") ?: ""
@@ -68,6 +76,29 @@ fun TdcNavGraph(navController: NavHostController = rememberNavController()) {
         ) {
             AssignmentDetailScreen(onNavigateBack = { navController.popBackStack() })
         }
+        composable(Screen.AssignmentEditor.route) {
+            AssignmentEditorScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onSaved = { navController.popBackStack() }
+            )
+        }
+        composable(
+            Screen.AssignmentSubmissions.route,
+            arguments = listOf(navArgument("assignmentId") { type = NavType.StringType })
+        ) {
+            AssignmentSubmissionsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable(Screen.CreateQuiz.route) {
+            CreateQuizScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onSaved = { navController.popBackStack() }
+            )
+        }
+        composable(
+            Screen.QuizResults.route,
+            arguments = listOf(navArgument("quizId") { type = NavType.StringType })
+        ) {
+            QuizResultsScreen(onNavigateBack = { navController.popBackStack() })
+        }
     }
 }
-

@@ -3,11 +3,13 @@ package com.bagadbille.tdc.di
 import com.bagadbille.tdc.BuildConfig
 import com.bagadbille.tdc.data.local.DataStoreManager
 import com.bagadbille.tdc.data.remote.api.AnnouncementApi
+import com.bagadbille.tdc.data.remote.api.AssignmentApi
 import com.bagadbille.tdc.data.remote.api.AuthApi
 import com.bagadbille.tdc.data.remote.api.ClassApi
 import com.bagadbille.tdc.data.remote.api.NotificationApi
 import com.bagadbille.tdc.data.remote.api.ProfileApi
 import com.bagadbille.tdc.data.remote.api.QuizApi
+import com.bagadbille.tdc.data.remote.api.ScheduleApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -88,4 +90,10 @@ object NetworkModule {
 
     @Provides @Singleton
     fun provideNotificationApi(retrofit: Retrofit): NotificationApi = retrofit.create(NotificationApi::class.java)
+
+    @Provides @Singleton
+    fun provideScheduleApi(retrofit: Retrofit): ScheduleApi = retrofit.create(ScheduleApi::class.java)
+
+    @Provides @Singleton
+    fun provideAssignmentApi(retrofit: Retrofit): AssignmentApi = retrofit.create(AssignmentApi::class.java)
 }

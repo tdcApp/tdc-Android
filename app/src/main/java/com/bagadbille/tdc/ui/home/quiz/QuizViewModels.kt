@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.UUID
 import javax.inject.Inject
 
 // --- QuizList ---
@@ -54,7 +55,7 @@ class QuizTakingViewModel @Inject constructor(private val repo: QuizRepository) 
     val uiState: StateFlow<QuizTakingUiState> = _uiState.asStateFlow()
     private val _timeRemaining = MutableStateFlow(0)
     val timeRemaining: StateFlow<Int> = _timeRemaining.asStateFlow()
-    val selectedAnswers = mutableStateMapOf<String, List<String>>()
+    val selectedAnswers = mutableStateMapOf<String, String>()
     private var quizId = ""
     private var timerJob: Job? = null
 
@@ -62,17 +63,14 @@ class QuizTakingViewModel @Inject constructor(private val repo: QuizRepository) 
         quizId = id
         viewModelScope.launch {
             _uiState.value = QuizTakingUiState.Loading
-            repo.getQuizDetail(id)
+            repo.getQuizQuestions(id)
                 .onSuccess { _uiState.value = QuizTakingUiState.InProgress(it); startTimer(30 * 60) }
                 .onFailure { _uiState.value = QuizTakingUiState.Error(it.message ?: "Failed to load") }
         }
     }
 
-    fun selectAnswer(questionId: String, optionId: String, isMultiAnswer: Boolean) {
-        val cur = selectedAnswers[questionId] ?: emptyList()
-        selectedAnswers[questionId] = if (isMultiAnswer) {
-            if (optionId in cur) cur - optionId else cur + optionId
-        } else listOf(optionId)
+    fun selectAnswer(questionId: String, option: String) {
+        selectedAnswers[questionId] = option
     }
 
     fun getAnsweredCount() = selectedAnswers.count { it.value.isNotEmpty() }
@@ -81,8 +79,9 @@ class QuizTakingViewModel @Inject constructor(private val repo: QuizRepository) 
         timerJob?.cancel()
         viewModelScope.launch {
             _uiState.value = QuizTakingUiState.Submitting
-            val answers = selectedAnswers.map { (qId, opts) -> QuizAnswer(qId, opts) }
-            repo.submitQuiz(quizId, answers)
+            val answers = selectedAnswers.map { (qId, opt) -> QuizAnswer(qId, opt) }
+            val clientId = UUID.randomUUID().toString()
+            repo.submitQuiz(quizId, answers, clientId)
                 .onSuccess { _uiState.value = QuizTakingUiState.Submitted }
                 .onFailure { _uiState.value = QuizTakingUiState.Error(it.message ?: "Failed to submit") }
         }
@@ -114,7 +113,7 @@ class QuizResultViewModel @Inject constructor(private val repo: QuizRepository) 
     fun loadResults(quizId: String) {
         viewModelScope.launch {
             _uiState.value = QuizResultUiState.Loading
-            repo.getQuizResults(quizId)
+            repo.getQuizResult(quizId)
                 .onSuccess { _uiState.value = QuizResultUiState.Success(it) }
                 .onFailure { _uiState.value = QuizResultUiState.Error(it.message ?: "Failed to load") }
         }

@@ -3,44 +3,55 @@ package com.bagadbille.tdc.data.model
 data class Quiz(
     val id: String,
     val title: String,
-    val subject: String,
-    val description: String? = null,
-    val questionCount: Int,
-    val timeLimitMinutes: Int,
-    val status: QuizStatus,
-    val scheduledAt: String? = null,
-    val deadlineAt: String? = null
+    val audience: String,
+    val createdBy: String? = null,
+    val classId: String? = null,
+    val createdAt: String? = null,
+    val updatedAt: String? = null
 )
-
-enum class QuizStatus { AVAILABLE, UPCOMING, COMPLETED, SUBMITTED }
 
 data class QuizQuestion(
     val id: String,
-    val questionText: String,
-    val options: List<QuizOption>,
-    val isMultiAnswer: Boolean,
-    val order: Int
+    val question: String,
+    val optionA: String,
+    val optionB: String,
+    val optionC: String,
+    val optionD: String,
+    val correctOption: String,
+    val questionOrder: Int,
+    val quizId: String
 )
 
-data class QuizOption(val id: String, val text: String)
-
-data class QuizAnswer(val questionId: String, val selectedOptionIds: List<String>)
+data class QuizAnswer(val questionId: String, val selectedOption: String)
 
 data class QuizResult(
     val quizId: String,
-    val status: QuizResultStatus,
-    val score: Int? = null,
-    val totalScore: Int? = null,
-    val percentage: Double? = null,
-    val breakdown: List<QuestionResult>? = null
+    val score: Int,
+    val totalQuestions: Int,
+    val submittedAt: String? = null
 )
 
-enum class QuizResultStatus { PENDING, RELEASED }
-
-data class QuestionResult(
-    val questionId: String,
-    val questionText: String,
-    val selectedOptionIds: List<String>,
-    val correctOptionIds: List<String>,
-    val isCorrect: Boolean
+data class QuizQuestionDraft(
+    val question: String,
+    val optionA: String,
+    val optionB: String,
+    val optionC: String,
+    val optionD: String,
+    val correctOption: String = "a"
 )
+
+data class QuizStats(
+    val quizId: String,
+    val totalAttempts: Int,
+    val averageScore: Double,
+    val highestScore: Int,
+    val totalQuestions: Int
+)
+
+data class QuizSubmissionDetail(
+    val submission: QuizSubmission,
+    val studentName: String,
+    val studentEmail: String,
+    val studentEnrollment: String?
+)
+

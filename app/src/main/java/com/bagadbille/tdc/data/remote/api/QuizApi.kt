@@ -10,12 +10,12 @@ interface QuizApi {
     @GET("quizzes")
     suspend fun getQuizzes(): List<QuizDto>
 
-    @GET("quizzes/{id}")
-    suspend fun getQuizDetail(@Path("id") id: String): QuizDetailDto
+    @GET("quizzes/{id}/questions")
+    suspend fun getQuizQuestions(@Path("id") id: String): List<QuizQuestionDto>
 
     @POST("quizzes/{id}/submit")
-    suspend fun submitQuiz(@Path("id") id: String, @Body submission: QuizSubmissionRequest): QuizSubmissionResponse
+    suspend fun submitQuiz(@Path("id") id: String, @Body submission: QuizSubmitRequest): QuizSubmissionDto
 
-    @GET("quizzes/{id}/results")
-    suspend fun getQuizResults(@Path("id") id: String): QuizResultDto
+    @GET("quizzes/{id}/result")
+    suspend fun getQuizResult(@Path("id") id: String): QuizSubmissionDto
 }

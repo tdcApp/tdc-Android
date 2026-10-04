@@ -1,5 +1,6 @@
 package com.bagadbille.tdc.data.remote.api
 
+import com.bagadbille.tdc.data.remote.dto.SetupProfileRequest
 import com.bagadbille.tdc.data.remote.dto.UpdateProfileRequest
 import com.bagadbille.tdc.data.remote.dto.UserProfileDto
 import retrofit2.http.Body
@@ -12,4 +13,7 @@ interface ProfileApi {
 
     @PATCH("profile/me")
     suspend fun updateProfile(@Body request: UpdateProfileRequest): UserProfileDto
+
+    @PATCH("profile/me/setup")
+    suspend fun setupProfile(@Body request: SetupProfileRequest): UserProfileDto
 }

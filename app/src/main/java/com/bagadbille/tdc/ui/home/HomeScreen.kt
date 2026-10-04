@@ -27,7 +27,6 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen(
-    onNavigateToClassDetail: (String) -> Unit,
     onNavigateToQuizTaking: (String) -> Unit,
     onNavigateToQuizResult: (String) -> Unit,
     onNotificationClick: () -> Unit = {}
@@ -39,53 +38,29 @@ fun HomeScreen(
     Column(Modifier.fillMaxSize()) {
         // Header: Logo | TDC | Notification Bell
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Logo placeholder
-            Icon(
-                imageVector = Icons.Filled.School,
-                contentDescription = "Logo",
-                modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
+            Icon(Icons.Filled.School, "Logo", Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.width(8.dp))
-
-            // Centered title
             Text(
-                text = "TDC",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
+                "TDC", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
-
             Spacer(Modifier.width(8.dp))
-
-            // Notification bell with red dot badge
             IconButton(onClick = onNotificationClick) {
-                BadgedBox(
-                    badge = {
-                        Badge(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(8.dp)
-                        )
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Notifications,
-                        contentDescription = "Notifications",
-                        modifier = Modifier.size(28.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                BadgedBox(badge = { Badge(containerColor = MaterialTheme.colorScheme.error, modifier = Modifier.size(8.dp)) }) {
+                    Icon(Icons.Outlined.Notifications, "Notifications", Modifier.size(28.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
 
-        TabRow(selectedTabIndex = pagerState.currentPage, containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.primary) {
+        TabRow(
+            selectedTabIndex = pagerState.currentPage,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.primary
+        ) {
             tabs.forEachIndexed { index, title ->
                 Tab(selected = pagerState.currentPage == index, onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
                     text = { Text(title, style = MaterialTheme.typography.labelLarge) },
@@ -94,11 +69,14 @@ fun HomeScreen(
         }
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
             when (page) {
-                0 -> GeneralScreen()
-                1 -> ClassesScreen(onNavigateToClassDetail)
+                0 -> GeneralScreen(
+                    onQuizClick = onNavigateToQuizTaking,
+                    onNavigateToClasses = { scope.launch { pagerState.animateScrollToPage(1) } },
+                    onNavigateToQuizzes = { scope.launch { pagerState.animateScrollToPage(2) } }
+                )
+                1 -> ClassesScreen()
                 2 -> QuizListScreen(onNavigateToQuizTaking, onNavigateToQuizResult)
             }
         }
     }
 }
-

@@ -17,4 +17,6 @@ abstract class RepositoryModule {
     @Binds @Singleton abstract fun bindQuizRepository(impl: QuizRepositoryImpl): QuizRepository
     @Binds @Singleton abstract fun bindNotificationRepository(impl: NotificationRepositoryImpl): NotificationRepository
     @Binds @Singleton abstract fun bindAssignmentRepository(impl: AssignmentRepositoryImpl): AssignmentRepository
+    @Binds @Singleton abstract fun bindScheduleRepository(impl: ScheduleRepositoryImpl): ScheduleRepository
+    @Binds @Singleton abstract fun bindRosterRepository(impl: RosterRepositoryImpl): RosterRepository
 }
