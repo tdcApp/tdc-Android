@@ -13,7 +13,8 @@ data class LoginResponse(val token: String, val user: UserProfileDto)
 data class UserProfileDto(
     val id: String,
     val email: String,
-    val phone: String,
+    val phone: String = "",
+    @SerialName("mobile_number") val mobileNumber: String = "",
     val name: String? = null,
     val role: String = "student",
     @SerialName("enrollment_number") val enrollmentNumber: String? = null,
@@ -29,11 +30,13 @@ data class UserProfileDto(
 data class SetupProfileRequest(
     val name: String,
     @SerialName("enrollment_number") val enrollmentNumber: String,
+    @SerialName("mobile_number") val mobileNumber: String? = null,
     val year: String
 )
 
 @Serializable
 data class UpdateProfileRequest(
     val name: String? = null,
-    val phone: String? = null
+    val phone: String? = null,
+    @SerialName("mobile_number") val mobileNumber: String? = null
 )

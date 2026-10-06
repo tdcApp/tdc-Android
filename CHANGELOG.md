@@ -4,6 +4,37 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [0.4.0] — 2026-10-06
+
+### Added
+- **Google Firebase Authentication Integration**:
+  - Integrated `firebase-auth` (via Firebase BOM `33.7.0`) and `google-services.json`.
+  - Added real authentication (`signInWithEmailAndPassword` & `createUserWithEmailAndPassword`) in [AuthRepositoryImpl.kt](file:///c:/Users/Akash/Desktop/TDC/app/src/main/java/com/bagadbille/tdc/data/repository/AuthRepository.kt).
+  - Hybrid Auth Fallback: Validates against Firebase backend with seamless fallback to in-memory mock dev accounts (`admin@gmail.com`, `student@gmail.com`).
+  - Community membership verification: Unrecognized accounts trigger a clear *"You're not a part of TDC"* error card.
+- **Mobile Number Field & Neon DB Schema Alignment**:
+  - Added `mobileNumber` (`mobile_number` in Neon DB schema) to [UserProfile.kt](file:///c:/Users/Akash/Desktop/TDC/app/src/main/java/com/bagadbille/tdc/data/model/UserProfile.kt) with backward-compatible `phone` alias.
+  - Added `@SerialName("mobile_number")` to [UserProfileDto](file:///c:/Users/Akash/Desktop/TDC/app/src/main/java/com/bagadbille/tdc/data/remote/dto/AuthDtos.kt), `SetupProfileRequest`, and `UpdateProfileRequest`.
+  - Exposed `firebaseUid` getter mapped to Neon's `firebase_uid varchar(128) PK`.
+- **Enhanced Student Onboarding & Batch Selection**:
+  - Added dedicated **Mobile Number** text field (`KeyboardType.Phone`) to [SetupScreen.kt](file:///c:/Users/Akash/Desktop/TDC/app/src/main/java/com/bagadbille/tdc/ui/auth/SetupScreen.kt).
+  - Added interactive dropdown pickers for **Language Batch** (e.g. C++, Python DSA) and **Technology Batch** (e.g. Android, Web Dev).
+  - Added an admin role notice explaining that students complete their profile while mentor accounts are provisioned exclusively by TDC Administrators.
+  - Auto-registration in [MockUsers.kt](file:///c:/Users/Akash/Desktop/TDC/app/src/main/java/com/bagadbille/tdc/data/mock/MockUsers.kt) upon first Firebase login, eliminating "User not found" errors when saving profile.
+- **Role-Based UI & Navigation**:
+  - Role branching in [MainScreen.kt](file:///c:/Users/Akash/Desktop/TDC/app/src/main/java/com/bagadbille/tdc/ui/main/MainScreen.kt):
+    - **Mentors / Admins**: Routed to **Mentor Dashboard** (batch statistics, create quiz/assignment shortcuts) and **Mentor Assignments** (review student submissions, submission counts).
+    - **Students**: Routed to standard student dashboard (schedule, classes, quizzes, personal submissions).
+
+### Fixed
+- **Gradle & JDK Build Transform Error**:
+  - Resolved `JdkImageTransform` compilation crash caused by the IDE's Red Hat Java extension providing a stripped JRE missing the `jdk.jlink` module.
+  - Configured [gradle.properties](file:///c:/Users/Akash/Desktop/TDC/gradle.properties) to disable toolchain auto-detection (`auto-detect=false`) and explicitly locked Gradle to Android Studio JBR (`21.0.10`).
+  - Replaced `jvmToolchain(21)` with `kotlinOptions { jvmTarget = "21" }` in [app/build.gradle.kts](file:///c:/Users/Akash/Desktop/TDC/app/build.gradle.kts).
+  - Enhanced [gradlew.bat](file:///c:/Users/Akash/Desktop/TDC/gradlew.bat) to auto-detect Android Studio JBR if `JAVA_HOME` is not set in the terminal environment.
+
+---
+
 ## [0.3.1] — 2026-10-04
 
 ### Added

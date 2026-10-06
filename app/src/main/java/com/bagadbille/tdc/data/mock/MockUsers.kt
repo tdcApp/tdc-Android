@@ -21,7 +21,7 @@ object MockUsers {
             profile = UserProfile(
                 id = "mentor_001",
                 email = "admin@gmail.com",
-                phone = DEV_PASSWORD,
+                mobileNumber = DEV_PASSWORD,
                 name = "TDC Mentor",
                 role = "mentor",
                 isProfileComplete = true
@@ -33,7 +33,7 @@ object MockUsers {
             profile = UserProfile(
                 id = "user_001",
                 email = "student@gmail.com",
-                phone = DEV_PASSWORD,
+                mobileNumber = DEV_PASSWORD,
                 name = "Akash Sharma",
                 role = "student",
                 isProfileComplete = true,
@@ -49,7 +49,7 @@ object MockUsers {
             profile = UserProfile(
                 id = "user_002",
                 email = "newstudent@gmail.com",
-                phone = DEV_PASSWORD,
+                mobileNumber = DEV_PASSWORD,
                 name = null,
                 role = "student",
                 isProfileComplete = false,
@@ -76,13 +76,32 @@ object MockUsers {
     ) = Account(
         password = DEV_PASSWORD,
         profile = UserProfile(
-            id = id, email = email, phone = DEV_PASSWORD, name = name, role = "student",
+            id = id, email = email, mobileNumber = DEV_PASSWORD, name = name, role = "student",
             isProfileComplete = true, enrollmentNumber = enrollment, year = year,
             languageClassId = languageClassId, technologyClassId = technologyClassId
         )
     )
 
     fun findById(id: String): UserProfile? = accounts.values.firstOrNull { it.profile.id == id }?.profile
+
+    fun findByFirebaseUid(uid: String): UserProfile? = findById(uid)
+
+    fun exists(email: String): Boolean = accounts.containsKey(email.trim().lowercase())
+
+    fun register(email: String, password: String, firebaseUid: String = "user_${System.currentTimeMillis()}"): UserProfile {
+        val key = email.trim().lowercase()
+        val existing = accounts[key]
+        if (existing != null) return existing.profile
+        val profile = UserProfile(
+            id = firebaseUid,
+            email = email.trim(),
+            name = null,
+            role = "student", // Role is always student; mentors are created by admin
+            isProfileComplete = false
+        )
+        accounts[key] = Account(password = password, profile = profile)
+        return profile
+    }
 
     fun studentsInClass(classId: String): List<UserProfile> = accounts.values
         .map { it.profile }
@@ -96,11 +115,18 @@ object MockUsers {
 
     fun find(email: String): UserProfile? = accounts[email.trim().lowercase()]?.profile
 
-    fun update(email: String, transform: (UserProfile) -> UserProfile): UserProfile? {
+    fun update(email: String, transform: (UserProfile) -> UserProfile): UserProfile {
         val key = email.trim().lowercase()
-        val account = accounts[key] ?: return null
-        val updated = transform(account.profile)
-        accounts[key] = account.copy(profile = updated)
+        val account = accounts[key]
+        val currentProfile = account?.profile ?: UserProfile(
+            id = "user_${System.currentTimeMillis()}",
+            email = email.trim(),
+            name = null,
+            role = "student",
+            isProfileComplete = false
+        )
+        val updated = transform(currentProfile)
+        accounts[key] = Account(password = account?.password ?: DEV_PASSWORD, profile = updated)
         return updated
     }
 }

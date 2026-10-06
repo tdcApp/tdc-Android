@@ -29,12 +29,34 @@ class AuthViewModel @Inject constructor(
     val isProfileComplete: Flow<Boolean> = authRepository.isProfileComplete()
 
     fun signInWithEmail(email: String, password: String) {
-        if (email.isBlank() || password.isBlank()) { _uiState.value = AuthUiState.Error("Email and password are required"); return }
+        if (email.isBlank() || password.isBlank()) {
+            _uiState.value = AuthUiState.Error("Email and password are required")
+            return
+        }
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading
             authRepository.signInWithEmail(email, password)
                 .onSuccess { _uiState.value = AuthUiState.Success(it) }
-                .onFailure { _uiState.value = AuthUiState.Error(it.message ?: "Sign in failed") }
+                .onFailure {
+                    _uiState.value = AuthUiState.Error(it.message ?: "You're not a part of TDC")
+                }
+        }
+    }
+
+    fun signUpWithEmail(email: String, password: String) {
+        if (email.isBlank() || password.isBlank()) {
+            _uiState.value = AuthUiState.Error("Email and password are required")
+            return
+        }
+        if (password.length < 6) {
+            _uiState.value = AuthUiState.Error("Password must be at least 6 characters")
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = AuthUiState.Loading
+            authRepository.signUpWithEmail(email, password)
+                .onSuccess { _uiState.value = AuthUiState.Success(it) }
+                .onFailure { _uiState.value = AuthUiState.Error(it.message ?: "Registration failed") }
         }
     }
 

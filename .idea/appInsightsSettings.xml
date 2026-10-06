@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.bagadbille.tdc" />
+                  <option name="mobileSdkAppId" value="1:848969920585:android:ee04d8b7334ac607fc4f98" />
+                  <option name="projectId" value="tdc-app-960c3" />
+                  <option name="projectNumber" value="848969920585" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

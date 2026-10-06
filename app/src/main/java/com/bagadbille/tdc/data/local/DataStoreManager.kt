@@ -25,6 +25,7 @@ class DataStoreManager @Inject constructor(
         private val USER_ROLE_KEY = stringPreferencesKey("user_role")
         private val IS_PROFILE_COMPLETE_KEY = booleanPreferencesKey("is_profile_complete")
         private val USER_EMAIL_KEY = stringPreferencesKey("user_email")
+        private val FIREBASE_UID_KEY = stringPreferencesKey("firebase_uid")
     }
 
     val authToken: Flow<String?> = context.dataStore.data.map { it[AUTH_TOKEN_KEY] }
@@ -36,6 +37,12 @@ class DataStoreManager @Inject constructor(
     val isProfileComplete: Flow<Boolean> = context.dataStore.data.map { it[IS_PROFILE_COMPLETE_KEY] ?: false }
 
     val userEmail: Flow<String?> = context.dataStore.data.map { it[USER_EMAIL_KEY] }
+
+    val firebaseUid: Flow<String?> = context.dataStore.data.map { it[FIREBASE_UID_KEY] }
+
+    suspend fun saveFirebaseUid(uid: String) {
+        context.dataStore.edit { it[FIREBASE_UID_KEY] = uid }
+    }
 
     suspend fun saveUserEmail(email: String) {
         context.dataStore.edit { it[USER_EMAIL_KEY] = email }
@@ -59,6 +66,7 @@ class DataStoreManager @Inject constructor(
             it.remove(USER_ROLE_KEY)
             it.remove(IS_PROFILE_COMPLETE_KEY)
             it.remove(USER_EMAIL_KEY)
+            it.remove(FIREBASE_UID_KEY)
         }
     }
 

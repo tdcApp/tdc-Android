@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "848969920585",
+    "project_id": "tdc-app-960c3",
+    "storage_bucket": "tdc-app-960c3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:848969920585:android:ee04d8b7334ac607fc4f98",
+        "android_client_info": {
+          "package_name": "com.bagadbille.tdc"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCb0Qn_8376chw9rfGiyij4EoJPam83Zvo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
