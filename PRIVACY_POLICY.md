@@ -1,7 +1,7 @@
 # Privacy Policy — TDC (Technocrats Developer Community)
 
-**Effective Date:** September 1, 2026  
-**Last Updated:** September 1, 2026  
+**Effective Date:** October 6, 2026  
+**Last Updated:** October 6, 2026  
 **App Name:** TDC (Technocrats Developer Community)  
 **Developer:** BagadBille  
 **Package Name:** `com.bagadbille.tdc`  
@@ -11,9 +11,9 @@
 
 ## 1. Introduction
 
-Welcome to **TDC (Technocrats Developer Community)** ("TDC", "the App", "we", "us", or "our"). TDC is an android mobile application designed to help students manage their academic activities, including class schedules, announcements, quizzes, assignments, and notifications.
+Welcome to **TDC (Technocrats Developer Community)** ("TDC", "the App", "we", "us", or "our"). TDC is an Android mobile application designed to help student members and mentors of the Technocrats Developer Community manage their academic and development activities, including class schedules, announcements, technical quizzes, coding assignments, batch registrations, and notifications.
 
-We are committed to protecting the privacy of all our users, including students and their families. This Privacy Policy explains what information we collect, how we use and protect it, who we share it with, and what choices you have regarding your data.
+We are committed to protecting the privacy of all our users, including students, mentors, and administrators. This Privacy Policy explains what information we collect, how we use and protect it, who we share it with, and what choices and rights you have regarding your personal data.
 
 By downloading, installing, or using TDC, you agree to the collection and use of information in accordance with this Privacy Policy. If you do not agree to this policy, please do not use the App.
 
@@ -23,259 +23,205 @@ By downloading, installing, or using TDC, you agree to the collection and use of
 
 ### 2.1 Information You Provide Directly
 
-When you register for an account or use TDC, we collect the following personal information that you voluntarily provide:
+When you register for an account, log in, or complete your profile in TDC, we collect personal information that you voluntarily provide:
 
 | Data Type | When Collected | Purpose |
 |---|---|---|
-| **Full Name** | Account registration | Display on your profile; identify you within the classroom |
-| **Email Address** | Account registration and login | Authentication; account identification; account recovery |
-| **Password** | Account registration and login | Authentication (transmitted securely; stored as a hash on the server, never in plaintext) |
-| **Phone Number** (optional) | Profile settings | Displayed on your profile for teacher/peer contact; not required |
-| **Class / Grade** (optional) | Profile settings | Associate you with your enrolled academic class |
-| **Section** (optional) | Profile settings | Associate you with your class section |
-| **Quiz Answers** | During quiz/test sessions | Record your assessment submissions for grading and academic evaluation |
+| **Full Name** | Student profile onboarding (`SetupScreen`) or profile updates | Displayed on your profile; identifies you within your enrolled batches and community leaderboards |
+| **Email Address** | Account registration and authentication | Unique account identification, login credentials, and account communication |
+| **Mobile Number** | Student profile onboarding and profile settings | Contact information for batch coordination, community announcements, and administrative verification |
+| **Academic Details** (College Year, Enrollment Number) | Student profile onboarding | Categorizes your academic standing (e.g., 1st Year, 2nd Year, 3rd Year, 4th Year) and university identification (optional) |
+| **Enrolled Batches / Tracks** | Batch selection during onboarding | Associates you with your enrolled **Language Track** (e.g., C++, Python DSA) and **Technology Track** (e.g., Android Dev, Web Dev) |
+| **Quiz Responses** | During quiz and test sessions | Records your submitted multiple-choice answers for automated grading, scoring, and performance tracking |
+| **Assignment Submissions** | Assignment submission screen | Records your project submission URLs (e.g., GitHub repository links or hosted project URLs) for mentor review |
 
-### 2.2 Information Collected Automatically
+### 2.2 Information Processed Automatically & Technical Data
 
-When you use TDC, certain technical information may be collected automatically:
+When you use TDC, certain technical data is stored locally on your device or processed to provide application functionality:
 
-| Data Type | Purpose |
-|---|---|
-| **Authentication Token (JWT)** | Stored locally on your device to maintain your signed-in session. This token is transmitted to our servers with each authenticated API request to verify your identity. |
-| **App Preferences** (e.g., dark/light theme) | Stored locally on your device to remember your display settings. This data is not transmitted to any server. |
-| **Cached Quiz Data** | Quiz questions and pending answer submissions are temporarily stored in a local database on your device to allow uninterrupted test-taking even during network outages. This data is synced to the server when connectivity is restored and then cleared locally. |
+| Data Type | Storage & Transmission | Purpose |
+|---|---|---|
+| **Firebase User Identifier (UID)** | Generated by Google Firebase upon registration; stored locally in DataStore and sent with API calls | Identifies your authenticated session across app sessions |
+| **Session Authentication Token** | Stored securely in private Jetpack DataStore on your device; transmitted via HTTPS headers | Verifies your identity on authorized backend endpoints |
+| **App Preferences** (e.g., Dark Theme) | Stored exclusively on your device in DataStore | Remembers your user interface preferences (dark or light mode) across app restarts |
+| **Offline Quiz Cache** | Stored temporarily in local Room (SQLite) database on your device | Allows uninterrupted quiz participation during transient network drops; synced upon reconnection and cleared |
 
 ### 2.3 Information We Do NOT Collect
 
-TDC is designed with data minimization in mind. We want to be explicit about what we **do not** collect:
+TDC adheres to strict data minimization principles. We explicitly do **not** collect:
 
-- ❌ **Location data** (GPS, network-based, or approximate)
-- ❌ **Device identifiers** (Android Advertising ID, IMEI, hardware serial numbers)
-- ❌ **Contacts, call logs, or SMS messages**
-- ❌ **Camera or microphone recordings**
-- ❌ **Browsing history or app usage analytics**
-- ❌ **Financial or payment information**
+- ❌ **Precise or approximate location data** (GPS or cell tower tracking)
+- ❌ **Permanent device identifiers** (IMEI, MAC address, or hardware serial numbers)
+- ❌ **Contacts, phone logs, or SMS messages**
+- ❌ **Microphone or camera recordings**
+- ❌ **Financial, banking, or payment card information**
 - ❌ **Biometric data**
-- ❌ **Files or photos from your device** (the assignment attachment feature is not yet active in this version)
+- ❌ **Personal photos, media library, or local file system storage** (assignments are submitted strictly via external URLs such as GitHub)
 
-The only Android permission the App requests is **`INTERNET`**, which is required to communicate with our backend servers for fetching class data, announcements, quiz content, and notifications.
+The only Android permissions the App requests are:
+* **`android.permission.INTERNET`**: Required to communicate with Firebase and backend servers to retrieve schedules, quizzes, batches, and notifications.
+* **`android.permission.ACCESS_NETWORK_STATE`**: Used to verify active network connectivity before transmitting submissions.
 
 ---
 
 ## 3. How We Use Your Information
 
-We use the information we collect solely for the following purposes:
+We use your information strictly for educational and community administration purposes:
 
-1. **Account Creation & Authentication:** To create and manage your student account, verify your identity, and maintain your signed-in session.
-2. **Providing Core App Features:** To display your enrolled classes, deliver announcements, serve quizzes and assessments, show assignments, and deliver notifications relevant to your academic activities.
-3. **Profile Display:** To show your name, class, and section within the App (e.g., on your profile screen).
-4. **Academic Assessment:** To record, submit, and grade quiz answers as part of your coursework.
-5. **Offline Functionality:** To temporarily cache quiz content on your device so you can complete tests even if your internet connection is interrupted.
-6. **User Preferences:** To remember your chosen display theme (dark or light mode) on your device.
+1. **Authentication & Session Management:** To create, verify, and authenticate student accounts via Firebase Authentication and maintain your signed-in state.
+2. **Batch & Course Delivery:** To associate students with their enrolled Language and Technology tracks, show weekly class schedules, and provide class links (Google Meet, Discord, Zoom).
+3. **Academic Evaluation:** To evaluate technical quizzes, record assignment submission links, and provide mentor feedback.
+4. **Role-Based Experience:** To provide appropriate interfaces (Student Home vs. Mentor Dashboard and Review tools) based on your assigned role (`student`, `mentor`, or `admin`).
+5. **Community Notifications:** To deliver updates, class schedules, and announcements relevant to your batches.
+6. **User Preferences:** To retain display settings (Dark Theme toggle) on your device.
 
-**We do NOT use your data for:**
-- ❌ Advertising, ad targeting, or ad personalization
-- ❌ Selling or renting to third parties
-- ❌ User profiling for non-educational purposes
-- ❌ Marketing emails or promotional campaigns (unless you explicitly opt in to a separate service)
+**We do NOT use your information for:**
+- ❌ Third-party advertising, ad targeting, or behavioral tracking
+- ❌ Selling, licensing, or commercial distribution to data brokers
+- ❌ Unsolicited external commercial marketing
 
 ---
 
 ## 4. How We Share Your Information
 
-We treat your data with strict confidentiality. Your personal information is shared only in the following limited circumstances:
+We treat your personal data with high confidentiality. Information is shared only in the following contexts:
 
-### 4.1 With Your Educational Institution
-Your name, class, section, quiz submissions, and assignment-related data may be accessible to authorized personnel at your educational institution (e.g., teachers and administrators) through the backend system that TDC connects to. This is necessary to deliver the educational services the App provides.
+### 4.1 With Authorized Community Mentors & Administrators
+Authorized TDC mentors and administrative staff have access to student names, enrolled batches, quiz performance, and assignment URLs solely to conduct classes, mentor students, review submissions, and track community progress.
 
-### 4.2 Service Providers
-We may use trusted third-party service providers to operate our backend infrastructure (e.g., cloud hosting providers). These providers process data on our behalf and are contractually obligated to protect your information and use it only for the services they provide to us.
+### 4.2 Cloud Infrastructure & Service Providers
+We rely on trusted enterprise infrastructure providers to operate the App:
+- **Google Firebase (Google LLC):** User authentication and identity management.
+- **Backend Database & Cloud Hosting (Neon / PostgreSQL):** Encrypted storage of user profile records, class schedules, quizzes, and assignment metadata.
+
+These providers process data strictly on our behalf under secure, encrypted conditions and are prohibited from using your data for independent purposes.
 
 ### 4.3 Legal Requirements
-We may disclose your information if required to do so by law, regulation, legal process, or governmental request, or if we believe in good faith that disclosure is necessary to protect our rights, protect your safety or the safety of others, investigate fraud, or respond to a government request.
+We may disclose information if required to do so by applicable legal process, court order, or governmental inquiry, or to protect the safety, rights, or integrity of the community and its members.
 
 ### 4.4 No Sale of Data
-**We do not sell, trade, or rent your personal information to any third party, under any circumstances.**
+**We do not sell, rent, or trade your personal information to any third party.**
 
 ---
 
 ## 5. Third-Party Services & SDKs
 
-TDC uses the following third-party libraries and services. These operate within the App but do not independently collect or transmit your personal data to third parties:
+The App integrates the following third-party developer libraries:
 
-| Library / Service | Purpose | Data Transmitted to Third Party? |
-|---|---|---|
-| **Retrofit + OkHttp** | Network communication with our own backend server | No — communicates only with our server |
-| **Room Database** | Local on-device data caching (quiz questions, pending submissions) | No — data stays on your device |
-| **Jetpack DataStore** | Local on-device preference storage (auth token, theme setting) | No — data stays on your device |
-| **Coil** | Image loading for avatars and class materials | No personal data transmitted; loads images from URLs provided by our server |
-| **Dagger Hilt** | In-app dependency injection framework | No — operates entirely on-device |
-| **kotlinx.serialization** | JSON data parsing | No — operates entirely on-device |
-
-**Note:** TDC does not integrate any third-party analytics SDKs (e.g., Google Analytics, Firebase Analytics), advertising SDKs, crash-reporting services, or social media SDKs in the current version. If this changes in a future update, this Privacy Policy will be updated accordingly and users will be notified.
+| Service / SDK | Provider | Purpose | Privacy Policy |
+|---|---|---|---|
+| **Firebase Authentication** | Google LLC | User account management, email/password verification, and authentication tokens | [Google Privacy Policy](https://policies.google.com/privacy) |
+| **Firebase Analytics / Core** | Google LLC | App installation verification and basic reliability diagnostics | [Firebase Data Privacy](https://firebase.google.com/support/privacy) |
+| **Retrofit & OkHttp** | Square Inc. (Open Source) | Secure HTTPS API client communicating strictly with our backend | N/A (On-device library) |
+| **Android Jetpack (Room, DataStore)** | Google LLC | On-device encrypted local storage for tokens and preferences | N/A (On-device library) |
+| **Coil** | Coil Contributors (Open Source) | On-device image and community icon rendering | N/A (On-device library) |
 
 ---
 
 ## 6. Data Storage & Security
 
-We take the security of your personal information seriously and implement appropriate technical and organizational measures to protect it:
+We maintain industry-standard safeguards to secure your personal data:
 
-### 6.1 Data in Transit
-All network communication between the App and our backend servers is conducted over **HTTPS (TLS/SSL encryption)**, ensuring your data is encrypted during transmission.
+### 6.1 Encryption in Transit
+All network transmissions between the App, Google Firebase, and our backend servers are strictly protected using **Transport Layer Security (HTTPS / TLS 1.3)** encryption.
 
-### 6.2 Data on Your Device
-- **Authentication tokens** are stored in Android Jetpack DataStore (encrypted app-private storage), accessible only to the TDC application.
-- **Cached quiz data** is stored in a local Room (SQLite) database within the App's private storage sandbox, inaccessible to other apps.
-- **Theme preferences** are stored in DataStore and contain no personal information.
+### 6.2 On-Device Data Protection
+- Authentication tokens and user metadata are stored within the Android application's sandboxed private storage via **Jetpack DataStore**, isolated from other apps on your device.
+- Offline quiz answers are stored in an encrypted/sandboxed SQLite database via **Room**.
 
-### 6.3 Data on Our Servers
-- Passwords are **hashed** (never stored in plaintext) on our server.
-- Server access is restricted to authorized personnel only.
-- We employ industry-standard security practices including access controls and regular security reviews.
-
-### 6.4 Data Breach Notification
-In the unlikely event of a data breach affecting your personal information, we will notify affected users and relevant authorities as required by applicable law within 72 hours of becoming aware of the breach.
+### 6.3 Server-Side Protection
+- Passwords are encrypted and managed directly by Google Firebase's secure identity infrastructure; plaintext passwords are never accessed, stored, or logged by TDC servers.
+- Database access is restricted to authenticated administrative channels with row-level role enforcement.
 
 ---
 
-## 7. Data Retention
+## 7. Data Retention & Account Deletion
 
-We retain your personal information only for as long as is necessary to fulfill the purposes described in this Privacy Policy:
+We retain personal information only as long as necessary to support your community membership:
 
-| Data Type | Retention Period |
+| Data Type | Retention Duration |
 |---|---|
-| **Account data** (name, email, class, section) | Retained while your account is active. Deleted within 30 days of account deletion request. |
-| **Quiz submissions and results** | Retained for the duration of the academic term or as required by your educational institution's policies. |
-| **Authentication tokens** (on device) | Cleared immediately upon logout or account deletion. |
-| **Cached quiz questions** (on device) | Cleared after successful submission sync or upon app data clearing. |
-| **App preferences** (on device) | Cleared when you uninstall the App or clear app data. |
+| **Account & Profile Data** (Name, Email, Mobile, Batches) | Retained for the duration of your active community membership. Deleted within 30 days upon receiving an account deletion request. |
+| **Quiz Results & Assignment Submissions** | Retained during the active academic cycle for record-keeping and certification. |
+| **Device Storage Data** (Tokens, Themes, Offline Cache) | Cleared immediately upon logging out, clearing application storage, or uninstalling the App. |
+
+### How to Request Account & Data Deletion
+Users have the right to request full deletion of their account and all associated records at any time:
+1. Send an email to **aman2005mishra@gmail.com** with the subject line `"TDC Account Deletion Request"`.
+2. Include your registered email address and full name.
+3. Your Firebase credentials, profile records, and submission history will be permanently deleted from our servers within **30 days** of verification.
 
 ---
 
 ## 8. Your Rights & Choices
 
-Depending on your location and applicable law, you may have the following rights regarding your personal data:
-
 ### 8.1 All Users
-- **Access:** You can view your personal information at any time through the Profile screen in the App.
-- **Correction:** You can update your name, phone number, class, and section through the App's profile settings.
-- **Logout:** You can sign out at any time, which clears your authentication token from the device.
-- **Deletion:** You may request complete deletion of your account and all associated data by contacting us at **privacy@bagadbille.com**. We will process deletion requests within 30 days.
+- **Access & Review:** You can view your complete personal details, mobile number, enrolled tracks, and academic year directly on the Profile screen.
+- **Update & Correction:** You can update your full name and mobile number directly via the in-app Edit Profile dialog.
+- **Logout:** Signing out removes your local session tokens and cached preferences from the device immediately.
+- **Data Deletion:** You can request permanent account deletion by contacting us.
 
-### 8.2 European Economic Area (EEA) / UK Users — GDPR Rights
-If you are located in the EEA or UK, you have additional rights under the General Data Protection Regulation (GDPR):
-- **Right of Access** — Request a copy of all personal data we hold about you.
-- **Right to Rectification** — Request correction of inaccurate or incomplete data.
-- **Right to Erasure ("Right to be Forgotten")** — Request deletion of your personal data.
-- **Right to Restriction of Processing** — Request that we limit how we use your data.
-- **Right to Data Portability** — Request your data in a structured, machine-readable format.
-- **Right to Object** — Object to processing of your data for certain purposes.
-- **Right to Withdraw Consent** — Where processing is based on consent, withdraw it at any time.
-
-**Legal Basis for Processing (GDPR):**
-- **Contract Performance:** Processing your account data and quiz submissions is necessary to provide you with the App's educational services.
-- **Legitimate Interest:** Maintaining application security, preventing fraud, and improving the App.
-- **Consent:** Where required by law, we obtain your consent before processing (e.g., optional profile fields).
-
-To exercise any of these rights, contact us at **privacy@bagadbille.com**.
-
-### 8.3 California Users — CCPA Rights
-If you are a California resident, the California Consumer Privacy Act (CCPA) grants you:
-- The right to know what personal information we collect and how it is used.
-- The right to request deletion of your personal information.
-- The right to opt out of the sale of personal information. **We do not sell your personal information.**
-- The right to non-discrimination for exercising your CCPA rights.
+### 8.2 Regional Protections (GDPR / Indian DPDP Act)
+In compliance with international data protection standards and the Digital Personal Data Protection (DPDP) Act:
+- You have the right to confirmation, correction, completion, and erasure of your personal data.
+- Processing is conducted based on user consent (upon registration) and legitimate educational interest.
+- Inquiries or grievances can be addressed directly to our developer contact below.
 
 ---
 
 ## 9. Children's Privacy
 
-### 9.1 Age Requirement
-TDC is designed for use by students in educational settings. **The App is intended for users aged 13 and older.** We do not knowingly collect personal information from children under the age of 13 without verifiable parental consent.
-
-### 9.2 COPPA Compliance (United States)
-In compliance with the Children's Online Privacy Protection Act (COPPA):
-- If we become aware that we have collected personal information from a child under 13 without parental consent, we will take immediate steps to delete that information from our servers.
-- Parents or guardians who believe their child under 13 has provided us with personal information may contact us at **privacy@bagadbille.com** to request review and deletion of that data.
-
-### 9.3 Parental Rights
-Parents and guardians have the right to:
-- Review the personal information we have collected from their child.
-- Request deletion of their child's personal information.
-- Refuse to permit any further collection of their child's information.
-- Contact us at any time regarding their child's privacy.
-
-### 9.4 Educational Institution Authorization
-Where TDC is deployed by a school or educational institution, the institution may act as an agent of the parent for purposes of providing consent for the collection of student information, in accordance with applicable educational privacy laws (e.g., FERPA in the United States).
+TDC is designed for high school, college, and university students participating in technical training:
+- The App is intended for users **aged 13 and older**. We do not knowingly collect personal data from children under 13 years of age.
+- If we discover that a user under 13 has registered without verifiable parental or guardian consent, we will promptly delete their account and associated data.
+- Parents or legal guardians who believe their child has provided personal information may contact us at **aman2005mishra@gmail.com** for prompt verification and removal.
 
 ---
 
-## 10. Data Safety Declaration (Google Play)
+## 10. Google Play Data Safety Declaration
 
-In accordance with Google Play's Data Safety requirements, the following is a summary of our data practices for the Play Store listing:
+For Google Play Store submission and transparency, here is our summary of declared data practices:
 
-### Data Collected
+### Data Collected & Shared
 
-| Data Category | Data Type | Collected? | Shared with Third Parties? | Purpose |
+| Data Category | Specific Data | Collected? | Shared with 3rd Parties? | Purpose |
 |---|---|---|---|---|
-| **Personal Info** | Name | Yes | No | Account management, profile display |
-| **Personal Info** | Email address | Yes | No | Authentication, account identification |
-| **Personal Info** | Phone number | Optional | No | Profile contact information |
-| **Account Info** | Password | Yes (hashed) | No | Authentication |
-| **Education Info** | Class/Grade, Section | Optional | No | Academic group association |
-| **App Activity** | Quiz responses | Yes | No | Academic assessment and grading |
+| **Personal Info** | Name | Yes | No | Account management, profile display, classroom identity |
+| **Personal Info** | Email address | Yes | No (Processed by Firebase) | Authentication, account identification |
+| **Personal Info** | Phone / Mobile Number | Yes | No | Profile verification, student communication |
+| **Personal Info** | User IDs (Firebase UID) | Yes | No | Account authentication |
+| **Education Info** | Academic Year, Enrolled Batches, Enrollment No. | Yes | No | Course management, batch scheduling |
+| **App Activity** | Quiz responses, Assignment URLs | Yes | No | Academic grading and submission review |
+| **Diagnostics** | Crash & diagnostic info | Minimal (Firebase) | No | App stability and performance improvements |
 
-### Data NOT Collected
-
-| Data Category | Collected? |
-|---|---|
-| Location (precise or approximate) | ❌ No |
-| Device or other identifiers | ❌ No |
-| Financial info | ❌ No |
-| Photos or videos | ❌ No |
-| Audio | ❌ No |
-| Files and docs | ❌ No |
-| Contacts | ❌ No |
-| Calendar | ❌ No |
-| Web browsing history | ❌ No |
-| App usage analytics | ❌ No |
-| Diagnostics / Crash logs | ❌ No |
-
-### Security Practices
-- ✅ Data is encrypted in transit (HTTPS/TLS)
-- ✅ Users can request data deletion
-- ✅ Data is stored in secure, access-controlled environments
+### Security Measures Declared
+- ✅ **Data is encrypted in transit**: All communication uses standard HTTPS/TLS.
+- ✅ **Data deletion available**: Users can submit deletion requests via email.
+- ✅ **No location tracking**: No GPS, cell, or approximate location captured.
+- ✅ **No ad tracking / No data selling**: Zero commercial data monetization.
 
 ---
 
 ## 11. Changes to This Privacy Policy
 
-We may update this Privacy Policy from time to time to reflect changes in our practices, technology, legal requirements, or other factors. When we make material changes:
-
-1. We will update the **"Last Updated"** date at the top of this policy.
-2. We will notify users through an in-app notification or announcement.
-3. Continued use of the App after the effective date of the revised policy constitutes acceptance of the changes.
-
-We encourage you to review this Privacy Policy periodically for any updates.
+We may update this Privacy Policy from time to time to accommodate new features, evolving security standards, or regulatory updates. When changes are made:
+1. The **"Last Updated"** date at the top of this document will be updated.
+2. An announcement or notification will be posted within the App for material changes.
+3. Continued use of the App following posted updates constitutes your acknowledgement and acceptance of the revised terms.
 
 ---
 
-## 12. Contact Us
+## 12. Contact Information
 
-If you have any questions, concerns, or requests regarding this Privacy Policy, your personal data, or our data practices, please contact us:
+If you have questions, feedback, or data privacy requests regarding this Privacy Policy or your information, please contact:
 
-- **Email:** privacy@bagadbille.com
-- **Developer Name:** BagadBille
-- **Subject Line:** "TDC Privacy Inquiry"
+* **Developer:** BagadBille
+* **Application:** TDC (Technocrats Developer Community)
+* **Contact Email:** aman2005mishra@gmail.com
+* **Subject:** `TDC Privacy Inquiry`
 
-We will respond to all privacy-related inquiries within **30 days**.
-
----
-
-## 13. Governing Law
-
-This Privacy Policy is governed by and construed in accordance with the laws of India. For users in other jurisdictions, local privacy laws (including GDPR for EEA/UK users and CCPA for California users) will apply to the extent they provide additional protections.
+All requests will be acknowledged and processed within **30 days**.
 
 ---
 
-*This privacy policy was last reviewed and updated on September 1, 2026.*
+*This privacy policy is published for the TDC Android Application (`com.bagadbille.tdc`) and was last updated on October 6, 2026.*

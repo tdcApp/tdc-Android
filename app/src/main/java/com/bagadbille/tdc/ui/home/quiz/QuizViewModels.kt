@@ -45,7 +45,7 @@ sealed class QuizTakingUiState {
     data object Loading : QuizTakingUiState()
     data class InProgress(val questions: List<QuizQuestion>) : QuizTakingUiState()
     data object Submitting : QuizTakingUiState()
-    data object Submitted : QuizTakingUiState()
+    data class Submitted(val isDisqualified: Boolean = false) : QuizTakingUiState()
     data class Error(val message: String) : QuizTakingUiState()
 }
 
@@ -56,6 +56,16 @@ class QuizTakingViewModel @Inject constructor(private val repo: QuizRepository) 
     private val _timeRemaining = MutableStateFlow(0)
     val timeRemaining: StateFlow<Int> = _timeRemaining.asStateFlow()
     val selectedAnswers = mutableStateMapOf<String, String>()
+
+    // Proctoring & Anti-Cheat State
+    private val _warningCount = MutableStateFlow(0)
+    val warningCount: StateFlow<Int> = _warningCount.asStateFlow()
+
+    private val _activeWarning = MutableStateFlow<Int?>(null)
+    val activeWarning: StateFlow<Int?> = _activeWarning.asStateFlow()
+
+    var isInternalDialogActive: Boolean = false
+
     private var quizId = ""
     private var timerJob: Job? = null
 
@@ -75,14 +85,36 @@ class QuizTakingViewModel @Inject constructor(private val repo: QuizRepository) 
 
     fun getAnsweredCount() = selectedAnswers.count { it.value.isNotEmpty() }
 
-    fun submitQuiz() {
+    fun onAppExitOrFocusLost() {
+        if (isInternalDialogActive) return
+        if (_uiState.value !is QuizTakingUiState.InProgress) return
+        if (_activeWarning.value != null) return
+
+        val next = _warningCount.value + 1
+        _warningCount.value = next
+
+        when (next) {
+            1 -> _activeWarning.value = 1
+            2 -> _activeWarning.value = 2
+            else -> {
+                _activeWarning.value = 3
+                submitQuiz(isDisqualified = true)
+            }
+        }
+    }
+
+    fun dismissWarning() {
+        _activeWarning.value = null
+    }
+
+    fun submitQuiz(isDisqualified: Boolean = false) {
         timerJob?.cancel()
         viewModelScope.launch {
             _uiState.value = QuizTakingUiState.Submitting
             val answers = selectedAnswers.map { (qId, opt) -> QuizAnswer(qId, opt) }
             val clientId = UUID.randomUUID().toString()
-            repo.submitQuiz(quizId, answers, clientId)
-                .onSuccess { _uiState.value = QuizTakingUiState.Submitted }
+            repo.submitQuiz(quizId, answers, clientId, isDisqualified = isDisqualified)
+                .onSuccess { _uiState.value = QuizTakingUiState.Submitted(isDisqualified) }
                 .onFailure { _uiState.value = QuizTakingUiState.Error(it.message ?: "Failed to submit") }
         }
     }

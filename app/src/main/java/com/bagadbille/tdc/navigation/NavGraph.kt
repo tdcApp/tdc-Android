@@ -61,11 +61,30 @@ fun TdcNavGraph(navController: NavHostController = rememberNavController()) {
         }
         composable("quizTaking/{quizId}", arguments = listOf(navArgument("quizId") { type = NavType.StringType })) {
             val qId = it.arguments?.getString("quizId") ?: ""
-            QuizTakingScreen(quizId = qId, onNavigateBack = { navController.popBackStack() },
-                onQuizSubmitted = { navController.navigate("quizResult/$qId") { popUpTo("quizTaking/$qId") { inclusive = true } } })
+            QuizTakingScreen(
+                quizId = qId,
+                onNavigateBack = { navController.popBackStack() },
+                onQuizSubmitted = { isDisqualified ->
+                    navController.navigate("quizResult/$qId?disqualified=$isDisqualified") {
+                        popUpTo("quizTaking/$qId") { inclusive = true }
+                    }
+                }
+            )
         }
-        composable("quizResult/{quizId}", arguments = listOf(navArgument("quizId") { type = NavType.StringType })) {
-            QuizResultScreen(quizId = it.arguments?.getString("quizId") ?: "", onNavigateBack = { navController.popBackStack() })
+        composable(
+            "quizResult/{quizId}?disqualified={disqualified}",
+            arguments = listOf(
+                navArgument("quizId") { type = NavType.StringType },
+                navArgument("disqualified") { type = NavType.BoolType; defaultValue = false }
+            )
+        ) {
+            val qId = it.arguments?.getString("quizId") ?: ""
+            val isDisqualified = it.arguments?.getBoolean("disqualified") ?: false
+            QuizResultScreen(
+                quizId = qId,
+                isDisqualified = isDisqualified,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
         composable(Screen.Notifications.route) {
             NotificationsScreen(onNavigateBack = { navController.popBackStack() })
