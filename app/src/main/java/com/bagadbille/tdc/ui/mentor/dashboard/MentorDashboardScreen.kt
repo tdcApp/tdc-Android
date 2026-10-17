@@ -9,8 +9,11 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.bagadbille.tdc.ui.components.TdcHeader
 import com.bagadbille.tdc.ui.mentor.quiz.QuizTab
 import kotlinx.coroutines.launch
@@ -21,14 +24,29 @@ fun MentorDashboardScreen(
     onNotificationClick: () -> Unit = {},
     onCreateAssignment: () -> Unit = {},
     onCreateQuiz: () -> Unit = {},
-    onOpenQuizResults: (String) -> Unit = {}
+    onOpenQuizResults: (String) -> Unit = {},
+    hasUnreadNotifications: Boolean = false
 ) {
     val tabs = listOf("Overview", "Batches", "Quiz")
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
 
+    val overviewViewModel: OverviewViewModel = hiltViewModel()
+    val rosterViewModel: RosterViewModel = hiltViewModel()
+    val quizViewModel: com.bagadbille.tdc.ui.mentor.quiz.MentorQuizViewModel = hiltViewModel()
+
     Column(Modifier.fillMaxSize()) {
-        TdcHeader(onNotificationClick = onNotificationClick)
+        TdcHeader(
+            onNotificationClick = onNotificationClick,
+            hasUnreadNotifications = hasUnreadNotifications,
+            onRefreshClick = {
+                when (pagerState.currentPage) {
+                    0 -> overviewViewModel.load()
+                    1 -> rosterViewModel.load()
+                    2 -> quizViewModel.load(isPullToRefresh = true)
+                }
+            }
+        )
 
         TabRow(
             selectedTabIndex = pagerState.currentPage,
@@ -49,11 +67,13 @@ fun MentorDashboardScreen(
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
             when (page) {
                 0 -> OverviewTab(
+                    viewModel = overviewViewModel,
                     onCreateAssignment = onCreateAssignment,
                     onCreateQuiz = onCreateQuiz
                 )
-                1 -> RosterTab()
+                1 -> RosterTab(viewModel = rosterViewModel)
                 else -> QuizTab(
+                    viewModel = quizViewModel,
                     onCreateQuiz = onCreateQuiz,
                     onOpenQuizResults = onOpenQuizResults
                 )

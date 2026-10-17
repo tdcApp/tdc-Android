@@ -36,6 +36,7 @@ import kotlinx.coroutines.launch
 fun AssignmentsScreen(
     onNavigateToAssignmentDetail: (String) -> Unit,
     onNotificationClick: () -> Unit = {},
+    hasUnreadNotifications: Boolean = false,
     viewModel: AssignmentsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -45,46 +46,10 @@ fun AssignmentsScreen(
 
     Column(Modifier.fillMaxSize()) {
         // ─── Header: Matching HomeScreen (Logo | TDC | Notification Bell) ───
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.Filled.School,
-                contentDescription = "Logo",
-                modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                "TDC",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.width(8.dp))
-            IconButton(onClick = onNotificationClick) {
-                BadgedBox(
-                    badge = {
-                        Badge(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(8.dp)
-                        )
-                    }
-                ) {
-                    Icon(
-                        Icons.Outlined.Notifications,
-                        contentDescription = "Notifications",
-                        modifier = Modifier.size(28.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
+        com.bagadbille.tdc.ui.components.TdcHeader(
+            onNotificationClick = onNotificationClick,
+            hasUnreadNotifications = hasUnreadNotifications
+        )
 
         // ─── TabRow: Matching HomeScreen (surface background, primary active indicator) ───
         TabRow(
@@ -113,10 +78,14 @@ fun AssignmentsScreen(
             is AssignmentsUiState.Loading -> LoadingScreen("Loading assignments...")
             is AssignmentsUiState.Error -> ErrorScreen(s.message, onRetry = { viewModel.loadAssignments() })
             is AssignmentsUiState.Success -> {
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize()
-                ) { page ->
+                com.bagadbille.tdc.ui.components.TdcPullToRefresh(
+                    isRefreshing = false,
+                    onRefresh = { viewModel.loadAssignments() }
+                ) {
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.fillMaxSize()
+                    ) { page ->
                     val assignments = if (page == 0) s.ongoingAssignments else s.pastAssignments
                     val sectionTitle = if (page == 0) "Active Assignments" else "Past Assignments"
 
@@ -174,6 +143,7 @@ fun AssignmentsScreen(
             }
         }
     }
+}
 }
 
 // ─── Card Design: Perfectly matching ClassCard & QuizCard on HomeScreen ───

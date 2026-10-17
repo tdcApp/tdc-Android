@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.collectLatest
 fun ProfileScreen(
     onLogout: () -> Unit,
     onNotificationClick: () -> Unit = {},
+    hasUnreadNotifications: Boolean = false,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -55,40 +56,10 @@ fun ProfileScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            // Header matching HomeScreen and AssignmentsScreen (Logo | TDC | Notification Bell)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Filled.School,
-                    contentDescription = "Logo",
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = "TDC",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center
-                )
-                Spacer(Modifier.width(8.dp))
-                IconButton(onClick = onNotificationClick) {
-                    BadgedBox(badge = { Badge(containerColor = MaterialTheme.colorScheme.error, modifier = Modifier.size(8.dp)) }) {
-                        Icon(
-                            Icons.Outlined.Notifications,
-                            contentDescription = "Notifications",
-                            modifier = Modifier.size(28.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
+            com.bagadbille.tdc.ui.components.TdcHeader(
+                onNotificationClick = onNotificationClick,
+                hasUnreadNotifications = hasUnreadNotifications
+            )
         }
     ) { innerPadding ->
         Box(
@@ -103,13 +74,18 @@ fun ProfileScreen(
                     onRetry = { viewModel.loadProfile() }
                 )
                 is ProfileUiState.Success -> {
-                    ProfileContent(
-                        data = state.data,
-                        isDarkTheme = isDarkTheme,
-                        onEditClick = { showEditDialog = true },
-                        onToggleDarkTheme = { viewModel.toggleDarkTheme(it) },
-                        onLogoutClick = { showLogoutDialog = true }
-                    )
+                    com.bagadbille.tdc.ui.components.TdcPullToRefresh(
+                        isRefreshing = false,
+                        onRefresh = { viewModel.loadProfile() }
+                    ) {
+                        ProfileContent(
+                            data = state.data,
+                            isDarkTheme = isDarkTheme,
+                            onEditClick = { showEditDialog = true },
+                            onToggleDarkTheme = { viewModel.toggleDarkTheme(it) },
+                            onLogoutClick = { showLogoutDialog = true }
+                        )
+                    }
 
                     if (showEditDialog) {
                         EditProfileDialog(
@@ -220,7 +196,7 @@ private fun ProfileContent(
                 Spacer(Modifier.height(14.dp))
 
                 Text(
-                    text = profile.name ?: "Student",
+                    text = profile.name?.ifBlank { null } ?: profile.email.substringBefore("@").ifBlank { "User" },
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,

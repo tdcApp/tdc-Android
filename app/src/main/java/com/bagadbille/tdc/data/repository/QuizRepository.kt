@@ -1,17 +1,27 @@
 package com.bagadbille.tdc.data.repository
 
-import com.bagadbille.tdc.data.mock.MockUsers
+import com.bagadbille.tdc.data.local.DataStoreManager
 import com.bagadbille.tdc.data.model.*
-import kotlinx.coroutines.delay
-import java.time.Instant
+import com.bagadbille.tdc.data.remote.api.ClassApi
+import com.bagadbille.tdc.data.remote.api.QuizApi
+import com.bagadbille.tdc.data.remote.dto.CreateQuizQuestionRequest
+import com.bagadbille.tdc.data.remote.dto.CreateQuizRequest
+import com.bagadbille.tdc.data.remote.dto.QuizAnswerDto
+import com.bagadbille.tdc.data.remote.dto.QuizSubmitRequest
+import com.bagadbille.tdc.data.remote.dto.UserProfileDto
+import kotlinx.coroutines.flow.firstOrNull
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
 interface QuizRepository {
     suspend fun getQuizzes(): Result<List<Quiz>>
+    suspend fun getQuiz(quizId: String): Result<Quiz>
     suspend fun getQuizQuestions(quizId: String): Result<List<QuizQuestion>>
     suspend fun submitQuiz(quizId: String, answers: List<QuizAnswer>, clientSubmissionId: String, isDisqualified: Boolean = false): Result<QuizSubmission>
     suspend fun getQuizResult(quizId: String): Result<QuizResult>
+    suspend fun isQuizSubmitted(quizId: String): Boolean
+    suspend fun markQuizSubmittedLocally(quizId: String)
 
     // ─── Mentor ───
     suspend fun createQuiz(
@@ -26,113 +36,62 @@ interface QuizRepository {
 }
 
 @Singleton
-class QuizRepositoryImpl @Inject constructor() : QuizRepository {
+class QuizRepositoryImpl @Inject constructor(
+    private val quizApi: QuizApi,
+    private val classApi: ClassApi,
+    private val dataStoreManager: DataStoreManager
+) : QuizRepository {
 
-    private val quizzes = mutableListOf(
-        Quiz("quiz_special", "Special Selection Quiz", "all", "mentor_001", "cls_001", "2026-10-08T10:00:00Z"),
-        Quiz("quiz_001", "TDC Selection Round - C++", "all", "mentor_001", "cls_001", "2026-08-20T09:00:00Z"),
-        Quiz("quiz_002", "Python Basics Screening", "all", "mentor_002", "cls_002", "2026-08-18T10:00:00Z"),
-        Quiz("quiz_003", "Web Dev Aptitude Test", "all", "mentor_003", "cls_003", "2026-08-28T09:00:00Z"),
-        Quiz("quiz_004", "DSA Weekly Challenge #4", "technology", "mentor_002", "cls_002", "2026-08-15T10:00:00Z"),
-    )
+    private val studentCache = ConcurrentHashMap<String, UserProfileDto>()
 
-    private val questionsMap = mutableMapOf<String, MutableList<QuizQuestion>>(
-        "quiz_special" to mutableListOf(
-            QuizQuestion("q_sp_01", "What is the time complexity of searching an element in a balanced Binary Search Tree (AVL / Red-Black)?",
-                "O(1)", "O(log n)", "O(n)", "O(n log n)", "b", 1, "quiz_special"),
-            QuizQuestion("q_sp_02", "Which data structure is primarily used to implement Breadth-First Search (BFS) in a graph?",
-                "Stack", "Queue", "Priority Queue", "Array", "b", 2, "quiz_special"),
-            QuizQuestion("q_sp_03", "In C++, which keyword is used to prevent a class from being inherited?",
-                "static", "sealed", "final", "const", "c", 3, "quiz_special"),
-            QuizQuestion("q_sp_04", "Which protocol operates at the Transport Layer of the OSI model and provides connection-oriented reliable delivery?",
-                "UDP", "IP", "TCP", "HTTP", "c", 4, "quiz_special"),
-            QuizQuestion("q_sp_05", "In Python, which of the following built-in collection types is immutable?",
-                "list", "dict", "set", "tuple", "d", 5, "quiz_special"),
-            QuizQuestion("q_sp_06", "What is the worst-case time complexity of standard QuickSort?",
-                "O(n)", "O(n log n)", "O(n^2)", "O(log n)", "c", 6, "quiz_special"),
-            QuizQuestion("q_sp_07", "In relational database design, which Normal Form guarantees that no non-prime attribute is transitively dependent on the primary key?",
-                "1NF", "2NF", "3NF", "BCNF", "c", 7, "quiz_special"),
-            QuizQuestion("q_sp_08", "Which CPU scheduling algorithm can cause process starvation if aging is not implemented?",
-                "Round Robin", "Shortest Job First (SJF)", "First-Come, First-Served (FCFS)", "FIFO", "b", 8, "quiz_special"),
-            QuizQuestion("q_sp_09", "What is the result of the bitwise XOR operation (7 ^ 7)?",
-                "0", "7", "14", "1", "a", 9, "quiz_special"),
-            QuizQuestion("q_sp_10", "What OOP principle occurs when a child class provides a specialized implementation of a method declared in its parent class?",
-                "Overloading", "Overriding", "Encapsulation", "Abstraction", "b", 10, "quiz_special"),
-            QuizQuestion("q_sp_11", "Which algorithm is used to determine the single-source shortest path on a graph with non-negative edge weights?",
-                "Dijkstra's Algorithm", "Bellman-Ford Algorithm", "Floyd-Warshall", "Prim's Algorithm", "a", 11, "quiz_special"),
-            QuizQuestion("q_sp_12", "What is the primary function of creating a B-Tree index on a relational database column?",
-                "To encrypt table rows", "To speed up query search and retrieval", "To automatically backup database records", "To prevent foreign key constraints", "b", 12, "quiz_special"),
-            QuizQuestion("q_sp_13", "In Kotlin Coroutines, which builder function returns an instance of Deferred<T>?",
-                "launch", "async", "runBlocking", "withContext", "b", 13, "quiz_special"),
-            QuizQuestion("q_sp_14", "What does the 'I' in the ACID database transaction principles stand for?",
-                "Integrity", "Isolation", "Index", "Immutable", "b", 14, "quiz_special"),
-            QuizQuestion("q_sp_15", "Which creational design pattern ensures a class has only one instance and provides global access to it?",
-                "Factory Pattern", "Observer Pattern", "Singleton Pattern", "Decorator Pattern", "c", 15, "quiz_special"),
-            QuizQuestion("q_sp_16", "What is the minimum number of standard queues required to implement a FIFO stack?",
-                "1", "2", "3", "Cannot be implemented", "b", 16, "quiz_special"),
-            QuizQuestion("q_sp_17", "Which Git command simultaneously creates a new branch and checks it out?",
-                "git checkout -b <name>", "git branch -new <name>", "git merge -b <name>", "git commit -b <name>", "a", 17, "quiz_special"),
-            QuizQuestion("q_sp_18", "What phenomenon occurs in an OS when the system spends more time swapping pages than executing instructions?",
-                "Deadlock", "Thrashing", "Paging Fault", "Segmentation Fault", "b", 18, "quiz_special"),
-            QuizQuestion("q_sp_19", "Which HTTP status code corresponds to 'Unauthorized' client error?",
-                "400", "401", "403", "404", "b", 19, "quiz_special"),
-            QuizQuestion("q_sp_20", "What is the auxiliary space complexity of recursive Depth-First Search (DFS) on a tree of height h?",
-                "O(1)", "O(h)", "O(2^h)", "O(n^2)", "b", 20, "quiz_special")
-        ),
-        "quiz_001" to mutableListOf(
-            QuizQuestion("q_001", "What is the output of: cout << (5 / 2);",
-                "2", "2.5", "2.0", "Compilation Error", "a", 1, "quiz_001"),
-            QuizQuestion("q_002", "Which of the following is NOT a valid C++ data type?",
-                "int", "float", "real", "double", "c", 2, "quiz_001"),
-            QuizQuestion("q_003", "What does STL stand for in C++?",
-                "Standard Type Library", "Standard Template Library", "Static Template Library", "System Type Library", "b", 3, "quiz_001"),
-        ),
-        "quiz_002" to mutableListOf(
-            QuizQuestion("q_004", "What is the output of: print(type([]))?",
-                "<class 'tuple'>", "<class 'list'>", "<class 'dict'>", "<class 'set'>", "b", 1, "quiz_002"),
-            QuizQuestion("q_005", "Which keyword is used to define a function in Python?",
-                "func", "define", "def", "function", "c", 2, "quiz_002"),
-        ),
-        "quiz_003" to mutableListOf(
-            QuizQuestion("q_006", "What is the correct HTML element for inserting a line break?",
-                "<break>", "<br>", "<lb>", "<newline>", "b", 1, "quiz_003"),
-            QuizQuestion("q_007", "Which CSS property controls the text size?",
-                "font-style", "text-size", "font-size", "text-style", "c", 2, "quiz_003"),
-        ),
-        "quiz_004" to mutableListOf(
-            QuizQuestion("q_008", "What is the time complexity of binary search?",
-                "O(1)", "O(n)", "O(log n)", "O(n^2)", "c", 1, "quiz_004"),
-        )
-    )
-
-    private val submissions = mutableListOf(
-        QuizSubmission("quiz_special", "user_004", 19, 20, "sub_sp_01", "2026-10-08T10:15:00Z"),
-        QuizSubmission("quiz_special", "user_003", 18, 20, "sub_sp_02", "2026-10-08T10:18:30Z"),
-        QuizSubmission("quiz_special", "user_006", 17, 20, "sub_sp_03", "2026-10-08T10:22:15Z"),
-        QuizSubmission("quiz_special", "user_008", 16, 20, "sub_sp_04", "2026-10-08T10:25:00Z"),
-        QuizSubmission("quiz_special", "user_009", 15, 20, "sub_sp_05", "2026-10-08T10:28:45Z"),
-        QuizSubmission("quiz_special", "user_007", 13, 20, "sub_sp_06", "2026-10-08T10:35:10Z"),
-        QuizSubmission("quiz_special", "user_005", -1, 20, "sub_sp_07", "2026-10-08T10:12:00Z"), // Disqualified (3 strikes)
-        QuizSubmission("quiz_001", "user_001", 3, 3, "sub_q_01", "2026-08-20T10:30:00Z"),
-        QuizSubmission("quiz_001", "user_003", 2, 3, "sub_q_02", "2026-08-20T11:15:00Z"),
-        QuizSubmission("quiz_001", "user_004", 3, 3, "sub_q_03", "2026-08-20T12:00:00Z"),
-        QuizSubmission("quiz_001", "user_005", -1, 3, "sub_q_04", "2026-08-20T14:20:00Z"), // Disqualified sample
-        QuizSubmission("quiz_001", "user_006", 2, 3, "sub_q_05", "2026-08-20T15:45:00Z"),
-        QuizSubmission("quiz_002", "user_001", 2, 2, "sub_q_06", "2026-08-18T10:45:00Z"),
-        QuizSubmission("quiz_002", "user_005", 2, 2, "sub_q_07", "2026-08-18T11:30:00Z"),
-        QuizSubmission("quiz_002", "user_006", 1, 2, "sub_q_08", "2026-08-18T13:00:00Z"),
-    )
-
-    override suspend fun getQuizzes(): Result<List<Quiz>> {
-        delay(300)
-        // TODO: Replace with GET /quizzes from NestJS backend
-        return Result.success(quizzes.sortedByDescending { it.createdAt ?: "" }.toList())
+    override suspend fun getQuizzes(): Result<List<Quiz>> = runCatching {
+        val localSubmitted = dataStoreManager.submittedQuizIds.firstOrNull() ?: emptySet()
+        val dtos = quizApi.getQuizzes()
+        dtos.map { dto ->
+            val quiz = dto.toDomain()
+            if (quiz.isSubmitted) {
+                dataStoreManager.markQuizSubmitted(quiz.id)
+                quiz
+            } else if (quiz.id in localSubmitted) {
+                quiz.copy(isSubmitted = true)
+            } else {
+                quiz
+            }
+        }
     }
 
-    override suspend fun getQuizQuestions(quizId: String): Result<List<QuizQuestion>> {
-        delay(300)
-        // TODO: Replace with GET /quizzes/{id}/questions from NestJS backend
-        return Result.success(questionsMap[quizId]?.toList() ?: emptyList())
+    override suspend fun getQuiz(quizId: String): Result<Quiz> = runCatching {
+        val localSubmitted = dataStoreManager.submittedQuizIds.firstOrNull() ?: emptySet()
+        val detail = quizApi.getQuizDetail(quizId)
+        val quiz = detail.toDomain()
+        if (quiz.isSubmitted || quiz.id in localSubmitted) {
+            dataStoreManager.markQuizSubmitted(quiz.id)
+            quiz.copy(isSubmitted = true)
+        } else {
+            quiz
+        }
+    }
+
+    override suspend fun isQuizSubmitted(quizId: String): Boolean {
+        val localSubmitted = dataStoreManager.submittedQuizIds.firstOrNull() ?: emptySet()
+        if (quizId in localSubmitted) return true
+
+        return try {
+            val sub = quizApi.getMySubmission(quizId)
+            dataStoreManager.markQuizSubmitted(quizId)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    override suspend fun markQuizSubmittedLocally(quizId: String) {
+        dataStoreManager.markQuizSubmitted(quizId)
+    }
+
+    override suspend fun getQuizQuestions(quizId: String): Result<List<QuizQuestion>> = runCatching {
+        val detail = quizApi.getQuizDetail(quizId)
+        detail.questions.map { it.toDomain(fallbackQuizId = quizId) }
     }
 
     override suspend fun submitQuiz(
@@ -140,39 +99,31 @@ class QuizRepositoryImpl @Inject constructor() : QuizRepository {
         answers: List<QuizAnswer>,
         clientSubmissionId: String,
         isDisqualified: Boolean
-    ): Result<QuizSubmission> {
-        delay(600)
-        // TODO: Replace with POST /quizzes/{id}/submit to NestJS backend
-        val questions = questionsMap[quizId] ?: emptyList()
-        val score = if (isDisqualified) {
-            -1 // Sentinel score: Disqualified due to 3 exit warnings
-        } else {
-            answers.count { answer ->
-                val q = questions.firstOrNull { it.id == answer.questionId }
-                q != null && q.correctOption.equals(answer.selectedOption, ignoreCase = true)
-            }
+    ): Result<QuizSubmission> = runCatching {
+        val mappedAnswers = answers.map {
+            QuizAnswerDto(
+                questionId = it.questionId,
+                selectedOption = it.selectedOption.trim().uppercase()
+            )
         }
-        val sub = QuizSubmission(
-            quizId = quizId,
-            studentUid = "user_001",
-            score = score,
-            totalQuestions = questions.size,
+        val request = QuizSubmitRequest(
             clientSubmissionId = clientSubmissionId,
-            submittedAt = Instant.now().toString()
+            answers = mappedAnswers
         )
-        submissions.add(sub)
-        return Result.success(sub)
+        val submission = quizApi.submitQuiz(quizId, request).toDomain()
+        dataStoreManager.markQuizSubmitted(quizId)
+        submission
     }
 
-    override suspend fun getQuizResult(quizId: String): Result<QuizResult> {
-        delay(300)
-        // TODO: Replace with GET /quizzes/{id}/result from NestJS backend
-        val lastSub = submissions.lastOrNull { it.quizId == quizId && it.studentUid == "user_001" }
-        return if (lastSub != null) {
-            Result.success(QuizResult(quizId, lastSub.score, lastSub.totalQuestions, lastSub.submittedAt))
-        } else {
-            Result.success(QuizResult(quizId, 0, questionsMap[quizId]?.size ?: 0, null))
-        }
+    override suspend fun getQuizResult(quizId: String): Result<QuizResult> = runCatching {
+        val sub = quizApi.getMySubmission(quizId)
+        dataStoreManager.markQuizSubmitted(quizId)
+        QuizResult(
+            quizId = sub.quizId ?: quizId,
+            score = sub.score,
+            totalQuestions = sub.totalQuestions,
+            submittedAt = sub.submittedAt
+        )
     }
 
     override suspend fun createQuiz(
@@ -181,78 +132,111 @@ class QuizRepositoryImpl @Inject constructor() : QuizRepository {
         classId: String?,
         questions: List<QuizQuestionDraft>
     ): Result<Quiz> = runCatching {
-        delay(500)
-        // TODO: Replace with POST /quizzes and POST /quizzes/{id}/questions to NestJS backend
-        val quizId = "quiz_${System.currentTimeMillis()}"
-        val now = Instant.now().toString()
-        val newQuiz = Quiz(
-            id = quizId,
-            title = title,
-            audience = audience,
-            createdBy = "mentor_001",
-            classId = classId,
-            createdAt = now,
-            updatedAt = now
-        )
-        quizzes.add(0, newQuiz)
+        val finalAudience = if (!classId.isNullOrBlank()) "CLASS" else audience.trim().uppercase()
+        val finalClassId = if (finalAudience == "CLASS") classId?.trim() else null
 
-        val createdQuestions = questions.mapIndexed { index, draft ->
-            QuizQuestion(
-                id = "q_${quizId}_${index + 1}",
-                question = draft.question,
-                optionA = draft.optionA,
-                optionB = draft.optionB,
-                optionC = draft.optionC,
-                optionD = draft.optionD,
-                correctOption = draft.correctOption.lowercase(),
-                questionOrder = index + 1,
-                quizId = quizId
-            )
-        }
-        questionsMap[quizId] = createdQuestions.toMutableList()
-        newQuiz
+        val request = CreateQuizRequest(
+            title = title.trim(),
+            audience = finalAudience,
+            classId = finalClassId,
+            questions = questions.map {
+                CreateQuizQuestionRequest(
+                    question = it.question.trim(),
+                    optionA = it.optionA.trim(),
+                    optionB = it.optionB.trim(),
+                    optionC = it.optionC.trim(),
+                    optionD = it.optionD.trim(),
+                    correctOption = it.correctOption.trim().uppercase()
+                )
+            }
+        )
+        quizApi.createQuiz(request).toDomain()
     }
 
     override suspend fun deleteQuiz(quizId: String): Result<Unit> = runCatching {
-        delay(400)
-        // TODO: Replace with DELETE /quizzes/{id} to NestJS backend
-        if (!quizzes.removeAll { it.id == quizId }) {
-            throw IllegalArgumentException("Quiz not found")
-        }
-        questionsMap.remove(quizId)
-        submissions.removeAll { it.quizId == quizId }
+        quizApi.deleteQuiz(quizId)
     }
 
     override suspend fun getQuizStats(quizId: String): Result<QuizStats> = runCatching {
-        delay(200)
-        val quizSubs = submissions.filter { it.quizId == quizId }
-        val totalQuestions = questionsMap[quizId]?.size ?: 0
-        if (quizSubs.isEmpty()) {
-            QuizStats(quizId, 0, 0.0, 0, totalQuestions)
-        } else {
-            val validSubs = quizSubs.filter { it.score >= 0 }
-            val totalScore = validSubs.sumOf { it.score }
-            val avg = if (validSubs.isNotEmpty()) totalScore.toDouble() / validSubs.size else 0.0
-            val max = validSubs.maxOfOrNull { it.score } ?: 0
-            QuizStats(quizId, quizSubs.size, avg, max, totalQuestions)
+        val submissions = try {
+            quizApi.getAllSubmissions(quizId)
+        } catch (_: Exception) {
+            emptyList()
         }
+        val totalAttempts = submissions.size
+        val avgScore = if (totalAttempts > 0) submissions.map { it.score }.average() else 0.0
+        val highestScore = submissions.maxOfOrNull { it.score } ?: 0
+        val totalQuestions = submissions.firstOrNull()?.totalQuestions ?: 0
+
+        QuizStats(
+            quizId = quizId,
+            totalAttempts = totalAttempts,
+            averageScore = avgScore,
+            highestScore = highestScore,
+            totalQuestions = totalQuestions
+        )
     }
 
     override suspend fun getQuizSubmissionsWithDetails(quizId: String): Result<List<QuizSubmissionDetail>> = runCatching {
-        delay(300)
-        val quizSubs = submissions.filter { it.quizId == quizId }
-            .sortedWith(
-                compareByDescending<QuizSubmission> { it.score >= 0 }
-                    .thenByDescending { it.score }
-                    .thenBy { it.submittedAt }
-            )
-        quizSubs.map { sub ->
-            val user = MockUsers.findById(sub.studentUid)
+        val currentUid = dataStoreManager.firebaseUid.firstOrNull()
+        val currentName = dataStoreManager.userName.firstOrNull()
+        val currentEmail = dataStoreManager.userEmail.firstOrNull()
+
+        val submissions = try {
+            quizApi.getAllSubmissions(quizId)
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+        val missingUids = submissions
+            .filter { (it.studentName.isNullOrBlank() || it.studentName == "Student") && (it.studentUid != currentUid) && !studentCache.containsKey(it.studentUid) }
+            .map { it.studentUid }
+            .toSet()
+
+        if (missingUids.isNotEmpty()) {
+            try {
+                val classes = classApi.getClasses()
+                for (cls in classes) {
+                    try {
+                        val students = classApi.getStudentsByClass(cls.id)
+                        for (st in students) {
+                            val uid = st.effectiveUid
+                            if (uid.isNotBlank()) {
+                                studentCache[uid] = st
+                            }
+                        }
+                    } catch (_: Exception) {}
+                }
+            } catch (_: Exception) {}
+        }
+
+        submissions.map { subDto ->
+            val sub = subDto.toDomain()
+            val cachedStudent = studentCache[sub.studentUid]
+
+            val studentName = subDto.studentName?.ifBlank { null }?.takeIf { it != "Student" }
+                ?: subDto.studentNameSnake?.ifBlank { null }?.takeIf { it != "Student" }
+                ?: cachedStudent?.name?.ifBlank { null }
+                ?: (if (sub.studentUid == currentUid && !currentName.isNullOrBlank()) currentName else null)
+                ?: cachedStudent?.email?.substringBefore("@")?.takeIf { it.isNotBlank() }
+                ?: subDto.studentEmail?.substringBefore("@")?.takeIf { it.isNotBlank() }
+                ?: (if (sub.studentUid == currentUid && !currentEmail.isNullOrBlank()) currentEmail.substringBefore("@") else null)
+                ?: "Candidate (${sub.studentUid.take(6)})"
+
+            val studentEmail = subDto.studentEmail?.ifBlank { null }
+                ?: subDto.studentEmailSnake?.ifBlank { null }
+                ?: cachedStudent?.email?.ifBlank { null }
+                ?: (if (sub.studentUid == currentUid) currentEmail else null)
+                ?: ""
+
+            val studentEnrollment = subDto.studentEnrollment
+                ?: subDto.studentEnrollmentSnake
+
             QuizSubmissionDetail(
                 submission = sub,
-                studentName = user?.name ?: user?.email ?: "Student (${sub.studentUid})",
-                studentEmail = user?.email ?: "student@gmail.com",
-                studentEnrollment = user?.enrollmentNumber
+                studentName = studentName,
+                studentEmail = studentEmail,
+                studentEnrollment = studentEnrollment
             )
         }
     }

@@ -130,8 +130,12 @@ fun SetupScreen(
             // Mobile Number
             TdcTextField(
                 value = mobileNumber,
-                onValueChange = { mobileNumber = it },
-                label = "Mobile Number",
+                onValueChange = { input ->
+                    if (input.length <= 10 && input.all { it.isDigit() }) {
+                        mobileNumber = input
+                    }
+                },
+                label = "Mobile Number (10 digits)",
                 leadingIcon = Icons.Outlined.Phone,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { fm.moveFocus(FocusDirection.Down) })

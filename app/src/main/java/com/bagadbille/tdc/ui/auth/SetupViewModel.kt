@@ -54,8 +54,23 @@ class SetupViewModel @Inject constructor(
         year: String? = null,
         mobileNumber: String? = null
     ) {
-        if (name.isBlank()) {
-            _uiState.value = SetupUiState.Error("Full name is required")
+        val cleanName = name.trim()
+        val cleanMobile = mobileNumber?.trim().orEmpty()
+
+        if (cleanName.length < 2) {
+            _uiState.value = SetupUiState.Error("Full name must be at least 2 characters")
+            return
+        }
+        if (!cleanMobile.matches(Regex("^\\d{10}$"))) {
+            _uiState.value = SetupUiState.Error("Mobile number must be exactly 10 digits")
+            return
+        }
+        if (languageClassId.isNullOrBlank()) {
+            _uiState.value = SetupUiState.Error("Please select a language class")
+            return
+        }
+        if (technologyClassId.isNullOrBlank()) {
+            _uiState.value = SetupUiState.Error("Please select a technology class")
             return
         }
 
@@ -70,7 +85,15 @@ class SetupViewModel @Inject constructor(
                 mobileNumber = mobileNumber?.trim()?.ifBlank { null }
             )
                 .onSuccess { _uiState.value = SetupUiState.Success(it) }
-                .onFailure { _uiState.value = SetupUiState.Error(it.message ?: "Setup failed") }
+                .onFailure { error ->
+                    if (error.message?.contains("already exists", ignoreCase = true) == true) {
+                        profileRepository.getProfile()
+                            .onSuccess { _uiState.value = SetupUiState.Success(it) }
+                            .onFailure { _uiState.value = SetupUiState.Error(error.message ?: "Profile already exists") }
+                    } else {
+                        _uiState.value = SetupUiState.Error(error.message ?: "Setup failed")
+                    }
+                }
         }
     }
 

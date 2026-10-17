@@ -32,8 +32,8 @@ fun TdcNavGraph(navController: NavHostController = rememberNavController()) {
         }
         composable(Screen.Login.route) {
             LoginScreen(
-                onNavigateToMain = { isProfileComplete ->
-                    if (isProfileComplete) {
+                onNavigateToMain = { isProfileComplete, userRole ->
+                    if (com.bagadbille.tdc.data.model.isMentorRole(userRole) || isProfileComplete) {
                         navController.navigate(Screen.Main.route) { popUpTo(Screen.Login.route) { inclusive = true } }
                     } else {
                         navController.navigate(Screen.Setup.route) { popUpTo(Screen.Login.route) { inclusive = true } }

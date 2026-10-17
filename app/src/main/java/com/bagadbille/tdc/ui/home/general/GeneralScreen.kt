@@ -55,12 +55,17 @@ fun GeneralScreen(
     when (val s = uiState) {
         is GeneralUiState.Loading -> LoadingScreen()
         is GeneralUiState.Error -> ErrorScreen(s.message, onRetry = { viewModel.loadDashboard() })
-        is GeneralUiState.Success -> DashboardContent(
-            data = s.data,
-            onQuizClick = onQuizClick,
-            onNavigateToClasses = onNavigateToClasses,
-            onNavigateToQuizzes = onNavigateToQuizzes
-        )
+        is GeneralUiState.Success -> com.bagadbille.tdc.ui.components.TdcPullToRefresh(
+            isRefreshing = false,
+            onRefresh = { viewModel.loadDashboard() }
+        ) {
+            DashboardContent(
+                data = s.data,
+                onQuizClick = onQuizClick,
+                onNavigateToClasses = onNavigateToClasses,
+                onNavigateToQuizzes = onNavigateToQuizzes
+            )
+        }
     }
 }
 

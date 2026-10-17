@@ -33,7 +33,7 @@ import com.bagadbille.tdc.ui.components.TdcTextField
 
 @Composable
 fun LoginScreen(
-    onNavigateToMain: (Boolean) -> Unit,
+    onNavigateToMain: (isProfileComplete: Boolean, role: String) -> Unit,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -45,7 +45,8 @@ fun LoginScreen(
 
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Success) {
-            onNavigateToMain((uiState as AuthUiState.Success).user.isProfileComplete)
+            val user = (uiState as AuthUiState.Success).user
+            onNavigateToMain(user.isProfileComplete, user.role)
         }
     }
 

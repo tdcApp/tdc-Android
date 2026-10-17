@@ -35,15 +35,16 @@ fun SplashScreen(
 ) {
     val authState by viewModel.isLoggedIn.collectAsState(initial = null)
     val profileComplete by viewModel.isProfileComplete.collectAsState(initial = null)
+    val userRole by viewModel.userRole.collectAsState(initial = null)
     val alpha = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) { alpha.animateTo(1f, animationSpec = tween(1000)); delay(1000) }
-    LaunchedEffect(authState, profileComplete) {
-        if (authState != null && profileComplete != null) {
+    LaunchedEffect(authState, profileComplete, userRole) {
+        if (authState != null && (profileComplete != null || userRole != null)) {
             delay(500)
             when {
                 authState == false -> onNavigateToLogin()
-                profileComplete == true -> onNavigateToMain()
+                com.bagadbille.tdc.data.model.isMentorRole(userRole) || profileComplete == true -> onNavigateToMain()
                 else -> onNavigateToSetup()
             }
         }

@@ -25,7 +25,7 @@ data class MentorQuizItem(
 
 sealed class MentorQuizUiState {
     data object Loading : MentorQuizUiState()
-    data class Success(val quizzes: List<MentorQuizItem>) : MentorQuizUiState()
+    data class Success(val quizzes: List<MentorQuizItem>, val isRefreshing: Boolean = false) : MentorQuizUiState()
     data class Error(val message: String) : MentorQuizUiState()
 }
 
@@ -49,9 +49,12 @@ class MentorQuizViewModel @Inject constructor(
         load()
     }
 
-    fun load() {
+    fun load(isPullToRefresh: Boolean = false) {
         viewModelScope.launch {
-            if (_uiState.value !is MentorQuizUiState.Success) {
+            val current = _uiState.value
+            if (isPullToRefresh && current is MentorQuizUiState.Success) {
+                _uiState.value = MentorQuizUiState.Success(current.quizzes, isRefreshing = true)
+            } else if (!isPullToRefresh && current !is MentorQuizUiState.Success) {
                 _uiState.value = MentorQuizUiState.Loading
             }
             try {
@@ -68,9 +71,13 @@ class MentorQuizViewModel @Inject constructor(
                         stats = stats
                     )
                 }
-                _uiState.value = MentorQuizUiState.Success(items)
+                _uiState.value = MentorQuizUiState.Success(items, isRefreshing = false)
             } catch (e: Exception) {
-                _uiState.value = MentorQuizUiState.Error(e.message ?: "Failed to load quizzes")
+                if (isPullToRefresh && current is MentorQuizUiState.Success) {
+                    _uiState.value = MentorQuizUiState.Success(current.quizzes, isRefreshing = false)
+                } else {
+                    _uiState.value = MentorQuizUiState.Error(e.message ?: "Failed to load quizzes")
+                }
             }
         }
     }

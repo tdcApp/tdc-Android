@@ -3,6 +3,7 @@ package com.bagadbille.tdc.ui.mentor.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bagadbille.tdc.data.model.Announcement
+import com.bagadbille.tdc.data.model.ClassInfo
 import com.bagadbille.tdc.data.model.Schedule
 import com.bagadbille.tdc.data.repository.AnnouncementRepository
 import com.bagadbille.tdc.data.repository.AssignmentRepository
@@ -26,6 +27,7 @@ data class OverviewUiData(
     val announcements: List<Announcement> = emptyList(),
     val pendingSubmissions: Int = 0,
     val classNames: Map<String, String> = emptyMap(),
+    val classList: List<ClassInfo> = emptyList(),
     val isPostingAnnouncement: Boolean = false
 )
 
@@ -63,7 +65,8 @@ class OverviewViewModel @Inject constructor(
             try {
                 val schedules = scheduleRepo.getSchedules().getOrDefault(emptyList())
                 val announcements = announcementRepo.getAnnouncements().getOrDefault(emptyList())
-                val classNames = classRepo.getClasses().getOrDefault(emptyList()).associate { it.id to it.name }
+                val classes = classRepo.getClasses().getOrDefault(emptyList())
+                val classNames = classes.associate { it.id to it.name }
                 val allSubmissions = assignmentRepo.getAllSubmissions().getOrDefault(emptyList())
                 val mentorAssignments = assignmentRepo.getMentorAssignments().getOrDefault(emptyList())
                 val submittedIds = allSubmissions.map { it.assignmentId }.toSet()
@@ -79,7 +82,8 @@ class OverviewViewModel @Inject constructor(
                         weekSchedules = schedules.sortedWith(compareBy({ it.dayOfWeek }, { it.startTime })),
                         announcements = announcements.take(5),
                         pendingSubmissions = pendingCount,
-                        classNames = classNames
+                        classNames = classNames,
+                        classList = classes
                     )
                 )
             } catch (e: Exception) {
@@ -88,19 +92,39 @@ class OverviewViewModel @Inject constructor(
         }
     }
 
-    fun postAnnouncement(title: String, content: String, audience: String, classId: String?) {
+    fun postAnnouncement(
+        title: String,
+        content: String,
+        audience: String,
+        selectedClassIds: Set<String>
+    ) {
         val current = _uiState.value as? OverviewUiState.Success ?: return
         viewModelScope.launch {
             _uiState.value = OverviewUiState.Success(current.data.copy(isPostingAnnouncement = true))
-            announcementRepo.createAnnouncement(title, content, audience, classId)
-                .onSuccess {
-                    _events.emit(OverviewEvent.ShowMessage("Announcement posted!"))
-                    load()
+
+            if (audience == "all" || selectedClassIds.isEmpty()) {
+                announcementRepo.createAnnouncement(title, content, "ALL", null)
+                    .onSuccess {
+                        _events.emit(OverviewEvent.ShowMessage("Announcement posted to all members!"))
+                        load()
+                    }
+                    .onFailure {
+                        _uiState.value = OverviewUiState.Success(current.data.copy(isPostingAnnouncement = false))
+                        _events.emit(OverviewEvent.ShowMessage(it.message ?: "Failed to post announcement"))
+                    }
+            } else {
+                var successCount = 0
+                for (cid in selectedClassIds) {
+                    val result = announcementRepo.createAnnouncement(title, content, "CLASS", cid)
+                    if (result.isSuccess) successCount++
                 }
-                .onFailure {
-                    _uiState.value = OverviewUiState.Success(current.data.copy(isPostingAnnouncement = false))
-                    _events.emit(OverviewEvent.ShowMessage(it.message ?: "Failed to post announcement"))
+                if (successCount > 0) {
+                    _events.emit(OverviewEvent.ShowMessage("Announcement posted to $successCount track(s)!"))
+                } else {
+                    _events.emit(OverviewEvent.ShowMessage("Failed to post announcement"))
                 }
+                load()
+            }
         }
     }
 

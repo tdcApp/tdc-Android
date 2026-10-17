@@ -80,6 +80,9 @@ fun QuizResultsScreen(
                             Icon(Icons.Outlined.ContentCopy, contentDescription = "Copy Shortlist", tint = MaterialTheme.colorScheme.primary)
                         }
                     }
+                    IconButton(onClick = { viewModel.load() }) {
+                        Icon(Icons.Outlined.Refresh, contentDescription = "Refresh Results", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
@@ -103,13 +106,17 @@ fun QuizResultsScreen(
                     ResultFilter.DISQUALIFIED -> disqualifiedSubmissions
                 }
 
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                com.bagadbille.tdc.ui.components.TdcPullToRefresh(
+                    isRefreshing = data.isRefreshing,
+                    onRefresh = { viewModel.load(isPullToRefresh = true) }
                 ) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
                     // Quiz Info Card
                     item {
                         Card(
@@ -339,6 +346,7 @@ fun QuizResultsScreen(
             }
         }
     }
+    }
 }
 
 @Composable
@@ -478,17 +486,23 @@ private fun StudentSubmissionCard(
                     }
                 }
                 Spacer(Modifier.height(2.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    detail.studentEnrollment?.let {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    detail.studentEnrollment?.takeIf { it.isNotBlank() }?.let {
                         Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("•", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
                     }
-                    Text(
-                        "· ${detail.studentEmail}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    if (detail.studentEmail.isNotBlank()) {
+                        Text(
+                            detail.studentEmail,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
 

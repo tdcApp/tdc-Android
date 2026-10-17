@@ -44,51 +44,56 @@ fun QuizTab(
             is MentorQuizUiState.Loading -> LoadingScreen("Loading quizzes...")
             is MentorQuizUiState.Error -> ErrorScreen(s.message, onRetry = { viewModel.load() })
             is MentorQuizUiState.Success -> {
-                if (s.quizzes.isEmpty()) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(32.dp)
-                        ) {
-                            Icon(
-                                Icons.Outlined.Quiz,
-                                contentDescription = null,
-                                modifier = Modifier.size(72.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                            )
-                            Spacer(Modifier.height(12.dp))
-                            Text(
-                                "No Quizzes Created",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                "Create quizzes to test students on language or technology topics.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(Modifier.height(16.dp))
-                            Button(onClick = onCreateQuiz) {
-                                Icon(Icons.Outlined.Add, null, Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Create First Quiz")
+                com.bagadbille.tdc.ui.components.TdcPullToRefresh(
+                    isRefreshing = s.isRefreshing,
+                    onRefresh = { viewModel.load(isPullToRefresh = true) }
+                ) {
+                    if (s.quizzes.isEmpty()) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Quiz,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(72.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                )
+                                Spacer(Modifier.height(12.dp))
+                                Text(
+                                    "No Quizzes Created",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    "Create quizzes to test students on language or technology topics.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(Modifier.height(16.dp))
+                                Button(onClick = onCreateQuiz) {
+                                    Icon(Icons.Outlined.Add, null, Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Create First Quiz")
+                                }
                             }
                         }
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 80.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(s.quizzes, key = { it.quiz.id }) { item ->
-                            MentorQuizCard(
-                                item = item,
-                                onClick = { onOpenQuizResults(item.quiz.id) },
-                                onDelete = { deleteTargetQuizId = item.quiz.id }
-                            )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 80.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(s.quizzes, key = { it.quiz.id }) { item ->
+                                MentorQuizCard(
+                                    item = item,
+                                    onClick = { onOpenQuizResults(item.quiz.id) },
+                                    onDelete = { deleteTargetQuizId = item.quiz.id }
+                                )
+                            }
                         }
                     }
                 }

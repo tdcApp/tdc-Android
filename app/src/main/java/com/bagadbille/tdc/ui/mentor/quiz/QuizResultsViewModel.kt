@@ -17,7 +17,8 @@ import javax.inject.Inject
 data class QuizResultsUiData(
     val quiz: Quiz,
     val stats: QuizStats,
-    val submissions: List<QuizSubmissionDetail>
+    val submissions: List<QuizSubmissionDetail>,
+    val isRefreshing: Boolean = false
 )
 
 sealed class QuizResultsUiState {
@@ -41,13 +42,20 @@ class QuizResultsViewModel @Inject constructor(
         load()
     }
 
-    fun load() {
+    fun load(isPullToRefresh: Boolean = false) {
         viewModelScope.launch {
-            _uiState.value = QuizResultsUiState.Loading
+            val current = _uiState.value
+            if (isPullToRefresh && current is QuizResultsUiState.Success) {
+                _uiState.value = QuizResultsUiState.Success(current.data.copy(isRefreshing = true))
+            } else if (!isPullToRefresh) {
+                _uiState.value = QuizResultsUiState.Loading
+            }
+
             try {
-                val quizzes = quizRepository.getQuizzes().getOrDefault(emptyList())
-                val quiz = quizzes.firstOrNull { it.id == quizId }
-                    ?: throw IllegalArgumentException("Quiz not found")
+                val quiz = quizRepository.getQuiz(quizId).getOrNull()
+                    ?: quizRepository.getQuizzes().getOrDefault(emptyList()).firstOrNull { it.id == quizId }
+                    ?: Quiz(id = quizId, title = "Quiz Results", audience = "all")
+
                 val stats = quizRepository.getQuizStats(quizId).getOrDefault(
                     QuizStats(quizId, 0, 0.0, 0, 0)
                 )
@@ -57,11 +65,16 @@ class QuizResultsViewModel @Inject constructor(
                     QuizResultsUiData(
                         quiz = quiz,
                         stats = stats,
-                        submissions = submissions
+                        submissions = submissions,
+                        isRefreshing = false
                     )
                 )
             } catch (e: Exception) {
-                _uiState.value = QuizResultsUiState.Error(e.message ?: "Failed to load quiz results")
+                if (isPullToRefresh && current is QuizResultsUiState.Success) {
+                    _uiState.value = QuizResultsUiState.Success(current.data.copy(isRefreshing = false))
+                } else {
+                    _uiState.value = QuizResultsUiState.Error(e.message ?: "Failed to load quiz results")
+                }
             }
         }
     }

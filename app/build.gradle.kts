@@ -21,7 +21,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "BASE_URL", "\"https://api.tdc.example.com/\"")
+        buildConfigField("String", "BASE_URL", "\"https://tdc-backend-api-1.onrender.com/\"")
+        buildConfigField("String", "FIREBASE_API_KEY", "\"AIzaSyCb0Qn_8376chw9rfGiyij4EoJPam83Zvo\"")
     }
 
     buildTypes {

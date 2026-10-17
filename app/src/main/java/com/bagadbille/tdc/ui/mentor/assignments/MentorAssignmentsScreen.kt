@@ -35,6 +35,7 @@ fun MentorAssignmentsScreen(
     onCreateAssignment: () -> Unit,
     onOpenAssignment: (String) -> Unit,
     onNotificationClick: () -> Unit = {},
+    hasUnreadNotifications: Boolean = false,
     viewModel: MentorAssignmentsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -46,7 +47,10 @@ fun MentorAssignmentsScreen(
     LaunchedEffect(Unit) { viewModel.load() }
 
     Column(Modifier.fillMaxSize()) {
-        TdcHeader(onNotificationClick = onNotificationClick)
+        TdcHeader(
+            onNotificationClick = onNotificationClick,
+            hasUnreadNotifications = hasUnreadNotifications
+        )
 
         TabRow(
             selectedTabIndex = pagerState.currentPage,
@@ -69,7 +73,11 @@ fun MentorAssignmentsScreen(
                 is MentorAssignmentsUiState.Loading -> LoadingScreen("Loading assignments...")
                 is MentorAssignmentsUiState.Error -> ErrorScreen(s.message, onRetry = { viewModel.load() })
                 is MentorAssignmentsUiState.Success -> {
-                    HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+                    com.bagadbille.tdc.ui.components.TdcPullToRefresh(
+                        isRefreshing = false,
+                        onRefresh = { viewModel.load() }
+                    ) {
+                        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                         val items = if (page == 0) s.ongoing else s.past
                         if (items.isEmpty()) {
                             if (page == 0) {
@@ -111,6 +119,7 @@ fun MentorAssignmentsScreen(
                         }
                     }
                 }
+            }
             }
 
             ExtendedFloatingActionButton(

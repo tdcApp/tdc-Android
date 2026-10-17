@@ -7,7 +7,8 @@ data class Quiz(
     val createdBy: String? = null,
     val classId: String? = null,
     val createdAt: String? = null,
-    val updatedAt: String? = null
+    val updatedAt: String? = null,
+    val isSubmitted: Boolean = false
 )
 
 data class QuizQuestion(

@@ -3,14 +3,16 @@ package com.bagadbille.tdc.ui.mentor.assignments
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bagadbille.tdc.data.mock.MockUsers
+import com.bagadbille.tdc.data.local.DataStoreManager
 import com.bagadbille.tdc.data.model.Assignment
 import com.bagadbille.tdc.data.model.AssignmentSubmission
 import com.bagadbille.tdc.data.repository.AssignmentRepository
+import com.bagadbille.tdc.data.repository.RosterRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -32,6 +34,8 @@ sealed class SubmissionsUiState {
 @HiltViewModel
 class AssignmentSubmissionsViewModel @Inject constructor(
     private val assignmentRepo: AssignmentRepository,
+    private val rosterRepo: RosterRepository,
+    private val dataStoreManager: DataStoreManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -46,18 +50,30 @@ class AssignmentSubmissionsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = SubmissionsUiState.Loading
             try {
+                val currentUid = dataStoreManager.firebaseUid.firstOrNull()
+                val currentName = dataStoreManager.userName.firstOrNull()
+
                 val assignment = assignmentRepo.getAssignmentById(assignmentId).getOrThrow()
                 val rawSubmissions = assignmentRepo.getSubmissionsForAssignment(assignmentId).getOrDefault(emptyList())
+                val classId = assignment.classId
+                val enrolledStudents = rosterRepo.getStudentsByClass(classId).getOrDefault(emptyList())
+                val studentMap = enrolledStudents.associateBy { it.firebaseUid }
+
                 val items = rawSubmissions.map { sub ->
+                    val resolvedName = sub.studentName?.ifBlank { null }?.takeIf { it != "Student" }
+                        ?: studentMap[sub.menteeUid]?.name?.ifBlank { null }
+                        ?: (if (sub.menteeUid == currentUid && !currentName.isNullOrBlank()) currentName else null)
+                        ?: studentMap[sub.menteeUid]?.email?.substringBefore("@")?.takeIf { it.isNotBlank() }
+                        ?: sub.studentEmail?.substringBefore("@")?.takeIf { it.isNotBlank() }
+                        ?: "Candidate (${sub.menteeUid.take(6)})"
+
                     SubmissionItem(
                         submission = sub,
-                        studentName = MockUsers.findById(sub.menteeUid)?.name ?: sub.menteeUid
+                        studentName = resolvedName
                     )
                 }.sortedByDescending { it.submission.submittedAt }
 
-                // Total students enrolled in this assignment's class
-                val classId = assignment.classId
-                val totalStudents = MockUsers.studentsInClass(classId).size
+                val totalStudents = enrolledStudents.size
 
                 _uiState.value = SubmissionsUiState.Success(
                     assignment = assignment,

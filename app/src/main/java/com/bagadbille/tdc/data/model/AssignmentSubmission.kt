@@ -4,5 +4,8 @@ data class AssignmentSubmission(
     val assignmentId: String,
     val menteeUid: String,
     val submissionUrl: String,
-    val submittedAt: String
+    val submittedAt: String,
+    val studentName: String? = null,
+    val studentEmail: String? = null,
+    val studentEnrollment: String? = null
 )

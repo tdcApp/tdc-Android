@@ -27,6 +27,7 @@ class AuthViewModel @Inject constructor(
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
     val isLoggedIn: Flow<Boolean> = authRepository.isLoggedIn()
     val isProfileComplete: Flow<Boolean> = authRepository.isProfileComplete()
+    val userRole: Flow<String?> = authRepository.getUserRole()
 
     fun signInWithEmail(email: String, password: String) {
         if (email.isBlank() || password.isBlank()) {

@@ -33,6 +33,7 @@ fun MainScreen(
     viewModel: MainViewModel = hiltViewModel()
 ) {
     val isMentor by viewModel.isMentor.collectAsStateWithLifecycle()
+    val hasUnreadNotifications by viewModel.hasUnreadNotifications.collectAsStateWithLifecycle()
     var selectedTab by rememberSaveable { mutableIntStateOf(1) }
     val tabs = BottomNavItem.entries
 
@@ -75,32 +76,37 @@ fun MainScreen(
             when (selectedTab) {
                 0 -> ProfileScreen(
                     onLogout = onLogout,
-                    onNotificationClick = onNavigateToNotifications
+                    onNotificationClick = onNavigateToNotifications,
+                    hasUnreadNotifications = hasUnreadNotifications
                 )
                 1 -> if (mentor) {
                     MentorDashboardScreen(
                         onNotificationClick = onNavigateToNotifications,
                         onCreateAssignment = onNavigateToCreateAssignment,
                         onCreateQuiz = onNavigateToCreateQuiz,
-                        onOpenQuizResults = onNavigateToQuizResults
+                        onOpenQuizResults = onNavigateToQuizResults,
+                        hasUnreadNotifications = hasUnreadNotifications
                     )
                 } else {
                     HomeScreen(
                         onNavigateToQuizTaking = onNavigateToQuizTaking,
                         onNavigateToQuizResult = onNavigateToQuizResult,
-                        onNotificationClick = onNavigateToNotifications
+                        onNotificationClick = onNavigateToNotifications,
+                        hasUnreadNotifications = hasUnreadNotifications
                     )
                 }
                 2 -> if (mentor) {
                     MentorAssignmentsScreen(
                         onCreateAssignment = onNavigateToCreateAssignment,
                         onOpenAssignment = onNavigateToAssignmentSubmissions,
-                        onNotificationClick = onNavigateToNotifications
+                        onNotificationClick = onNavigateToNotifications,
+                        hasUnreadNotifications = hasUnreadNotifications
                     )
                 } else {
                     AssignmentsScreen(
                         onNavigateToAssignmentDetail = onNavigateToAssignmentDetail,
-                        onNotificationClick = onNavigateToNotifications
+                        onNotificationClick = onNavigateToNotifications,
+                        hasUnreadNotifications = hasUnreadNotifications
                     )
                 }
             }

@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.outlined.*
@@ -55,15 +57,20 @@ fun OverviewTab(
         when (val s = uiState) {
             is OverviewUiState.Loading -> LoadingScreen()
             is OverviewUiState.Error -> ErrorScreen(s.message, onRetry = { viewModel.load() })
-            is OverviewUiState.Success -> OverviewContent(
-                data = s.data,
-                onCreateAssignment = onCreateAssignment,
-                onCreateQuiz = onCreateQuiz,
-                onPostClick = { showPostDialog = true },
-                onAddScheduleClick = { showAddScheduleDialog = true },
-                onDeleteAnnouncement = { deleteAnnouncementTarget = it },
-                onDeleteSchedule = { deleteScheduleTarget = it }
-            )
+            is OverviewUiState.Success -> com.bagadbille.tdc.ui.components.TdcPullToRefresh(
+                isRefreshing = false,
+                onRefresh = { viewModel.load() }
+            ) {
+                OverviewContent(
+                    data = s.data,
+                    onCreateAssignment = onCreateAssignment,
+                    onCreateQuiz = onCreateQuiz,
+                    onPostClick = { showPostDialog = true },
+                    onAddScheduleClick = { showAddScheduleDialog = true },
+                    onDeleteAnnouncement = { deleteAnnouncementTarget = it },
+                    onDeleteSchedule = { deleteScheduleTarget = it }
+                )
+            }
         }
         SnackbarHost(
             snackbar,
@@ -74,12 +81,13 @@ fun OverviewTab(
     }
 
     if (showPostDialog) {
+        val successData = (uiState as? OverviewUiState.Success)?.data
         PostAnnouncementDialog(
-            isPosting = (uiState as? OverviewUiState.Success)?.data?.isPostingAnnouncement == true,
-            classes = (uiState as? OverviewUiState.Success)?.data?.classNames ?: emptyMap(),
+            isPosting = successData?.isPostingAnnouncement == true,
+            classList = successData?.classList ?: emptyList(),
             onDismiss = { showPostDialog = false },
-            onPost = { title, content, audience, classId ->
-                viewModel.postAnnouncement(title, content, audience, classId)
+            onPost = { title, content, audience, selectedClassIds ->
+                viewModel.postAnnouncement(title, content, audience, selectedClassIds)
                 showPostDialog = false
             }
         )
@@ -662,29 +670,37 @@ private fun AddScheduleDialog(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun PostAnnouncementDialog(
     isPosting: Boolean,
-    classes: Map<String, String>,
+    classList: List<com.bagadbille.tdc.data.model.ClassInfo>,
     onDismiss: () -> Unit,
-    onPost: (title: String, content: String, audience: String, classId: String?) -> Unit
+    onPost: (title: String, content: String, audience: String, selectedClassIds: Set<String>) -> Unit
 ) {
     var title by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
-    var audience by remember { mutableStateOf("all") }
-    var selectedClassId by remember { mutableStateOf<String?>(null) }
-    var classDropdownExpanded by remember { mutableStateOf(false) }
+    var audienceMode by remember { mutableStateOf("all") } // "all" or "custom"
+    val selectedClassIds = remember { mutableStateListOf<String>() }
     var error by remember { mutableStateOf<String?>(null) }
 
-    val audienceOptions = listOf("all" to "All members", "language" to "Language batch", "technology" to "Technology batch")
+    val languages = remember(classList) {
+        classList.filter { it.type.equals("language", ignoreCase = true) }
+    }
+    val technologies = remember(classList) {
+        classList.filter { it.type.equals("technology", ignoreCase = true) }
+    }
 
     AlertDialog(
         onDismissRequest = { if (!isPosting) onDismiss() },
         icon = { Icon(Icons.Outlined.Campaign, null, tint = MaterialTheme.colorScheme.primary) },
         title = { Text("Post Announcement") },
         text = {
-            Column(Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+            ) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it; error = null },
@@ -704,51 +720,157 @@ private fun PostAnnouncementDialog(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.medium
                 )
-                Spacer(Modifier.height(12.dp))
-                // Audience chips
-                Text("Audience", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(14.dp))
+
+                // Audience Target Switch
+                Text(
+                    "Target Audience",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    audienceOptions.forEach { (key, label) ->
-                        FilterChip(
-                            selected = audience == key,
-                            onClick = { audience = key },
-                            label = { Text(label, style = MaterialTheme.typography.labelSmall) }
-                        )
-                    }
-                }
-                // Optional class selector
-                Spacer(Modifier.height(8.dp))
-                ExposedDropdownMenuBox(
-                    expanded = classDropdownExpanded,
-                    onExpandedChange = { classDropdownExpanded = it }
-                ) {
-                    OutlinedTextField(
-                        value = classes[selectedClassId] ?: "All classes",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Class (optional)") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(classDropdownExpanded) },
-                        shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    FilterChip(
+                        selected = audienceMode == "all",
+                        onClick = { audienceMode = "all" },
+                        label = { Text("All Members") }
                     )
-                    ExposedDropdownMenu(expanded = classDropdownExpanded, onDismissRequest = { classDropdownExpanded = false }) {
-                        DropdownMenuItem(
-                            text = { Text("All classes") },
-                            onClick = { selectedClassId = null; classDropdownExpanded = false }
-                        )
-                        classes.forEach { (id, name) ->
-                            DropdownMenuItem(
-                                text = { Text(name) },
-                                onClick = { selectedClassId = id; classDropdownExpanded = false }
+                    FilterChip(
+                        selected = audienceMode == "custom",
+                        onClick = { audienceMode = "custom" },
+                        label = { Text("Target Batches") }
+                    )
+                }
+
+                if (audienceMode == "custom") {
+                    Spacer(Modifier.height(12.dp))
+
+                    // Language Multi-Select
+                    if (languages.isNotEmpty()) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Programming Languages",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
                             )
+                            val allLangSelected = languages.isNotEmpty() && languages.all { selectedClassIds.contains(it.id) }
+                            TextButton(
+                                onClick = {
+                                    if (allLangSelected) {
+                                        languages.forEach { selectedClassIds.remove(it.id) }
+                                    } else {
+                                        languages.forEach { if (!selectedClassIds.contains(it.id)) selectedClassIds.add(it.id) }
+                                    }
+                                    error = null
+                                },
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                            ) {
+                                Text(
+                                    if (allLangSelected) "Clear" else "Select All",
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            languages.forEach { lang ->
+                                val isSelected = selectedClassIds.contains(lang.id)
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = {
+                                        if (isSelected) selectedClassIds.remove(lang.id)
+                                        else selectedClassIds.add(lang.id)
+                                        error = null
+                                    },
+                                    label = { Text(lang.name, style = MaterialTheme.typography.labelSmall) },
+                                    leadingIcon = if (isSelected) {
+                                        { Icon(Icons.Outlined.Check, null, Modifier.size(16.dp)) }
+                                    } else null
+                                )
+                            }
                         }
                     }
+
+                    Spacer(Modifier.height(10.dp))
+
+                    // Technology Multi-Select
+                    if (technologies.isNotEmpty()) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Technologies",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                            val allTechSelected = technologies.isNotEmpty() && technologies.all { selectedClassIds.contains(it.id) }
+                            TextButton(
+                                onClick = {
+                                    if (allTechSelected) {
+                                        technologies.forEach { selectedClassIds.remove(it.id) }
+                                    } else {
+                                        technologies.forEach { if (!selectedClassIds.contains(it.id)) selectedClassIds.add(it.id) }
+                                    }
+                                    error = null
+                                },
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                            ) {
+                                Text(
+                                    if (allTechSelected) "Clear" else "Select All",
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            technologies.forEach { tech ->
+                                val isSelected = selectedClassIds.contains(tech.id)
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = {
+                                        if (isSelected) selectedClassIds.remove(tech.id)
+                                        else selectedClassIds.add(tech.id)
+                                        error = null
+                                    },
+                                    label = { Text(tech.name, style = MaterialTheme.typography.labelSmall) },
+                                    leadingIcon = if (isSelected) {
+                                        { Icon(Icons.Outlined.Check, null, Modifier.size(16.dp)) }
+                                    } else null
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+                    Surface(
+                        shape = MaterialTheme.shapes.extraSmall,
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                    ) {
+                        Text(
+                            if (selectedClassIds.isEmpty()) "Tap chips to target multiple languages/technologies"
+                            else "${selectedClassIds.size} batch(es) selected",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
                 }
+
                 error?.let {
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 }
             }
@@ -759,7 +881,10 @@ private fun PostAnnouncementDialog(
                     when {
                         title.isBlank() -> error = "Title is required"
                         content.isBlank() -> error = "Message is required"
-                        else -> onPost(title.trim(), content.trim(), audience, selectedClassId)
+                        audienceMode == "custom" && selectedClassIds.isEmpty() -> {
+                            error = "Select at least one language or technology"
+                        }
+                        else -> onPost(title.trim(), content.trim(), if (audienceMode == "all") "all" else "class", selectedClassIds.toSet())
                     }
                 },
                 enabled = !isPosting

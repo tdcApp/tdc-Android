@@ -15,46 +15,49 @@ import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.bagadbille.tdc.ui.home.classes.ClassesScreen
+import com.bagadbille.tdc.ui.home.classes.ClassesViewModel
 import com.bagadbille.tdc.ui.home.general.GeneralScreen
+import com.bagadbille.tdc.ui.home.general.GeneralViewModel
 import com.bagadbille.tdc.ui.home.quiz.QuizListScreen
+import com.bagadbille.tdc.ui.home.quiz.QuizViewModel
 import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen(
     onNavigateToQuizTaking: (String) -> Unit,
     onNavigateToQuizResult: (String) -> Unit,
-    onNotificationClick: () -> Unit = {}
+    onNotificationClick: () -> Unit = {},
+    hasUnreadNotifications: Boolean = false
 ) {
     val tabs = listOf("General", "Classes", "Quiz")
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
 
+    val generalViewModel: GeneralViewModel = hiltViewModel()
+    val classesViewModel: ClassesViewModel = hiltViewModel()
+    val quizViewModel: QuizViewModel = hiltViewModel()
+
     Column(Modifier.fillMaxSize()) {
-        // Header: Logo | TDC | Notification Bell
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Filled.School, "Logo", Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.width(8.dp))
-            Text(
-                "TDC", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-            Spacer(Modifier.width(8.dp))
-            IconButton(onClick = onNotificationClick) {
-                BadgedBox(badge = { Badge(containerColor = MaterialTheme.colorScheme.error, modifier = Modifier.size(8.dp)) }) {
-                    Icon(Icons.Outlined.Notifications, "Notifications", Modifier.size(28.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        com.bagadbille.tdc.ui.components.TdcHeader(
+            onNotificationClick = onNotificationClick,
+            hasUnreadNotifications = hasUnreadNotifications,
+            onRefreshClick = {
+                when (pagerState.currentPage) {
+                    0 -> generalViewModel.loadDashboard()
+                    1 -> classesViewModel.loadClasses()
+                    2 -> quizViewModel.loadQuizzes(isPullToRefresh = true)
                 }
             }
-        }
+        )
 
         TabRow(
             selectedTabIndex = pagerState.currentPage,
@@ -70,13 +73,19 @@ fun HomeScreen(
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
             when (page) {
                 0 -> GeneralScreen(
+                    viewModel = generalViewModel,
                     onQuizClick = onNavigateToQuizTaking,
                     onNavigateToClasses = { scope.launch { pagerState.animateScrollToPage(1) } },
                     onNavigateToQuizzes = { scope.launch { pagerState.animateScrollToPage(2) } }
                 )
-                1 -> ClassesScreen()
-                2 -> QuizListScreen(onNavigateToQuizTaking, onNavigateToQuizResult)
+                1 -> ClassesScreen(viewModel = classesViewModel)
+                2 -> QuizListScreen(
+                    onNavigateToQuizTaking = onNavigateToQuizTaking,
+                    onNavigateToQuizResult = onNavigateToQuizResult,
+                    viewModel = quizViewModel
+                )
             }
         }
     }
 }
+

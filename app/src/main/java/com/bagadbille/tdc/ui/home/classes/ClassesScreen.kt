@@ -31,18 +31,22 @@ fun ClassesScreen(viewModel: ClassesViewModel = hiltViewModel()) {
         is ClassesUiState.Loading -> LoadingScreen()
         is ClassesUiState.Error -> ErrorScreen(s.message, onRetry = { viewModel.loadClasses() })
         is ClassesUiState.Success -> {
-            if (s.classes.isEmpty()) {
-                EmptyStateScreen(
-                    Icons.Outlined.School,
-                    "No Classes Enrolled",
-                    "You are not enrolled in any batches yet."
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+            com.bagadbille.tdc.ui.components.TdcPullToRefresh(
+                isRefreshing = false,
+                onRefresh = { viewModel.loadClasses() }
+            ) {
+                if (s.classes.isEmpty()) {
+                    EmptyStateScreen(
+                        Icons.Outlined.School,
+                        "No Classes Enrolled",
+                        "You are not enrolled in any batches yet."
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                     item {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
@@ -75,6 +79,8 @@ fun ClassesScreen(viewModel: ClassesViewModel = hiltViewModel()) {
         }
     }
 }
+}
+
 
 @Composable
 private fun ClassCard(c: ClassInfo) {
@@ -155,3 +161,4 @@ private fun ClassCard(c: ClassInfo) {
         }
     }
 }
+

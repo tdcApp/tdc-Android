@@ -1,33 +1,108 @@
 package com.bagadbille.tdc.data.repository
 
+import com.bagadbille.tdc.data.local.DataStoreManager
 import com.bagadbille.tdc.data.model.AppNotification
 import com.bagadbille.tdc.data.model.NotificationType
-import kotlinx.coroutines.delay
+import com.bagadbille.tdc.data.remote.api.AnnouncementApi
+import com.bagadbille.tdc.data.remote.api.ScheduleApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
 interface NotificationRepository {
     suspend fun getNotifications(): Result<List<AppNotification>>
     suspend fun markAsRead(id: String): Result<Unit>
+    suspend fun markAllAsRead(): Result<Unit>
+    fun hasUnread(): Flow<Boolean>
 }
 
 @Singleton
-class NotificationRepositoryImpl @Inject constructor() : NotificationRepository {
-    // TODO: Replace with NestJS API calls
-    private val mock = mutableListOf(
-        AppNotification("n_001", "Selection Quiz Live!", "TDC Selection Round - C++ quiz is now available. Attempt before Aug 25.", NotificationType.QUIZ_REMINDER, false, "2026-08-20T10:00:00Z"),
-        AppNotification("n_002", "Python Batch Schedule Changed", "Python DSA class moved to Thursday 9-10 PM on Discord.", NotificationType.CLASS_UPDATE, false, "2026-08-19T16:00:00Z"),
-        AppNotification("n_003", "New Android Dev Batch", "Registrations for Kotlin + Jetpack Compose batch are now open.", NotificationType.ANNOUNCEMENT, true, "2026-08-18T09:00:00Z"),
-        AppNotification("n_004", "Assignment Due Reminder", "Your React To-Do App assignment is due in 3 days.", NotificationType.CLASS_UPDATE, true, "2026-08-17T14:00:00Z"),
-        AppNotification("n_005", "DSA Challenge Results Out", "LeetCode Challenge results have been posted. Check your score!", NotificationType.QUIZ_REMINDER, true, "2026-08-16T11:30:00Z"),
-    )
+class NotificationRepositoryImpl @Inject constructor(
+    private val announcementApi: AnnouncementApi,
+    private val scheduleApi: ScheduleApi,
+    private val dataStoreManager: DataStoreManager
+) : NotificationRepository {
 
-    override suspend fun getNotifications(): Result<List<AppNotification>> { delay(500); return Result.success(mock.toList()) }
+    private val _hasUnread = MutableStateFlow(false)
+    private val cachedNotifIds = mutableSetOf<String>()
 
-    override suspend fun markAsRead(id: String): Result<Unit> {
-        delay(200)
-        val i = mock.indexOfFirst { it.id == id }
-        if (i != -1) mock[i] = mock[i].copy(isRead = true)
-        return Result.success(Unit)
+    override fun hasUnread(): Flow<Boolean> = _hasUnread.asStateFlow()
+
+    override suspend fun getNotifications(): Result<List<AppNotification>> = runCatching {
+        val readIds = dataStoreManager.readNotifIds.first()
+        val notifications = mutableListOf<AppNotification>()
+
+        // 1. Convert real announcements into in-app notifications
+        try {
+            val announcements = announcementApi.getAnnouncements()
+            announcements.forEach { a ->
+                val notifId = "ann_${a.id}"
+                notifications.add(
+                    AppNotification(
+                        id = notifId,
+                        title = a.title,
+                        body = a.content,
+                        type = NotificationType.ANNOUNCEMENT,
+                        isRead = readIds.contains(notifId),
+                        createdAt = a.createdAt ?: a.createdAtSnake ?: ""
+                    )
+                )
+            }
+        } catch (_: Exception) {}
+
+        // 2. Convert real enrolled schedules into class update notifications
+        try {
+            val schedules = scheduleApi.getSchedules()
+            schedules.forEach { s ->
+                val notifId = "sch_${s.id}"
+                val dayName = when (s.dayOfWeek) {
+                    0 -> "Sunday"
+                    1 -> "Monday"
+                    2 -> "Tuesday"
+                    3 -> "Wednesday"
+                    4 -> "Thursday"
+                    5 -> "Friday"
+                    6 -> "Saturday"
+                    else -> "Day ${s.dayOfWeek}"
+                }
+                notifications.add(
+                    AppNotification(
+                        id = notifId,
+                        title = "Class Update: ${s.subject}",
+                        body = "${s.subject} scheduled for $dayName (${s.startTime} - ${s.endTime})${if (!s.room.isNullOrBlank()) " in ${s.room}" else ""}",
+                        type = NotificationType.CLASS_UPDATE,
+                        isRead = readIds.contains(notifId),
+                        createdAt = s.createdAt ?: s.createdAtSnake ?: ""
+                    )
+                )
+            }
+        } catch (_: Exception) {}
+
+        cachedNotifIds.clear()
+        cachedNotifIds.addAll(notifications.map { it.id })
+
+        val hasAnyUnread = notifications.any { !it.isRead }
+        _hasUnread.value = hasAnyUnread
+
+        notifications.sortedByDescending { it.createdAt }
+    }
+
+    override suspend fun markAsRead(id: String): Result<Unit> = runCatching {
+        dataStoreManager.markNotifRead(id)
+        val readIds = dataStoreManager.readNotifIds.first() + id
+        _hasUnread.value = cachedNotifIds.any { !readIds.contains(it) }
+    }
+
+    override suspend fun markAllAsRead(): Result<Unit> = runCatching {
+        if (cachedNotifIds.isEmpty()) {
+            getNotifications()
+        }
+        if (cachedNotifIds.isNotEmpty()) {
+            dataStoreManager.markNotifsRead(cachedNotifIds)
+        }
+        _hasUnread.value = false
     }
 }

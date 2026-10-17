@@ -4,6 +4,39 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
+data class FirebaseSignInRequest(
+    val email: String,
+    val password: String,
+    @SerialName("returnSecureToken") val returnSecureToken: Boolean = true
+)
+
+@Serializable
+data class FirebaseSignInResponse(
+    val idToken: String? = null,
+    val email: String? = null,
+    val refreshToken: String? = null,
+    val expiresIn: String? = null,
+    val localId: String? = null,
+    val registered: Boolean? = null,
+    val displayName: String? = null
+)
+
+@Serializable
+data class FirebaseRefreshTokenResponse(
+    @SerialName("access_token") val accessToken: String? = null,
+    @SerialName("id_token") val idToken: String? = null,
+    @SerialName("refresh_token") val refreshToken: String? = null,
+    @SerialName("expires_in") val expiresIn: String? = null,
+    @SerialName("user_id") val userId: String? = null
+)
+
+@Serializable
+data class AuthBootstrapResponse(
+    @SerialName("profileExists") val profileExists: Boolean,
+    @SerialName("profile") val profile: UserProfileDto? = null
+)
+
+@Serializable
 data class LoginRequest(val email: String, val password: String)
 
 @Serializable
@@ -11,19 +44,45 @@ data class LoginResponse(val token: String, val user: UserProfileDto)
 
 @Serializable
 data class UserProfileDto(
-    val id: String,
-    val email: String,
+    @SerialName("firebaseUid") val firebaseUid: String? = null,
+    val id: String? = null,
+    val email: String = "",
     val phone: String = "",
-    @SerialName("mobile_number") val mobileNumber: String = "",
+    @SerialName("mobileNumber") val mobileNumber: String = "",
+    @SerialName("mobile_number") val mobileNumberSnake: String = "",
     val name: String? = null,
-    val role: String = "student",
+    val role: String = "STUDENT",
     @SerialName("enrollment_number") val enrollmentNumber: String? = null,
     val year: String? = null,
     @SerialName("is_profile_complete") val isProfileComplete: Boolean = false,
-    @SerialName("language_class_id") val languageClassId: String? = null,
-    @SerialName("technology_class_id") val technologyClassId: String? = null,
-    @SerialName("created_at") val createdAt: String? = null,
-    @SerialName("updated_at") val updatedAt: String? = null
+    @SerialName("languageClassId") val languageClassId: String? = null,
+    @SerialName("language_class_id") val languageClassIdSnake: String? = null,
+    @SerialName("technologyClassId") val technologyClassId: String? = null,
+    @SerialName("technology_class_id") val technologyClassIdSnake: String? = null,
+    @SerialName("createdAt") val createdAt: String? = null,
+    @SerialName("created_at") val createdAtSnake: String? = null,
+    @SerialName("updatedAt") val updatedAt: String? = null,
+    @SerialName("updated_at") val updatedAtSnake: String? = null
+) {
+    val effectiveUid: String
+        get() = firebaseUid ?: id ?: ""
+
+    val effectiveMobile: String
+        get() = mobileNumber.ifBlank { mobileNumberSnake.ifBlank { phone } }
+
+    val effectiveLanguageClassId: String?
+        get() = languageClassId ?: languageClassIdSnake
+
+    val effectiveTechnologyClassId: String?
+        get() = technologyClassId ?: technologyClassIdSnake
+}
+
+@Serializable
+data class CreateProfileRequest(
+    val name: String,
+    val mobileNumber: String,
+    val languageClassId: String,
+    val technologyClassId: String
 )
 
 @Serializable
@@ -37,6 +96,6 @@ data class SetupProfileRequest(
 @Serializable
 data class UpdateProfileRequest(
     val name: String? = null,
-    val phone: String? = null,
-    @SerialName("mobile_number") val mobileNumber: String? = null
+    val mobileNumber: String? = null,
+    val phone: String? = null
 )

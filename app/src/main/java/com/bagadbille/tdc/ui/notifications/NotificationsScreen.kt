@@ -28,6 +28,12 @@ import com.bagadbille.tdc.ui.components.ErrorScreen
 import com.bagadbille.tdc.ui.components.LoadingScreen
 import kotlinx.coroutines.launch
 
+import androidx.compose.material.icons.outlined.DoneAll
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.bagadbille.tdc.ui.components.TdcPullToRefresh
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsScreen(
@@ -45,6 +51,11 @@ fun NotificationsScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
+                actions = {
+                    IconButton(onClick = { viewModel.markAllAsRead() }) {
+                        Icon(Icons.Outlined.DoneAll, contentDescription = "Mark all as read", tint = MaterialTheme.colorScheme.primary)
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.onSurface
@@ -56,10 +67,15 @@ fun NotificationsScreen(
             when (val s = uiState) {
                 is NotificationsUiState.Loading -> LoadingScreen()
                 is NotificationsUiState.Error -> ErrorScreen(s.message, onRetry = { viewModel.loadAll() })
-                is NotificationsUiState.Success -> NotificationsContent(
-                    data = s.data,
-                    onMarkAsRead = { viewModel.markAsRead(it) }
-                )
+                is NotificationsUiState.Success -> TdcPullToRefresh(
+                    isRefreshing = s.data.isRefreshing,
+                    onRefresh = { viewModel.loadAll(isPullToRefresh = true) }
+                ) {
+                    NotificationsContent(
+                        data = s.data,
+                        onMarkAsRead = { viewModel.markAsRead(it) }
+                    )
+                }
             }
         }
     }
@@ -70,6 +86,8 @@ private fun NotificationsContent(data: NotificationsData, onMarkAsRead: (String)
     val tabs = listOf("Notifications", "Announcements")
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
+    var selectedNotif by remember { mutableStateOf<AppNotification?>(null) }
+    var selectedAnnouncement by remember { mutableStateOf<Announcement?>(null) }
 
     Column(Modifier.fillMaxSize()) {
         TabRow(
@@ -90,17 +108,92 @@ private fun NotificationsContent(data: NotificationsData, onMarkAsRead: (String)
 
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
             when (page) {
-                0 -> NotificationsTab(data.notifications, onMarkAsRead)
-                1 -> AnnouncementsTab(data.announcements)
+                0 -> NotificationsTab(
+                    notifications = data.notifications,
+                    onNotificationClick = { n ->
+                        selectedNotif = n
+                        onMarkAsRead(n.id)
+                    }
+                )
+                1 -> AnnouncementsTab(
+                    announcements = data.announcements,
+                    onAnnouncementClick = { a ->
+                        selectedAnnouncement = a
+                        onMarkAsRead("ann_${a.id}")
+                    }
+                )
             }
         }
+    }
+
+    selectedNotif?.let { notif ->
+        AlertDialog(
+            onDismissRequest = { selectedNotif = null },
+            icon = { Icon(Icons.Outlined.Notifications, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            title = { Text(notif.title) },
+            text = {
+                Column {
+                    Text(notif.body, style = MaterialTheme.typography.bodyMedium)
+                    if (notif.createdAt.isNotBlank()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            notif.createdAt.take(16).replace('T', ' '),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { selectedNotif = null }) { Text("Close") }
+            }
+        )
+    }
+
+    selectedAnnouncement?.let { ann ->
+        AlertDialog(
+            onDismissRequest = { selectedAnnouncement = null },
+            icon = { Icon(Icons.Outlined.Campaign, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            title = { Text(ann.title) },
+            text = {
+                Column {
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            "Audience: ${ann.audience.replaceFirstChar { it.uppercase() }}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Text(ann.content, style = MaterialTheme.typography.bodyMedium)
+                    ann.createdAt?.let {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            it.take(16).replace('T', ' '),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { selectedAnnouncement = null }) { Text("Close") }
+            }
+        )
     }
 }
 
 // ─── Notifications Tab ───
 
 @Composable
-private fun NotificationsTab(notifications: List<AppNotification>, onMarkAsRead: (String) -> Unit) {
+private fun NotificationsTab(
+    notifications: List<AppNotification>,
+    onNotificationClick: (AppNotification) -> Unit
+) {
     if (notifications.isEmpty()) {
         EmptyStateScreen(Icons.Outlined.NotificationsNone, "No Notifications", "You're all caught up!")
     } else {
@@ -109,7 +202,7 @@ private fun NotificationsTab(notifications: List<AppNotification>, onMarkAsRead:
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(notifications, key = { it.id }) { NotifCard(it) { onMarkAsRead(it.id) } }
+            items(notifications, key = { it.id }) { NotifCard(it) { onNotificationClick(it) } }
         }
     }
 }
@@ -152,7 +245,10 @@ private fun NotifCard(n: AppNotification, onClick: () -> Unit) {
 // ─── Announcements Tab ───
 
 @Composable
-private fun AnnouncementsTab(announcements: List<Announcement>) {
+private fun AnnouncementsTab(
+    announcements: List<Announcement>,
+    onAnnouncementClick: (Announcement) -> Unit
+) {
     if (announcements.isEmpty()) {
         EmptyStateScreen(Icons.Outlined.Campaign, "No Announcements", "Check back later!")
     } else {
@@ -161,15 +257,16 @@ private fun AnnouncementsTab(announcements: List<Announcement>) {
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            items(announcements, key = { it.id }) { AnnouncementCard(it) }
+            items(announcements, key = { it.id }) { AnnouncementCard(it) { onAnnouncementClick(it) } }
         }
     }
 }
 
 @Composable
-private fun AnnouncementCard(a: Announcement) {
+private fun AnnouncementCard(a: Announcement, onClick: () -> Unit) {
     Card(
-        Modifier.fillMaxWidth(),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
         shape = MaterialTheme.shapes.medium
     ) {

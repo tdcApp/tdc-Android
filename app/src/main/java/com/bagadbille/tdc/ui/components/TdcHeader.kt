@@ -22,9 +22,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
-/** App header: Logo | TDC | Notification bell. Same look as Home, Assignments and Profile. */
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material3.CircularProgressIndicator
+
+/** App header: Logo | TDC | Notification bell (with dynamic unread badge). */
 @Composable
-fun TdcHeader(onNotificationClick: () -> Unit, modifier: Modifier = Modifier) {
+fun TdcHeader(
+    onNotificationClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    hasUnreadNotifications: Boolean = false,
+    onRefreshClick: (() -> Unit)? = null,
+    isRefreshing: Boolean = false
+) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -42,8 +51,35 @@ fun TdcHeader(onNotificationClick: () -> Unit, modifier: Modifier = Modifier) {
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.width(8.dp))
+        if (onRefreshClick != null) {
+            IconButton(onClick = onRefreshClick, enabled = !isRefreshing) {
+                if (isRefreshing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else {
+                    Icon(
+                        Icons.Outlined.Refresh,
+                        contentDescription = "Refresh",
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
         IconButton(onClick = onNotificationClick) {
-            BadgedBox(badge = { Badge(containerColor = MaterialTheme.colorScheme.error, modifier = Modifier.size(8.dp)) }) {
+            if (hasUnreadNotifications) {
+                BadgedBox(badge = { Badge(containerColor = MaterialTheme.colorScheme.error, modifier = Modifier.size(8.dp)) }) {
+                    Icon(
+                        Icons.Outlined.Notifications,
+                        "Notifications",
+                        Modifier.size(28.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
                 Icon(
                     Icons.Outlined.Notifications,
                     "Notifications",

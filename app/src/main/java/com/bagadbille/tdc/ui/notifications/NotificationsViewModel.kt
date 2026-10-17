@@ -15,7 +15,8 @@ import javax.inject.Inject
 
 data class NotificationsData(
     val notifications: List<AppNotification> = emptyList(),
-    val announcements: List<Announcement> = emptyList()
+    val announcements: List<Announcement> = emptyList(),
+    val isRefreshing: Boolean = false
 )
 
 sealed class NotificationsUiState {
@@ -34,18 +35,56 @@ class NotificationsViewModel @Inject constructor(
 
     init { loadAll() }
 
-    fun loadAll() {
+    fun loadAll(isPullToRefresh: Boolean = false) {
         viewModelScope.launch {
-            _uiState.value = NotificationsUiState.Loading
+            val currentData = (_uiState.value as? NotificationsUiState.Success)?.data
+            if (isPullToRefresh && currentData != null) {
+                _uiState.value = NotificationsUiState.Success(currentData.copy(isRefreshing = true))
+            } else if (!isPullToRefresh) {
+                _uiState.value = NotificationsUiState.Loading
+            }
             try {
                 val notifs = notifRepo.getNotifications().getOrDefault(emptyList())
                 val announcements = announcementRepo.getAnnouncements().getOrDefault(emptyList())
-                _uiState.value = NotificationsUiState.Success(NotificationsData(notifs, announcements))
+                _uiState.value = NotificationsUiState.Success(
+                    NotificationsData(
+                        notifications = notifs,
+                        announcements = announcements,
+                        isRefreshing = false
+                    )
+                )
             } catch (e: Exception) {
-                _uiState.value = NotificationsUiState.Error(e.message ?: "Failed to load")
+                if (currentData != null) {
+                    _uiState.value = NotificationsUiState.Success(currentData.copy(isRefreshing = false))
+                } else {
+                    _uiState.value = NotificationsUiState.Error(e.message ?: "Failed to load")
+                }
             }
         }
     }
 
-    fun markAsRead(id: String) { viewModelScope.launch { notifRepo.markAsRead(id); loadAll() } }
+    fun markAsRead(id: String) {
+        viewModelScope.launch {
+            notifRepo.markAsRead(id)
+            // Silently refresh list state to reflect the updated isRead
+            val currentData = (_uiState.value as? NotificationsUiState.Success)?.data
+            if (currentData != null) {
+                val updatedNotifs = currentData.notifications.map {
+                    if (it.id == id) it.copy(isRead = true) else it
+                }
+                _uiState.value = NotificationsUiState.Success(currentData.copy(notifications = updatedNotifs))
+            }
+        }
+    }
+
+    fun markAllAsRead() {
+        viewModelScope.launch {
+            notifRepo.markAllAsRead()
+            val currentData = (_uiState.value as? NotificationsUiState.Success)?.data
+            if (currentData != null) {
+                val updatedNotifs = currentData.notifications.map { it.copy(isRead = true) }
+                _uiState.value = NotificationsUiState.Success(currentData.copy(notifications = updatedNotifs))
+            }
+        }
+    }
 }
