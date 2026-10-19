@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.suspendCancellableCoroutine
 import retrofit2.HttpException
 import com.bagadbille.tdc.data.remote.api.NotificationApi
+import com.bagadbille.tdc.data.remote.dto.RegisterFcmTokenRequest
 import com.google.firebase.messaging.FirebaseMessaging
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -145,6 +146,14 @@ class AuthRepositoryImpl @Inject constructor(
             dataStoreManager.saveMobileNumber(profileDto.effectiveMobile)
             profileDto.effectiveLanguageClassId?.let { dataStoreManager.saveLanguageClassId(it) }
             profileDto.effectiveTechnologyClassId?.let { dataStoreManager.saveTechnologyClassId(it) }
+
+            // Register device FCM token with backend immediately
+            try {
+                val fcmToken = FirebaseMessaging.getInstance().token.awaitTask()
+                if (!fcmToken.isNullOrBlank()) {
+                    notificationApi.registerFcmToken(RegisterFcmTokenRequest(token = fcmToken))
+                }
+            } catch (_: Exception) {}
 
             return Result.success(profileDto.toDomain(fallbackUid = uid, fallbackEmail = cleanEmail, fallbackComplete = isComplete))
         } else {

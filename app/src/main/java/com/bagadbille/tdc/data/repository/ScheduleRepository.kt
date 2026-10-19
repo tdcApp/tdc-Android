@@ -6,6 +6,7 @@ import com.bagadbille.tdc.data.model.Schedule
 import com.bagadbille.tdc.data.remote.api.ScheduleApi
 import com.bagadbille.tdc.data.remote.dto.CreateScheduleRequest
 import com.bagadbille.tdc.data.remote.dto.UpdateScheduleRequest
+import retrofit2.HttpException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -81,7 +82,11 @@ class ScheduleRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteSchedule(id: String): Result<Unit> = runCatching {
-        scheduleApi.deleteSchedule(id)
+        try {
+            scheduleApi.deleteSchedule(id)
+        } catch (e: HttpException) {
+            if (e.code() != 404) throw e
+        }
         scheduleDao.deleteSchedule(id)
     }
 }
