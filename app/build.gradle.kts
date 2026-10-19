@@ -16,8 +16,8 @@ android {
         applicationId = "com.bagadbille.tdc"
         minSdk = 28
         targetSdk = 36
-        versionCode = 4
-        versionName = "2.3.0"
+        versionCode = 5
+        versionName = "2.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
