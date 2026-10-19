@@ -1,20 +1,24 @@
 package com.bagadbille.tdc.data.repository
 
+import com.bagadbille.tdc.data.local.DataStoreManager
 import com.bagadbille.tdc.data.local.dao.ClassDao
 import com.bagadbille.tdc.data.local.entity.ClassEntity
 import com.bagadbille.tdc.data.model.ClassInfo
 import com.bagadbille.tdc.data.remote.api.ClassApi
+import kotlinx.coroutines.flow.firstOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 
 interface ClassRepository {
     suspend fun getClasses(): Result<List<ClassInfo>>
+    suspend fun getMyClasses(): Result<List<ClassInfo>>
 }
 
 @Singleton
 class ClassRepositoryImpl @Inject constructor(
     private val classApi: ClassApi,
-    private val classDao: ClassDao
+    private val classDao: ClassDao,
+    private val dataStoreManager: DataStoreManager
 ) : ClassRepository {
 
     private val fallbackClasses = listOf(
@@ -48,6 +52,40 @@ class ClassRepositoryImpl @Inject constructor(
         } catch (_: Exception) {
             val cached = classDao.getAllClasses()
             if (cached.isNotEmpty()) cached.map { it.toDomain() } else fallbackClasses
+        }
+    }
+
+    override suspend fun getMyClasses(): Result<List<ClassInfo>> = runCatching {
+        val role = dataStoreManager.userRole.firstOrNull()?.lowercase()
+        val langId = dataStoreManager.languageClassId.firstOrNull()
+        val techId = dataStoreManager.technologyClassId.firstOrNull()
+
+        try {
+            val remote = classApi.getMyClasses().map { dto ->
+                ClassInfo(
+                    id = dto.id,
+                    name = dto.name,
+                    type = dto.type.lowercase(),
+                    createdAt = dto.createdAt ?: dto.createdAtSnake ?: ""
+                )
+            }
+            if (remote.isNotEmpty()) {
+                remote
+            } else if (role == "student" && (!langId.isNullOrBlank() || !techId.isNullOrBlank())) {
+                val allClasses = getClasses().getOrDefault(emptyList())
+                allClasses.filter { it.id == langId || it.id == techId }
+            } else {
+                emptyList()
+            }
+        } catch (_: Exception) {
+            val allClasses = getClasses().getOrDefault(emptyList())
+            if (role == "student" && (!langId.isNullOrBlank() || !techId.isNullOrBlank())) {
+                allClasses.filter { it.id == langId || it.id == techId }
+            } else if (role == "teacher" || role == "admin") {
+                allClasses
+            } else {
+                allClasses.filter { it.id == langId || it.id == techId }
+            }
         }
     }
 }

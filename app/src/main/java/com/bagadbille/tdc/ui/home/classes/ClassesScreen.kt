@@ -24,6 +24,7 @@ import com.bagadbille.tdc.ui.components.EmptyStateScreen
 import com.bagadbille.tdc.ui.components.ErrorScreen
 import com.bagadbille.tdc.ui.components.LoadingScreen
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClassesScreen(viewModel: ClassesViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -31,59 +32,131 @@ fun ClassesScreen(viewModel: ClassesViewModel = hiltViewModel()) {
         is ClassesUiState.Loading -> LoadingScreen()
         is ClassesUiState.Error -> ErrorScreen(s.message, onRetry = { viewModel.loadClasses() })
         is ClassesUiState.Success -> {
+            val data = s.data
+            val isEnrolledTab = data.selectedFilter == ClassFilterTab.ENROLLED
+            val displayedClasses = if (isEnrolledTab) data.enrolledClasses else data.allClasses
+
             com.bagadbille.tdc.ui.components.TdcPullToRefresh(
                 isRefreshing = false,
                 onRefresh = { viewModel.loadClasses() }
             ) {
-                if (s.classes.isEmpty()) {
-                    EmptyStateScreen(
-                        Icons.Outlined.School,
-                        "No Classes Enrolled",
-                        "You are not enrolled in any batches yet."
-                    )
+                if (isEnrolledTab && data.enrolledClasses.isEmpty()) {
+                    Column(Modifier.fillMaxSize()) {
+                        FilterChipsRow(
+                            selectedFilter = data.selectedFilter,
+                            enrolledCount = data.enrolledClasses.size,
+                            allCount = data.allClasses.size,
+                            onFilterSelect = { viewModel.setFilterTab(it) }
+                        )
+                        EmptyStateScreen(
+                            Icons.Outlined.School,
+                            "No Classes Enrolled",
+                            "You are not enrolled in any batches yet."
+                        )
+                    }
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                    item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "Your Batches",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                        item {
+                            FilterChipsRow(
+                                selectedFilter = data.selectedFilter,
+                                enrolledCount = data.enrolledClasses.size,
+                                allCount = data.allClasses.size,
+                                onFilterSelect = { viewModel.setFilterTab(it) }
                             )
-                            Spacer(Modifier.width(8.dp))
-                            Surface(
-                                shape = MaterialTheme.shapes.small,
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        }
+
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    "${s.classes.size}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    if (isEnrolledTab) "Your Batches" else "All Batches",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
+                                Spacer(Modifier.width(8.dp))
+                                Surface(
+                                    shape = MaterialTheme.shapes.small,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                ) {
+                                    Text(
+                                        "${displayedClasses.size}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    )
+                                }
                             }
                         }
+
+                        items(displayedClasses, key = { it.id }) { classInfo ->
+                            val isEnrolled = data.enrolledClassIds.contains(classInfo.id)
+                            ClassCard(c = classInfo, isEnrolled = isEnrolled)
+                        }
                     }
-                    items(s.classes, key = { it.id }) { ClassCard(it) }
                 }
             }
         }
     }
 }
-}
-
 
 @Composable
-private fun ClassCard(c: ClassInfo) {
+private fun FilterChipsRow(
+    selectedFilter: ClassFilterTab,
+    enrolledCount: Int,
+    allCount: Int,
+    onFilterSelect: (ClassFilterTab) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        FilterChip(
+            selected = selectedFilter == ClassFilterTab.ENROLLED,
+            onClick = { onFilterSelect(ClassFilterTab.ENROLLED) },
+            label = {
+                Text(
+                    "Enrolled ($enrolledCount)",
+                    fontWeight = if (selectedFilter == ClassFilterTab.ENROLLED) FontWeight.Bold else FontWeight.Normal
+                )
+            },
+            leadingIcon = if (selectedFilter == ClassFilterTab.ENROLLED) {
+                {
+                    Icon(
+                        Icons.Outlined.CheckCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            } else null
+        )
+
+        FilterChip(
+            selected = selectedFilter == ClassFilterTab.ALL,
+            onClick = { onFilterSelect(ClassFilterTab.ALL) },
+            label = {
+                Text(
+                    "All Batches ($allCount)",
+                    fontWeight = if (selectedFilter == ClassFilterTab.ALL) FontWeight.Bold else FontWeight.Normal
+                )
+            }
+        )
+    }
+}
+
+@Composable
+private fun ClassCard(c: ClassInfo, isEnrolled: Boolean) {
     val icon = when {
         c.type.contains("tech", ignoreCase = true) -> Icons.Outlined.Devices
         c.name.contains("python", ignoreCase = true) || c.name.contains("c++", ignoreCase = true) -> Icons.Outlined.Terminal
@@ -92,7 +165,13 @@ private fun ClassCard(c: ClassInfo) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isEnrolled) {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+            }
+        ),
         shape = MaterialTheme.shapes.medium
     ) {
         Row(
@@ -101,13 +180,17 @@ private fun ClassCard(c: ClassInfo) {
         ) {
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                color = if (isEnrolled) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                }
             ) {
                 Icon(
                     icon,
                     contentDescription = null,
                     modifier = Modifier.padding(12.dp).size(24.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = if (isEnrolled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -134,25 +217,41 @@ private fun ClassCard(c: ClassInfo) {
                         )
                     }
                     Spacer(Modifier.width(8.dp))
-                    Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically
+
+                    if (isEnrolled) {
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
                         ) {
-                            Icon(
-                                Icons.Outlined.CheckCircle,
-                                contentDescription = null,
-                                modifier = Modifier.size(10.dp),
-                                tint = MaterialTheme.colorScheme.secondary
-                            )
-                            Spacer(Modifier.width(4.dp))
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Outlined.CheckCircle,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(10.dp),
+                                    tint = MaterialTheme.colorScheme.secondary
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    "Enrolled",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                            }
+                        }
+                    } else {
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
                             Text(
-                                "Enrolled",
+                                "Available",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.secondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
                     }

@@ -11,23 +11,68 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+enum class ClassFilterTab {
+    ENROLLED,
+    ALL
+}
+
+data class ClassesData(
+    val enrolledClasses: List<ClassInfo>,
+    val allClasses: List<ClassInfo>,
+    val enrolledClassIds: Set<String>,
+    val selectedFilter: ClassFilterTab = ClassFilterTab.ENROLLED
+)
+
 sealed class ClassesUiState {
     data object Loading : ClassesUiState()
-    data class Success(val classes: List<ClassInfo>) : ClassesUiState()
+    data class Success(val data: ClassesData) : ClassesUiState()
     data class Error(val message: String) : ClassesUiState()
 }
 
 @HiltViewModel
-class ClassesViewModel @Inject constructor(private val repo: ClassRepository) : ViewModel() {
+class ClassesViewModel @Inject constructor(
+    private val repo: ClassRepository
+) : ViewModel() {
+
     private val _uiState = MutableStateFlow<ClassesUiState>(ClassesUiState.Loading)
     val uiState: StateFlow<ClassesUiState> = _uiState.asStateFlow()
-    init { loadClasses() }
+
+    init {
+        loadClasses()
+    }
+
     fun loadClasses() {
         viewModelScope.launch {
             _uiState.value = ClassesUiState.Loading
-            repo.getClasses()
-                .onSuccess { _uiState.value = ClassesUiState.Success(it) }
-                .onFailure { _uiState.value = ClassesUiState.Error(it.message ?: "Failed to load") }
+            val myClassesResult = repo.getMyClasses()
+            val allClassesResult = repo.getClasses()
+
+            val myClasses = myClassesResult.getOrDefault(emptyList())
+            val allClasses = allClassesResult.getOrDefault(emptyList())
+
+            if (myClasses.isEmpty() && allClasses.isEmpty()) {
+                val err = myClassesResult.exceptionOrNull()?.message
+                    ?: allClassesResult.exceptionOrNull()?.message
+                    ?: "Failed to load classes"
+                _uiState.value = ClassesUiState.Error(err)
+            } else {
+                val enrolledIds = myClasses.map { it.id }.toSet()
+                _uiState.value = ClassesUiState.Success(
+                    ClassesData(
+                        enrolledClasses = myClasses,
+                        allClasses = allClasses,
+                        enrolledClassIds = enrolledIds,
+                        selectedFilter = ClassFilterTab.ENROLLED
+                    )
+                )
+            }
+        }
+    }
+
+    fun setFilterTab(tab: ClassFilterTab) {
+        val current = _uiState.value
+        if (current is ClassesUiState.Success) {
+            _uiState.value = ClassesUiState.Success(current.data.copy(selectedFilter = tab))
         }
     }
 }

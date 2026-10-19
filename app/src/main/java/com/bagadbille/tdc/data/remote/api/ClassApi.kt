@@ -10,6 +10,9 @@ interface ClassApi {
     @GET("classes")
     suspend fun getClasses(@Query("type") type: String? = null): List<ClassInfoDto>
 
+    @GET("classes/my")
+    suspend fun getMyClasses(): List<ClassInfoDto>
+
     @GET("classes/{id}/students")
     suspend fun getStudentsByClass(@Path("id") classId: String): List<UserProfileDto>
 }
