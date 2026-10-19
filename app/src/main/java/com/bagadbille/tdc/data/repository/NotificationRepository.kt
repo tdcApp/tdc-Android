@@ -4,7 +4,9 @@ import com.bagadbille.tdc.data.local.DataStoreManager
 import com.bagadbille.tdc.data.model.AppNotification
 import com.bagadbille.tdc.data.model.NotificationType
 import com.bagadbille.tdc.data.remote.api.AnnouncementApi
+import com.bagadbille.tdc.data.remote.api.AssignmentApi
 import com.bagadbille.tdc.data.remote.api.NotificationApi
+import com.bagadbille.tdc.data.remote.api.QuizApi
 import com.bagadbille.tdc.data.remote.api.ScheduleApi
 import com.bagadbille.tdc.data.remote.dto.RegisterFcmTokenRequest
 import kotlinx.coroutines.flow.Flow
@@ -27,6 +29,8 @@ interface NotificationRepository {
 class NotificationRepositoryImpl @Inject constructor(
     private val announcementApi: AnnouncementApi,
     private val scheduleApi: ScheduleApi,
+    private val quizApi: QuizApi,
+    private val assignmentApi: AssignmentApi,
     private val notificationApi: NotificationApi,
     private val dataStoreManager: DataStoreManager
 ) : NotificationRepository {
@@ -81,6 +85,44 @@ class NotificationRepositoryImpl @Inject constructor(
                         type = NotificationType.CLASS_UPDATE,
                         isRead = readIds.contains(notifId),
                         createdAt = s.createdAt ?: s.createdAtSnake ?: ""
+                    )
+                )
+            }
+        } catch (_: Exception) {}
+
+        // 3. Convert quizzes into in-app notifications
+        try {
+            val quizzes = quizApi.getQuizzes()
+            quizzes.forEach { q ->
+                val notifId = "quiz_${q.id}"
+                notifications.add(
+                    AppNotification(
+                        id = notifId,
+                        title = "New Quiz: ${q.title}",
+                        body = "A new technical quiz is active in the community. Tap to take the quiz.",
+                        type = NotificationType.QUIZ_REMINDER,
+                        isRead = readIds.contains(notifId),
+                        createdAt = q.createdAt ?: q.createdAtSnake ?: ""
+                    )
+                )
+            }
+        } catch (_: Exception) {}
+
+        // 4. Convert assignments into in-app notifications
+        try {
+            val assignments = assignmentApi.getAssignments()
+            assignments.forEach { a ->
+                val notifId = "asgn_${a.id}"
+                val due = a.dueAt ?: a.dueAtSnake
+                val dueText = if (!due.isNullOrBlank()) " • Due: ${due.take(10)}" else ""
+                notifications.add(
+                    AppNotification(
+                        id = notifId,
+                        title = "New Assignment: ${a.title}",
+                        body = "${if (!a.description.isNullOrBlank()) a.description else "New coding assignment posted."}$dueText",
+                        type = NotificationType.GENERAL,
+                        isRead = readIds.contains(notifId),
+                        createdAt = a.createdAt ?: a.createdAtSnake ?: ""
                     )
                 )
             }

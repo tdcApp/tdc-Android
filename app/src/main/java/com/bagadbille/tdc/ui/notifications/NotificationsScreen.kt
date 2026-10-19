@@ -28,7 +28,9 @@ import com.bagadbille.tdc.ui.components.ErrorScreen
 import com.bagadbille.tdc.ui.components.LoadingScreen
 import kotlinx.coroutines.launch
 
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material.icons.outlined.DoneAll
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -42,6 +44,11 @@ fun NotificationsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // Automatically load fresh notifications every time screen is opened
+    LaunchedEffect(Unit) {
+        viewModel.loadAll(isPullToRefresh = false)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -52,8 +59,19 @@ fun NotificationsScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { viewModel.loadAll(isPullToRefresh = true) }) {
+                        Icon(
+                            Icons.Outlined.Refresh,
+                            contentDescription = "Refresh",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                     IconButton(onClick = { viewModel.markAllAsRead() }) {
-                        Icon(Icons.Outlined.DoneAll, contentDescription = "Mark all as read", tint = MaterialTheme.colorScheme.primary)
+                        Icon(
+                            Icons.Outlined.DoneAll,
+                            contentDescription = "Mark all as read",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
