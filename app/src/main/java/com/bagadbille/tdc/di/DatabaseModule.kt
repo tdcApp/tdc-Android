@@ -3,7 +3,11 @@ package com.bagadbille.tdc.di
 import android.content.Context
 import androidx.room.Room
 import com.bagadbille.tdc.data.local.TdcDatabase
+import com.bagadbille.tdc.data.local.dao.AnnouncementDao
+import com.bagadbille.tdc.data.local.dao.AssignmentDao
+import com.bagadbille.tdc.data.local.dao.ClassDao
 import com.bagadbille.tdc.data.local.dao.QuizDao
+import com.bagadbille.tdc.data.local.dao.ScheduleDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -24,4 +28,16 @@ object DatabaseModule {
 
     @Provides
     fun provideQuizDao(database: TdcDatabase): QuizDao = database.quizDao()
+
+    @Provides
+    fun provideScheduleDao(database: TdcDatabase): ScheduleDao = database.scheduleDao()
+
+    @Provides
+    fun provideAnnouncementDao(database: TdcDatabase): AnnouncementDao = database.announcementDao()
+
+    @Provides
+    fun provideAssignmentDao(database: TdcDatabase): AssignmentDao = database.assignmentDao()
+
+    @Provides
+    fun provideClassDao(database: TdcDatabase): ClassDao = database.classDao()
 }

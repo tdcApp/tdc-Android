@@ -1,5 +1,7 @@
 package com.bagadbille.tdc.data.repository
 
+import com.bagadbille.tdc.data.local.dao.AssignmentDao
+import com.bagadbille.tdc.data.local.entity.AssignmentEntity
 import com.bagadbille.tdc.data.model.Assignment
 import com.bagadbille.tdc.data.model.AssignmentSubmission
 import com.bagadbille.tdc.data.remote.api.AssignmentApi
@@ -34,22 +36,33 @@ interface AssignmentRepository {
 
 @Singleton
 class AssignmentRepositoryImpl @Inject constructor(
-    private val assignmentApi: AssignmentApi
+    private val assignmentApi: AssignmentApi,
+    private val assignmentDao: AssignmentDao
 ) : AssignmentRepository {
 
-    private val localAssignments = mutableListOf<Assignment>()
-
     override suspend fun getAssignments(): Result<List<Assignment>> = runCatching {
-        val remote = try {
-            assignmentApi.getAssignments().map { it.toDomain() }
+        try {
+            val remote = assignmentApi.getAssignments().map { it.toDomain() }
+            if (remote.isNotEmpty()) {
+                assignmentDao.replaceAssignments(remote.map { AssignmentEntity.fromDomain(it) })
+            }
+            val cached = assignmentDao.getAllAssignments().map { it.toDomain() }
+            (remote + cached).distinctBy { it.id }
         } catch (_: Exception) {
-            emptyList()
+            val cached = assignmentDao.getAllAssignments()
+            cached.map { it.toDomain() }
         }
-        (remote + localAssignments).distinctBy { it.id }
     }
 
     override suspend fun getAssignmentById(id: String): Result<Assignment> = runCatching {
-        localAssignments.firstOrNull { it.id == id } ?: assignmentApi.getAssignment(id).toDomain()
+        val cached = assignmentDao.getAssignmentById(id)?.toDomain()
+        if (cached != null) {
+            cached
+        } else {
+            val remote = assignmentApi.getAssignment(id).toDomain()
+            assignmentDao.insertAssignment(AssignmentEntity.fromDomain(remote))
+            remote
+        }
     }
 
     // ─── Student ───
@@ -85,12 +98,7 @@ class AssignmentRepositoryImpl @Inject constructor(
     // ─── Mentor ───
 
     override suspend fun getMentorAssignments(): Result<List<Assignment>> = runCatching {
-        val remote = try {
-            assignmentApi.getAssignments().map { it.toDomain() }
-        } catch (_: Exception) {
-            emptyList()
-        }
-        (remote + localAssignments).distinctBy { it.id }
+        getAssignments().getOrDefault(emptyList())
     }
 
     override suspend fun createAssignment(
@@ -106,18 +114,17 @@ class AssignmentRepositoryImpl @Inject constructor(
             dueAt = dueAt.trim()
         )
         val created = assignmentApi.createAssignment(req).toDomain()
-        localAssignments.removeAll { it.id == created.id }
-        localAssignments.add(0, created)
+        assignmentDao.insertAssignment(AssignmentEntity.fromDomain(created))
         created
     }
 
     override suspend fun updateAssignment(assignment: Assignment): Result<Assignment> = runCatching {
-        // Backend currently supports delete & re-create, or returns the assignment
+        assignmentDao.insertAssignment(AssignmentEntity.fromDomain(assignment))
         assignment
     }
 
     override suspend fun deleteAssignment(id: String): Result<Unit> = runCatching {
-        localAssignments.removeAll { it.id == id }
+        assignmentDao.deleteAssignment(id)
         assignmentApi.deleteAssignment(id)
     }
 

@@ -1,5 +1,7 @@
 package com.bagadbille.tdc.data.repository
 
+import com.bagadbille.tdc.data.local.dao.AnnouncementDao
+import com.bagadbille.tdc.data.local.entity.AnnouncementEntity
 import com.bagadbille.tdc.data.model.Announcement
 import com.bagadbille.tdc.data.remote.api.AnnouncementApi
 import com.bagadbille.tdc.data.remote.dto.CreateAnnouncementRequest
@@ -20,13 +22,25 @@ interface AnnouncementRepository {
 
 @Singleton
 class AnnouncementRepositoryImpl @Inject constructor(
-    private val announcementApi: AnnouncementApi
+    private val announcementApi: AnnouncementApi,
+    private val announcementDao: AnnouncementDao
 ) : AnnouncementRepository {
 
     override suspend fun getAnnouncements(): Result<List<Announcement>> = runCatching {
-        announcementApi.getAnnouncements()
-            .map { it.toDomain() }
-            .sortedByDescending { it.createdAt ?: "" }
+        try {
+            val remote = announcementApi.getAnnouncements()
+                .map { it.toDomain() }
+                .sortedByDescending { it.createdAt ?: "" }
+            announcementDao.replaceAnnouncements(remote.map { AnnouncementEntity.fromDomain(it) })
+            remote
+        } catch (e: Exception) {
+            val cached = announcementDao.getAllAnnouncements()
+            if (cached.isNotEmpty()) {
+                cached.map { it.toDomain() }
+            } else {
+                throw e
+            }
+        }
     }
 
     override suspend fun createAnnouncement(
@@ -44,10 +58,13 @@ class AnnouncementRepositoryImpl @Inject constructor(
             audience = finalAudience,
             classId = finalClassId
         )
-        announcementApi.createAnnouncement(req).toDomain()
+        val created = announcementApi.createAnnouncement(req).toDomain()
+        announcementDao.insertAnnouncement(AnnouncementEntity.fromDomain(created))
+        created
     }
 
     override suspend fun deleteAnnouncement(id: String): Result<Unit> = runCatching {
         announcementApi.deleteAnnouncement(id)
+        announcementDao.deleteAnnouncement(id)
     }
 }

@@ -1,5 +1,7 @@
 package com.bagadbille.tdc.data.repository
 
+import com.bagadbille.tdc.data.local.dao.ScheduleDao
+import com.bagadbille.tdc.data.local.entity.ScheduleEntity
 import com.bagadbille.tdc.data.model.Schedule
 import com.bagadbille.tdc.data.remote.api.ScheduleApi
 import com.bagadbille.tdc.data.remote.dto.CreateScheduleRequest
@@ -24,11 +26,23 @@ interface ScheduleRepository {
 
 @Singleton
 class ScheduleRepositoryImpl @Inject constructor(
-    private val scheduleApi: ScheduleApi
+    private val scheduleApi: ScheduleApi,
+    private val scheduleDao: ScheduleDao
 ) : ScheduleRepository {
 
     override suspend fun getSchedules(): Result<List<Schedule>> = runCatching {
-        scheduleApi.getSchedules().map { it.toDomain() }
+        try {
+            val remote = scheduleApi.getSchedules().map { it.toDomain() }
+            scheduleDao.replaceSchedules(remote.map { ScheduleEntity.fromDomain(it) })
+            remote
+        } catch (e: Exception) {
+            val cached = scheduleDao.getAllSchedules()
+            if (cached.isNotEmpty()) {
+                cached.map { it.toDomain() }
+            } else {
+                throw e
+            }
+        }
     }
 
     override suspend fun createSchedule(
@@ -47,7 +61,9 @@ class ScheduleRepositoryImpl @Inject constructor(
             subject = subject,
             room = room
         )
-        scheduleApi.createSchedule(request).toDomain()
+        val created = scheduleApi.createSchedule(request).toDomain()
+        scheduleDao.insertSchedule(ScheduleEntity.fromDomain(created))
+        created
     }
 
     override suspend fun updateSchedule(schedule: Schedule): Result<Schedule> = runCatching {
@@ -59,10 +75,13 @@ class ScheduleRepositoryImpl @Inject constructor(
             subject = schedule.subject,
             room = schedule.room
         )
-        scheduleApi.updateSchedule(schedule.id, request).toDomain()
+        val updated = scheduleApi.updateSchedule(schedule.id, request).toDomain()
+        scheduleDao.insertSchedule(ScheduleEntity.fromDomain(updated))
+        updated
     }
 
     override suspend fun deleteSchedule(id: String): Result<Unit> = runCatching {
         scheduleApi.deleteSchedule(id)
+        scheduleDao.deleteSchedule(id)
     }
 }

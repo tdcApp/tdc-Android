@@ -1,5 +1,7 @@
 package com.bagadbille.tdc.data.repository
 
+import com.bagadbille.tdc.data.local.dao.ClassDao
+import com.bagadbille.tdc.data.local.entity.ClassEntity
 import com.bagadbille.tdc.data.model.ClassInfo
 import com.bagadbille.tdc.data.remote.api.ClassApi
 import javax.inject.Inject
@@ -11,7 +13,8 @@ interface ClassRepository {
 
 @Singleton
 class ClassRepositoryImpl @Inject constructor(
-    private val classApi: ClassApi
+    private val classApi: ClassApi,
+    private val classDao: ClassDao
 ) : ClassRepository {
 
     private val fallbackClasses = listOf(
@@ -28,7 +31,7 @@ class ClassRepositoryImpl @Inject constructor(
         try {
             val remoteClasses = classApi.getClasses()
             if (remoteClasses.isNotEmpty()) {
-                remoteClasses.map { dto ->
+                val mapped = remoteClasses.map { dto ->
                     ClassInfo(
                         id = dto.id,
                         name = dto.name,
@@ -36,11 +39,15 @@ class ClassRepositoryImpl @Inject constructor(
                         createdAt = dto.createdAt ?: dto.createdAtSnake ?: ""
                     )
                 }
+                classDao.replaceClasses(mapped.map { ClassEntity.fromDomain(it) })
+                mapped
             } else {
-                fallbackClasses
+                val cached = classDao.getAllClasses()
+                if (cached.isNotEmpty()) cached.map { it.toDomain() } else fallbackClasses
             }
         } catch (_: Exception) {
-            fallbackClasses
+            val cached = classDao.getAllClasses()
+            if (cached.isNotEmpty()) cached.map { it.toDomain() } else fallbackClasses
         }
     }
 }
