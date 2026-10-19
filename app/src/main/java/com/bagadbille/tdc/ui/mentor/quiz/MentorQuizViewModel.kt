@@ -7,6 +7,9 @@ import com.bagadbille.tdc.data.model.QuizStats
 import com.bagadbille.tdc.data.repository.ClassRepository
 import com.bagadbille.tdc.data.repository.QuizRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -45,10 +48,6 @@ class MentorQuizViewModel @Inject constructor(
     private val _events = MutableSharedFlow<MentorQuizEvent>()
     val events: SharedFlow<MentorQuizEvent> = _events.asSharedFlow()
 
-    init {
-        load()
-    }
-
     fun load(isPullToRefresh: Boolean = false) {
         viewModelScope.launch {
             val current = _uiState.value
@@ -58,18 +57,24 @@ class MentorQuizViewModel @Inject constructor(
                 _uiState.value = MentorQuizUiState.Loading
             }
             try {
-                val quizzes = quizRepository.getQuizzes().getOrDefault(emptyList())
-                val classes = classRepository.getClasses().getOrDefault(emptyList()).associate { it.id to it.name }
+                val items = coroutineScope {
+                    val quizzesDef = async { quizRepository.getQuizzes().getOrDefault(emptyList()) }
+                    val classesDef = async { classRepository.getClasses().getOrDefault(emptyList()).associate { it.id to it.name } }
+                    val quizzes = quizzesDef.await()
+                    val classes = classesDef.await()
 
-                val items = quizzes.map { quiz ->
-                    val questions = quizRepository.getQuizQuestions(quiz.id).getOrDefault(emptyList())
-                    val stats = quizRepository.getQuizStats(quiz.id).getOrNull()
-                    MentorQuizItem(
-                        quiz = quiz,
-                        className = quiz.classId?.let { classes[it] },
-                        questionCount = questions.size,
-                        stats = stats
-                    )
+                    quizzes.map { quiz ->
+                        async {
+                            val questionsDef = async { quizRepository.getQuizQuestions(quiz.id).getOrDefault(emptyList()) }
+                            val statsDef = async { quizRepository.getQuizStats(quiz.id).getOrNull() }
+                            MentorQuizItem(
+                                quiz = quiz,
+                                className = quiz.classId?.let { classes[it] },
+                                questionCount = questionsDef.await().size,
+                                stats = statsDef.await()
+                            )
+                        }
+                    }.awaitAll()
                 }
                 _uiState.value = MentorQuizUiState.Success(items, isRefreshing = false)
             } catch (e: Exception) {

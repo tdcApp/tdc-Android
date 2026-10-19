@@ -9,6 +9,8 @@ import com.bagadbille.tdc.data.remote.api.NotificationApi
 import com.bagadbille.tdc.data.remote.api.QuizApi
 import com.bagadbille.tdc.data.remote.api.ScheduleApi
 import com.bagadbille.tdc.data.remote.dto.RegisterFcmTokenRequest
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -44,9 +46,26 @@ class NotificationRepositoryImpl @Inject constructor(
         val readIds = dataStoreManager.readNotifIds.first()
         val notifications = mutableListOf<AppNotification>()
 
-        // 1. Convert real announcements into in-app notifications
-        try {
-            val announcements = announcementApi.getAnnouncements()
+        coroutineScope {
+            val announcementsDef = async {
+                runCatching { announcementApi.getAnnouncements() }.getOrDefault(emptyList())
+            }
+            val schedulesDef = async {
+                runCatching { scheduleApi.getSchedules() }.getOrDefault(emptyList())
+            }
+            val quizzesDef = async {
+                runCatching { quizApi.getQuizzes() }.getOrDefault(emptyList())
+            }
+            val assignmentsDef = async {
+                runCatching { assignmentApi.getAssignments() }.getOrDefault(emptyList())
+            }
+
+            val announcements = announcementsDef.await()
+            val schedules = schedulesDef.await()
+            val quizzes = quizzesDef.await()
+            val assignments = assignmentsDef.await()
+
+            // 1. Convert real announcements into in-app notifications
             announcements.forEach { a ->
                 val notifId = "ann_${a.id}"
                 notifications.add(
@@ -60,11 +79,8 @@ class NotificationRepositoryImpl @Inject constructor(
                     )
                 )
             }
-        } catch (_: Exception) {}
 
-        // 2. Convert real enrolled schedules into class update notifications
-        try {
-            val schedules = scheduleApi.getSchedules()
+            // 2. Convert real enrolled schedules into class update notifications
             schedules.forEach { s ->
                 val notifId = "sch_${s.id}"
                 val dayName = when (s.dayOfWeek) {
@@ -88,11 +104,8 @@ class NotificationRepositoryImpl @Inject constructor(
                     )
                 )
             }
-        } catch (_: Exception) {}
 
-        // 3. Convert quizzes into in-app notifications
-        try {
-            val quizzes = quizApi.getQuizzes()
+            // 3. Convert quizzes into in-app notifications
             quizzes.forEach { q ->
                 val notifId = "quiz_${q.id}"
                 notifications.add(
@@ -106,11 +119,8 @@ class NotificationRepositoryImpl @Inject constructor(
                     )
                 )
             }
-        } catch (_: Exception) {}
 
-        // 4. Convert assignments into in-app notifications
-        try {
-            val assignments = assignmentApi.getAssignments()
+            // 4. Convert assignments into in-app notifications
             assignments.forEach { a ->
                 val notifId = "asgn_${a.id}"
                 val due = a.dueAt ?: a.dueAtSnake
@@ -126,7 +136,7 @@ class NotificationRepositoryImpl @Inject constructor(
                     )
                 )
             }
-        } catch (_: Exception) {}
+        }
 
         cachedNotifIds.clear()
         cachedNotifIds.addAll(notifications.map { it.id })

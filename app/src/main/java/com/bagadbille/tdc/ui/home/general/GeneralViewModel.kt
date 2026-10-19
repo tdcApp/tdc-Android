@@ -7,6 +7,8 @@ import com.bagadbille.tdc.data.model.Schedule
 import com.bagadbille.tdc.data.repository.QuizRepository
 import com.bagadbille.tdc.data.repository.ScheduleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,8 +40,14 @@ class GeneralViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = GeneralUiState.Loading
             try {
-                val schedules = scheduleRepository.getSchedules().getOrDefault(emptyList())
-                val quizzes = quizRepository.getQuizzes().getOrDefault(emptyList())
+                val schedules: List<Schedule>
+                val quizzes: List<Quiz>
+                coroutineScope {
+                    val sDef = async { scheduleRepository.getSchedules().getOrDefault(emptyList()) }
+                    val qDef = async { quizRepository.getQuizzes().getOrDefault(emptyList()) }
+                    schedules = sDef.await()
+                    quizzes = qDef.await()
+                }
 
                 _uiState.value = GeneralUiState.Success(
                     DashboardData(

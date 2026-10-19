@@ -71,12 +71,26 @@ fun MentorDashboardScreen(
                     onCreateAssignment = onCreateAssignment,
                     onCreateQuiz = onCreateQuiz
                 )
-                1 -> RosterTab(viewModel = rosterViewModel)
-                else -> QuizTab(
-                    viewModel = quizViewModel,
-                    onCreateQuiz = onCreateQuiz,
-                    onOpenQuizResults = onOpenQuizResults
-                )
+                1 -> {
+                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                        if (rosterViewModel.uiState.value is RosterUiState.Loading) {
+                            rosterViewModel.load()
+                        }
+                    }
+                    RosterTab(viewModel = rosterViewModel)
+                }
+                else -> {
+                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                        if (quizViewModel.uiState.value is com.bagadbille.tdc.ui.mentor.quiz.MentorQuizUiState.Loading) {
+                            quizViewModel.load()
+                        }
+                    }
+                    QuizTab(
+                        viewModel = quizViewModel,
+                        onCreateQuiz = onCreateQuiz,
+                        onOpenQuizResults = onOpenQuizResults
+                    )
+                }
             }
         }
     }

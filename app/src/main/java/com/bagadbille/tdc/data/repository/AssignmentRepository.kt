@@ -7,6 +7,8 @@ import com.bagadbille.tdc.data.model.AssignmentSubmission
 import com.bagadbille.tdc.data.remote.api.AssignmentApi
 import com.bagadbille.tdc.data.remote.dto.AssignmentSubmissionRequest
 import com.bagadbille.tdc.data.remote.dto.CreateAssignmentRequest
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import retrofit2.HttpException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -85,14 +87,18 @@ class AssignmentRepositoryImpl @Inject constructor(
 
     override suspend fun getSubmissions(): Result<Map<String, AssignmentSubmission>> = runCatching {
         val assignments = getAssignments().getOrDefault(emptyList())
-        val result = mutableMapOf<String, AssignmentSubmission>()
-        for (a in assignments) {
-            try {
-                val sub = assignmentApi.getMySubmission(a.id).toDomain()
-                result[a.id] = sub
-            } catch (_: Exception) {}
+        coroutineScope {
+            assignments.map { a ->
+                async {
+                    try {
+                        val sub = assignmentApi.getMySubmission(a.id).toDomain()
+                        a.id to sub
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
+            }.mapNotNull { it.await() }.toMap()
         }
-        result
     }
 
     // ─── Mentor ───

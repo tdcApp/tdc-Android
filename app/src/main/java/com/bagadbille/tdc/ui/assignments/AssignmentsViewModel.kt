@@ -4,9 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bagadbille.tdc.data.model.Assignment
 import com.bagadbille.tdc.data.model.AssignmentSubmission
+import com.bagadbille.tdc.data.model.ClassInfo
 import com.bagadbille.tdc.data.repository.AssignmentRepository
 import com.bagadbille.tdc.data.repository.ClassRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,9 +51,17 @@ class AssignmentsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = AssignmentsUiState.Loading
             try {
-                val assignments = repo.getAssignments().getOrDefault(emptyList())
-                val submissions = repo.getSubmissions().getOrDefault(emptyMap())
-                val classes = classRepo.getClasses().getOrDefault(emptyList()).associateBy { it.id }
+                val assignments: List<Assignment>
+                val submissions: Map<String, AssignmentSubmission>
+                val classes: Map<String, ClassInfo>
+                coroutineScope {
+                    val aDef = async { repo.getAssignments().getOrDefault(emptyList()) }
+                    val sDef = async { repo.getSubmissions().getOrDefault(emptyMap()) }
+                    val cDef = async { classRepo.getClasses().getOrDefault(emptyList()).associateBy { it.id } }
+                    assignments = aDef.await()
+                    submissions = sDef.await()
+                    classes = cDef.await()
+                }
 
                 val now = Instant.now()
 

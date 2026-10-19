@@ -8,6 +8,8 @@ import com.bagadbille.tdc.data.repository.ClassRepository
 import com.bagadbille.tdc.data.repository.RosterRepository
 import com.bagadbille.tdc.ui.util.TdcDates
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -49,9 +51,19 @@ class MentorAssignmentsViewModel @Inject constructor(
                 _uiState.value = MentorAssignmentsUiState.Loading
             }
             try {
-                val assignments = assignmentRepo.getMentorAssignments().getOrThrow()
-                val submissions = assignmentRepo.getAllSubmissions().getOrDefault(emptyList())
-                val classNames = classRepo.getClasses().getOrDefault(emptyList()).associate { it.id to it.name }
+                val assignments: List<Assignment>
+                val submissions: List<com.bagadbille.tdc.data.model.AssignmentSubmission>
+                val classNames: Map<String, String>
+
+                coroutineScope {
+                    val aDef = async { assignmentRepo.getMentorAssignments().getOrThrow() }
+                    val sDef = async { assignmentRepo.getAllSubmissions().getOrDefault(emptyList()) }
+                    val cDef = async { classRepo.getClasses().getOrDefault(emptyList()).associate { it.id to it.name } }
+                    assignments = aDef.await()
+                    submissions = sDef.await()
+                    classNames = cDef.await()
+                }
+
                 val studentCounts = rosterRepo.getClassStudentCounts(assignments.map { it.classId })
                     .getOrDefault(emptyMap())
 

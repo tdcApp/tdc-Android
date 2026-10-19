@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.bagadbille.tdc.data.model.ClassInfo
 import com.bagadbille.tdc.data.repository.ClassRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -44,8 +46,14 @@ class ClassesViewModel @Inject constructor(
     fun loadClasses() {
         viewModelScope.launch {
             _uiState.value = ClassesUiState.Loading
-            val myClassesResult = repo.getMyClasses()
-            val allClassesResult = repo.getClasses()
+            val myClassesResult: Result<List<ClassInfo>>
+            val allClassesResult: Result<List<ClassInfo>>
+            coroutineScope {
+                val myDef = async { repo.getMyClasses() }
+                val allDef = async { repo.getClasses() }
+                myClassesResult = myDef.await()
+                allClassesResult = allDef.await()
+            }
 
             val myClasses = myClassesResult.getOrDefault(emptyList())
             val allClasses = allClassesResult.getOrDefault(emptyList())

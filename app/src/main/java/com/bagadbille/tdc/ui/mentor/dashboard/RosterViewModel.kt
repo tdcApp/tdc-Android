@@ -7,6 +7,9 @@ import com.bagadbille.tdc.data.model.UserProfile
 import com.bagadbille.tdc.data.repository.ClassRepository
 import com.bagadbille.tdc.data.repository.RosterRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,18 +36,20 @@ class RosterViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<RosterUiState>(RosterUiState.Loading)
     val uiState: StateFlow<RosterUiState> = _uiState.asStateFlow()
 
-    init { load() }
-
     fun load() {
         viewModelScope.launch {
             _uiState.value = RosterUiState.Loading
             try {
                 val classes = classRepo.getClasses().getOrThrow()
-                val batches = classes.map { cls ->
-                    BatchItem(
-                        classInfo = cls,
-                        students = rosterRepo.getStudentsByClass(cls.id).getOrDefault(emptyList())
-                    )
+                val batches = coroutineScope {
+                    classes.map { cls ->
+                        async {
+                            BatchItem(
+                                classInfo = cls,
+                                students = rosterRepo.getStudentsByClass(cls.id).getOrDefault(emptyList())
+                            )
+                        }
+                    }.awaitAll()
                 }.filter { it.students.isNotEmpty() }
 
                 _uiState.value = RosterUiState.Success(batches)

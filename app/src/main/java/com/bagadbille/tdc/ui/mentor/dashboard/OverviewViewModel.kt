@@ -10,6 +10,8 @@ import com.bagadbille.tdc.data.repository.AssignmentRepository
 import com.bagadbille.tdc.data.repository.ClassRepository
 import com.bagadbille.tdc.data.repository.ScheduleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -63,27 +65,42 @@ class OverviewViewModel @Inject constructor(
                 _uiState.value = OverviewUiState.Loading
             }
             try {
-                val schedules = scheduleRepo.getSchedules().getOrDefault(emptyList())
-                val announcements = announcementRepo.getAnnouncements().getOrDefault(emptyList())
-                val classes = classRepo.getClasses().getOrDefault(emptyList())
-                val classNames = classes.associate { it.id to it.name }
-                val allSubmissions = assignmentRepo.getAllSubmissions().getOrDefault(emptyList())
-                val mentorAssignments = assignmentRepo.getMentorAssignments().getOrDefault(emptyList())
-                val submittedIds = allSubmissions.map { it.assignmentId }.toSet()
-                val pendingCount = mentorAssignments.count { it.id !in submittedIds }
+                val scheduleList: List<Schedule>
+                val announcementList: List<Announcement>
+                val classList: List<ClassInfo>
+                val submissionList: List<com.bagadbille.tdc.data.model.AssignmentSubmission>
+                val mentorAssignmentList: List<com.bagadbille.tdc.data.model.Assignment>
+
+                coroutineScope {
+                    val sDef = async { scheduleRepo.getSchedules().getOrDefault(emptyList()) }
+                    val aDef = async { announcementRepo.getAnnouncements().getOrDefault(emptyList()) }
+                    val cDef = async { classRepo.getClasses().getOrDefault(emptyList()) }
+                    val subDef = async { assignmentRepo.getAllSubmissions().getOrDefault(emptyList()) }
+                    val maDef = async { assignmentRepo.getMentorAssignments().getOrDefault(emptyList()) }
+
+                    scheduleList = sDef.await()
+                    announcementList = aDef.await()
+                    classList = cDef.await()
+                    submissionList = subDef.await()
+                    mentorAssignmentList = maDef.await()
+                }
+
+                val classNames = classList.associate { it.id to it.name }
+                val submittedIds = submissionList.map { it.assignmentId }.toSet()
+                val pendingCount = mentorAssignmentList.count { it.id !in submittedIds }
 
                 val todayDow = LocalDate.now().dayOfWeek.value // 1=Mon … 7=Sun
-                val todaySchedules = schedules.filter { it.dayOfWeek == todayDow }
+                val todaySchedules = scheduleList.filter { it.dayOfWeek == todayDow }
                     .sortedBy { it.startTime }
 
                 _uiState.value = OverviewUiState.Success(
                     OverviewUiData(
                         todaySchedules = todaySchedules,
-                        weekSchedules = schedules.sortedWith(compareBy({ it.dayOfWeek }, { it.startTime })),
-                        announcements = announcements.take(5),
+                        weekSchedules = scheduleList.sortedWith(compareBy({ it.dayOfWeek }, { it.startTime })),
+                        announcements = announcementList.take(5),
                         pendingSubmissions = pendingCount,
                         classNames = classNames,
-                        classList = classes
+                        classList = classList
                     )
                 )
             } catch (e: Exception) {
