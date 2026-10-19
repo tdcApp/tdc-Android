@@ -1,6 +1,7 @@
 package com.bagadbille.tdc.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -21,7 +22,11 @@ import com.bagadbille.tdc.ui.mentor.quiz.QuizResultsScreen
 import com.bagadbille.tdc.ui.notifications.NotificationsScreen
 
 @Composable
-fun TdcNavGraph(navController: NavHostController = rememberNavController()) {
+fun TdcNavGraph(
+    navController: NavHostController = rememberNavController(),
+    pendingNotification: Pair<String, String>? = null,
+    onNotificationHandled: () -> Unit = {}
+) {
     NavHost(navController = navController, startDestination = Screen.Splash.route) {
         composable(Screen.Splash.route) {
             SplashScreen(
@@ -47,6 +52,34 @@ fun TdcNavGraph(navController: NavHostController = rememberNavController()) {
             )
         }
         composable(Screen.Main.route) {
+            LaunchedEffect(pendingNotification) {
+                pendingNotification?.let { (type, id) ->
+                    when (type.uppercase()) {
+                        "QUIZ" -> {
+                            if (id.isNotBlank()) {
+                                navController.navigate("quizTaking/$id")
+                            } else {
+                                navController.navigate(Screen.Notifications.route)
+                            }
+                        }
+                        "ASSIGNMENT" -> {
+                            if (id.isNotBlank()) {
+                                navController.navigate(Screen.AssignmentDetail.createRoute(id))
+                            } else {
+                                navController.navigate(Screen.Notifications.route)
+                            }
+                        }
+                        "ANNOUNCEMENT" -> {
+                            navController.navigate(Screen.Notifications.route)
+                        }
+                        else -> {
+                            navController.navigate(Screen.Notifications.route)
+                        }
+                    }
+                    onNotificationHandled()
+                }
+            }
+
             MainScreen(
                 onNavigateToQuizTaking = { navController.navigate("quizTaking/$it") },
                 onNavigateToQuizResult = { navController.navigate("quizResult/$it") },

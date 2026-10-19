@@ -185,3 +185,10 @@ data class NotificationDto(
     val id: String, val title: String, val body: String,
     val type: String, val isRead: Boolean, val createdAt: String
 )
+
+@Serializable
+data class RegisterFcmTokenRequest(
+    val token: String,
+    val platform: String = "ANDROID"
+)
+

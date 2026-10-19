@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.suspendCancellableCoroutine
 import retrofit2.HttpException
+import com.bagadbille.tdc.data.remote.api.NotificationApi
+import com.google.firebase.messaging.FirebaseMessaging
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -33,7 +35,8 @@ class AuthRepositoryImpl @Inject constructor(
     private val dataStoreManager: DataStoreManager,
     private val firebaseAuthApi: FirebaseAuthApi,
     private val authApi: AuthApi,
-    private val profileApi: ProfileApi
+    private val profileApi: ProfileApi,
+    private val notificationApi: NotificationApi
 ) : AuthRepository {
 
     private val firebaseAuth: FirebaseAuth? by lazy {
@@ -215,6 +218,12 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun logout() {
+        try {
+            val token = FirebaseMessaging.getInstance().token.awaitTask()
+            if (!token.isNullOrBlank()) {
+                notificationApi.unregisterFcmToken(token)
+            }
+        } catch (_: Exception) {}
         try {
             firebaseAuth?.signOut()
         } catch (_: Exception) {}

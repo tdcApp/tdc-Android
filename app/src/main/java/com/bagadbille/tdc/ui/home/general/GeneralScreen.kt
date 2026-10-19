@@ -4,6 +4,13 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,6 +35,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,6 +48,7 @@ import com.bagadbille.tdc.data.model.Quiz
 import com.bagadbille.tdc.data.model.Schedule
 import com.bagadbille.tdc.ui.components.ErrorScreen
 import com.bagadbille.tdc.ui.components.LoadingScreen
+import com.bagadbille.tdc.util.MeetingHelper
 import java.util.Calendar
 
 private val dayLabels = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
@@ -340,11 +350,59 @@ private fun DayCell(
 }
 
 @Composable
+private fun LiveNowBadge() {
+    val infiniteTransition = rememberInfiniteTransition(label = "live_pulse")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = EaseInOut),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alpha_pulse"
+    )
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFF10B981).copy(alpha = 0.18f),
+        border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.5f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(7.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF10B981).copy(alpha = alpha))
+            )
+            Text(
+                "LIVE NOW",
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                fontWeight = FontWeight.ExtraBold,
+                color = Color(0xFF10B981),
+                letterSpacing = 0.5.sp
+            )
+        }
+    }
+}
+
+@Composable
 private fun ScheduleRowItem(schedule: Schedule) {
+    val context = LocalContext.current
+    val isLive = remember(schedule) { MeetingHelper.isScheduleLive(schedule) }
+    val isOnline = remember(schedule.room) { MeetingHelper.isOnlineMeeting(schedule.room) }
+    val liveGreen = Color(0xFF10B981)
+
     Surface(
         shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+        color = if (isLive) liveGreen.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+        border = BorderStroke(
+            1.dp,
+            if (isLive) liveGreen.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        ),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -354,29 +412,41 @@ private fun ScheduleRowItem(schedule: Schedule) {
             // Time Badge
             Surface(
                 shape = RoundedCornerShape(6.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                color = if (isLive) liveGreen.copy(alpha = 0.15f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
             ) {
                 Text(
                     "${schedule.startTime} - ${schedule.endTime}",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = if (isLive) liveGreen else MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
 
             Spacer(Modifier.width(10.dp))
 
-            // Subject
+            // Subject & Platform
             Column(Modifier.weight(1f)) {
-                Text(
-                    schedule.subject,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        schedule.subject,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (isLive) {
+                        Spacer(Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(liveGreen)
+                        )
+                    }
+                }
                 schedule.room?.let { platform ->
                     Spacer(Modifier.height(2.dp))
                     Text(
@@ -384,6 +454,35 @@ private fun ScheduleRowItem(schedule: Schedule) {
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            }
+
+            if (isOnline) {
+                Spacer(Modifier.width(8.dp))
+                if (isLive) {
+                    Button(
+                        onClick = { MeetingHelper.launchMeeting(context, schedule.room) },
+                        shape = RoundedCornerShape(6.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = liveGreen),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Icon(Icons.Outlined.Videocam, null, Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Join", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    IconButton(
+                        onClick = { MeetingHelper.launchMeeting(context, schedule.room) },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.Outlined.Videocam,
+                            contentDescription = "Join Class",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
         }
@@ -451,56 +550,119 @@ private fun SectionHeader(
 
 @Composable
 private fun UpcomingClassCard(schedule: Schedule, dayLabel: String) {
+    val context = LocalContext.current
+    val isLive = remember(schedule) { MeetingHelper.isScheduleLive(schedule) }
+    val isOnline = remember(schedule.room) { MeetingHelper.isOnlineMeeting(schedule.room) }
+    val liveGreen = Color(0xFF10B981)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isLive) liveGreen.copy(alpha = 0.08f)
+            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        border = BorderStroke(
+            1.dp,
+            if (isLive) liveGreen.copy(alpha = 0.5f)
+            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+        ),
         shape = MaterialTheme.shapes.medium
     ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            // Relative Day + Time badge
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-            ) {
-                Column(
-                    Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Relative Day + Time badge
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isLive) liveGreen.copy(alpha = 0.15f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                 ) {
-                    Text(
-                        dayLabel,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        schedule.startTime,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    schedule.subject,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(Modifier.height(2.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "${schedule.startTime} - ${schedule.endTime}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    schedule.room?.let { platform ->
+                    Column(
+                        Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         Text(
-                            " • 📍 $platform",
+                            dayLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isLive) liveGreen else MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            schedule.startTime,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
+                Spacer(Modifier.width(14.dp))
+
+                Column(Modifier.weight(1f)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            schedule.subject,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        if (isLive) {
+                            Spacer(Modifier.width(6.dp))
+                            LiveNowBadge()
+                        }
+                    }
+                    Spacer(Modifier.height(2.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "${schedule.startTime} - ${schedule.endTime}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        schedule.room?.let { platform ->
+                            Text(
+                                " • 📍 $platform",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Quick Join Action Button
+            if (isOnline) {
+                Spacer(Modifier.height(10.dp))
+                if (isLive) {
+                    Button(
+                        onClick = { MeetingHelper.launchMeeting(context, schedule.room) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = liveGreen),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        Icon(Icons.Outlined.Videocam, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "Join Live Class Now",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = { MeetingHelper.launchMeeting(context, schedule.room) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Outlined.Videocam, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Join Meeting / Classroom Link", style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }

@@ -4,7 +4,9 @@ import com.bagadbille.tdc.data.local.DataStoreManager
 import com.bagadbille.tdc.data.model.AppNotification
 import com.bagadbille.tdc.data.model.NotificationType
 import com.bagadbille.tdc.data.remote.api.AnnouncementApi
+import com.bagadbille.tdc.data.remote.api.NotificationApi
 import com.bagadbille.tdc.data.remote.api.ScheduleApi
+import com.bagadbille.tdc.data.remote.dto.RegisterFcmTokenRequest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,6 +18,8 @@ interface NotificationRepository {
     suspend fun getNotifications(): Result<List<AppNotification>>
     suspend fun markAsRead(id: String): Result<Unit>
     suspend fun markAllAsRead(): Result<Unit>
+    suspend fun registerFcmToken(token: String): Result<Unit>
+    suspend fun unregisterFcmToken(token: String): Result<Unit>
     fun hasUnread(): Flow<Boolean>
 }
 
@@ -23,6 +27,7 @@ interface NotificationRepository {
 class NotificationRepositoryImpl @Inject constructor(
     private val announcementApi: AnnouncementApi,
     private val scheduleApi: ScheduleApi,
+    private val notificationApi: NotificationApi,
     private val dataStoreManager: DataStoreManager
 ) : NotificationRepository {
 
@@ -105,4 +110,13 @@ class NotificationRepositoryImpl @Inject constructor(
         }
         _hasUnread.value = false
     }
+
+    override suspend fun registerFcmToken(token: String): Result<Unit> = runCatching {
+        notificationApi.registerFcmToken(RegisterFcmTokenRequest(token = token))
+    }
+
+    override suspend fun unregisterFcmToken(token: String): Result<Unit> = runCatching {
+        notificationApi.unregisterFcmToken(token)
+    }
 }
+
