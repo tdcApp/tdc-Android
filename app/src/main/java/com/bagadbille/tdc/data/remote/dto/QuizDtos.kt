@@ -11,6 +11,8 @@ data class QuizDto(
     val id: String,
     val title: String,
     val audience: String = "ALL",
+    val targetYears: String? = null,
+    @SerialName("target_years") val targetYearsSnake: String? = null,
     val createdBy: String? = null,
     @SerialName("created_by") val createdBySnake: String? = null,
     val classId: String? = null,
@@ -26,6 +28,7 @@ data class QuizDto(
         id = id,
         title = title,
         audience = audience.lowercase(),
+        targetYears = targetYears ?: targetYearsSnake,
         createdBy = createdBy ?: createdBySnake,
         classId = classId ?: classIdSnake,
         createdAt = createdAt ?: createdAtSnake,
@@ -71,6 +74,8 @@ data class QuizDetailDto(
     val id: String,
     val title: String,
     val audience: String = "ALL",
+    val targetYears: String? = null,
+    @SerialName("target_years") val targetYearsSnake: String? = null,
     val createdBy: String? = null,
     @SerialName("created_by") val createdBySnake: String? = null,
     val classId: String? = null,
@@ -87,6 +92,7 @@ data class QuizDetailDto(
         id = id,
         title = title,
         audience = audience.lowercase(),
+        targetYears = targetYears ?: targetYearsSnake,
         createdBy = createdBy ?: createdBySnake,
         classId = classId ?: classIdSnake,
         createdAt = createdAt ?: createdAtSnake,
@@ -99,6 +105,7 @@ data class QuizDetailDto(
 data class CreateQuizRequest(
     val title: String,
     val audience: String,
+    val targetYears: String? = null,
     val classId: String? = null,
     val questions: List<CreateQuizQuestionRequest>
 )

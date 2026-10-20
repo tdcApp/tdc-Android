@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -27,8 +28,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bagadbille.tdc.data.model.ClassInfo
 import com.bagadbille.tdc.data.model.UserProfile
 import com.bagadbille.tdc.data.model.isMentor
+import androidx.compose.foundation.border
+import com.bagadbille.tdc.ui.components.CyberCard
 import com.bagadbille.tdc.ui.components.ErrorScreen
 import com.bagadbille.tdc.ui.components.LoadingScreen
+import com.bagadbille.tdc.ui.theme.*
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
@@ -53,19 +57,15 @@ fun ProfileScreen(
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            com.bagadbille.tdc.ui.components.TdcHeader(
-                onNotificationClick = onNotificationClick,
-                hasUnreadNotifications = hasUnreadNotifications
-            )
-        }
-    ) { innerPadding ->
+    Column(Modifier.fillMaxSize()) {
+        com.bagadbille.tdc.ui.components.TdcHeader(
+            onNotificationClick = onNotificationClick,
+            hasUnreadNotifications = hasUnreadNotifications
+        )
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
+                .fillMaxWidth()
+                .weight(1f)
         ) {
             when (val state = uiState) {
                 is ProfileUiState.Loading -> LoadingScreen()
@@ -91,10 +91,12 @@ fun ProfileScreen(
                         EditProfileDialog(
                             currentName = state.data.profile.name ?: "",
                             currentPhone = state.data.profile.phone,
+                            currentYear = state.data.profile.year,
+                            isStudent = !state.data.profile.isMentor,
                             isUpdating = state.data.isUpdating,
                             onDismiss = { showEditDialog = false },
-                            onSave = { name, phone ->
-                                viewModel.updateProfile(name, phone) { success ->
+                            onSave = { name, phone, year ->
+                                viewModel.updateProfile(name, phone, year) { success ->
                                     if (success) showEditDialog = false
                                 }
                             }
@@ -134,6 +136,12 @@ fun ProfileScreen(
                     }
                 }
             }
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp)
+            )
         }
     }
 }
@@ -155,13 +163,10 @@ private fun ProfileContent(
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         // ─── Hero Profile Card ───
-        Card(
+        CyberCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-            ),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+            shape = RoundedCornerShape(22.dp),
+            borderColor = GlassBorderSubtle
         ) {
             Column(
                 modifier = Modifier
@@ -182,13 +187,14 @@ private fun ProfileContent(
                     modifier = Modifier
                         .size(80.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                        .border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = initials,
                         style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -212,7 +218,7 @@ private fun ProfileContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(14.dp))
 
                 // Badges row: Role, Year, Status
                 Row(
@@ -220,56 +226,60 @@ private fun ProfileContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Role badge
-                    Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
                             text = profile.role.uppercase(),
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
 
                     // Year badge
                     profile.year?.let { yr ->
-                        Surface(
-                            shape = MaterialTheme.shapes.small,
-                            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f))
+                                .border(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
                                 text = yr,
                                 style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.secondary
                             )
                         }
                     }
 
                     // Active badge
-                    Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(NeonPurple.copy(alpha = 0.15f))
+                            .border(1.dp, NeonPurple.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
                                     .size(6.dp)
                                     .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.tertiary)
+                                    .background(NeonPurple)
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
                                 text = "Active",
                                 style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.tertiary
+                                fontWeight = FontWeight.Bold,
+                                color = NeonPurple
                             )
                         }
                     }
@@ -281,22 +291,22 @@ private fun ProfileContent(
                 OutlinedButton(
                     onClick = onEditClick,
                     modifier = Modifier.fillMaxWidth(0.6f),
-                    shape = MaterialTheme.shapes.medium,
+                    shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
+                    border = BorderStroke(1.dp, NeonEmerald.copy(alpha = 0.45f))
                 ) {
                     Icon(
                         Icons.Outlined.Edit,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = NeonEmerald
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
                         "Edit Profile",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = NeonEmerald
                     )
                 }
             }
@@ -344,13 +354,9 @@ private fun ProfileContent(
 
         Spacer(Modifier.height(10.dp))
 
-        Card(
+        CyberCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-            ),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+            shape = RoundedCornerShape(18.dp)
         ) {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 DetailRow(
@@ -359,20 +365,20 @@ private fun ProfileContent(
                     value = profile.phone
                 )
                 if (!profile.isMentor) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     DetailRow(
                         icon = Icons.Outlined.Badge,
                         label = "Enrollment Number",
                         value = profile.enrollmentNumber ?: "Not set"
                     )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     DetailRow(
                         icon = Icons.Outlined.CalendarMonth,
                         label = "College Year",
                         value = profile.year ?: "Not set"
                     )
                 }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 DetailRow(
                     icon = Icons.Outlined.Email,
                     label = "Email Address",
@@ -393,13 +399,10 @@ private fun ProfileContent(
 
         Spacer(Modifier.height(10.dp))
 
-        Card(
+        CyberCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-            ),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+            shape = RoundedCornerShape(18.dp),
+            onClick = { onToggleDarkTheme(!isDarkTheme) }
         ) {
             Row(
                 modifier = Modifier
@@ -410,14 +413,15 @@ private fun ProfileContent(
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f))
+                        .border(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f), RoundedCornerShape(10.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = if (isDarkTheme) Icons.Outlined.DarkMode else Icons.Outlined.LightMode,
                         contentDescription = "Theme",
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -457,9 +461,9 @@ private fun ProfileContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
-            shape = MaterialTheme.shapes.medium,
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = ErrorRed),
+            border = BorderStroke(1.dp, ErrorRed.copy(alpha = 0.45f))
         ) {
             Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Logout", modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
@@ -477,13 +481,10 @@ private fun EnrolledClassCard(
     icon: ImageVector,
     accentColor: androidx.compose.ui.graphics.Color
 ) {
-    Card(
+    CyberCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-        ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+        shape = RoundedCornerShape(18.dp),
+        borderColor = if (classInfo != null) accentColor.copy(alpha = 0.35f) else GlassBorderSubtle
     ) {
         Row(
             modifier = Modifier
@@ -494,8 +495,9 @@ private fun EnrolledClassCard(
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .clip(CircleShape)
-                    .background(accentColor.copy(alpha = 0.15f)),
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(accentColor.copy(alpha = 0.12f))
+                    .border(1.dp, accentColor.copy(alpha = 0.25f), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -527,16 +529,18 @@ private fun EnrolledClassCard(
             }
 
             if (classInfo != null) {
-                Surface(
-                    shape = MaterialTheme.shapes.extraSmall,
-                    color = accentColor.copy(alpha = 0.12f)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 7.dp, vertical = 3.dp)
                 ) {
                     Text(
                         text = "Enrolled",
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium,
-                        color = accentColor,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -556,18 +560,26 @@ private fun DetailRow(
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(20.dp)
-        )
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
             Spacer(Modifier.height(2.dp))
             Text(
@@ -580,16 +592,22 @@ private fun DetailRow(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EditProfileDialog(
     currentName: String,
     currentPhone: String,
+    currentYear: String?,
+    isStudent: Boolean = true,
     isUpdating: Boolean,
     onDismiss: () -> Unit,
-    onSave: (String, String) -> Unit
+    onSave: (String, String, String?) -> Unit
 ) {
     var name by remember { mutableStateOf(currentName) }
     var phone by remember { mutableStateOf(currentPhone) }
+    var year by remember { mutableStateOf(currentYear) }
+    var yearDropdownExpanded by remember { mutableStateOf(false) }
+    val yearOptions = remember { listOf("1st Year", "2nd Year", "3rd Year", "4th Year") }
     var validationError by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
@@ -641,6 +659,70 @@ private fun EditProfileDialog(
                     shape = MaterialTheme.shapes.medium
                 )
 
+                if (isStudent) {
+                    Spacer(Modifier.height(14.dp))
+
+                    val isYearLocked = !currentYear.isNullOrBlank()
+
+                    if (isYearLocked) {
+                        OutlinedTextField(
+                            value = currentYear,
+                            onValueChange = {},
+                            readOnly = true,
+                            enabled = false,
+                            label = { Text("Academic Year") },
+                            leadingIcon = {
+                                Icon(Icons.Outlined.School, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            },
+                            trailingIcon = {
+                                Icon(Icons.Outlined.Lock, contentDescription = "Locked", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            },
+                            supportingText = {
+                                Text("Academic year is locked and cannot be changed once set.")
+                            },
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        ExposedDropdownMenuBox(
+                            expanded = yearDropdownExpanded,
+                            onExpandedChange = { yearDropdownExpanded = it }
+                        ) {
+                            OutlinedTextField(
+                                value = year ?: "Select Academic Year",
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Academic Year *") },
+                                leadingIcon = {
+                                    Icon(Icons.Outlined.School, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = yearDropdownExpanded) },
+                                supportingText = {
+                                    Text("Can only be set once.")
+                                },
+                                shape = MaterialTheme.shapes.medium,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                            )
+                            ExposedDropdownMenu(
+                                expanded = yearDropdownExpanded,
+                                onDismissRequest = { yearDropdownExpanded = false }
+                            ) {
+                                yearOptions.forEach { yr ->
+                                    DropdownMenuItem(
+                                        text = { Text(yr) },
+                                        onClick = {
+                                            year = yr
+                                            yearDropdownExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 validationError?.let { err ->
                     Spacer(Modifier.height(6.dp))
                     Text(
@@ -662,7 +744,7 @@ private fun EditProfileDialog(
                         validationError = "Phone number cannot be empty"
                         return@Button
                     }
-                    onSave(name, phone)
+                    onSave(name, phone, if (isStudent) year else null)
                 },
                 enabled = !isUpdating
             ) {

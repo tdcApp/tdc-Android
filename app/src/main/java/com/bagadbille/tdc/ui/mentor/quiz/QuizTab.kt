@@ -73,12 +73,6 @@ fun QuizTab(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center
                                 )
-                                Spacer(Modifier.height(16.dp))
-                                Button(onClick = onCreateQuiz) {
-                                    Icon(Icons.Outlined.Add, null, Modifier.size(18.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Create First Quiz")
-                                }
                             }
                         }
                     } else {
@@ -217,6 +211,18 @@ private fun MentorQuizCard(
                                 "${item.questionCount} questions",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+
+                        Surface(
+                            shape = MaterialTheme.shapes.extraSmall,
+                            color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
+                        ) {
+                            Text(
+                                quiz.targetYears ?: "All Years",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.tertiary,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }

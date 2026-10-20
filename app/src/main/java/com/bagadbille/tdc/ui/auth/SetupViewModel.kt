@@ -73,6 +73,10 @@ class SetupViewModel @Inject constructor(
             _uiState.value = SetupUiState.Error("Please select a technology class")
             return
         }
+        if (year.isNullOrBlank()) {
+            _uiState.value = SetupUiState.Error("Please select your academic year")
+            return
+        }
 
         viewModelScope.launch {
             _uiState.value = SetupUiState.Loading

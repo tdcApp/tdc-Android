@@ -82,7 +82,8 @@ data class CreateProfileRequest(
     val name: String,
     val mobileNumber: String,
     val languageClassId: String,
-    val technologyClassId: String
+    val technologyClassId: String,
+    val year: String? = null
 )
 
 @Serializable
@@ -97,5 +98,5 @@ data class SetupProfileRequest(
 data class UpdateProfileRequest(
     val name: String? = null,
     val mobileNumber: String? = null,
-    val phone: String? = null
+    val year: String? = null
 )

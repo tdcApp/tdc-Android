@@ -46,8 +46,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bagadbille.tdc.data.model.Quiz
 import com.bagadbille.tdc.data.model.Schedule
+import com.bagadbille.tdc.ui.components.CyberCard
 import com.bagadbille.tdc.ui.components.ErrorScreen
 import com.bagadbille.tdc.ui.components.LoadingScreen
+import com.bagadbille.tdc.ui.theme.*
 import com.bagadbille.tdc.util.MeetingHelper
 import java.util.Calendar
 
@@ -168,10 +170,10 @@ private fun WeeklyScheduleWidget(schedules: List<Schedule>, today: Int) {
         (grouped[selectedDay] ?: emptyList()).sortedBy { it.startTime }
     }
 
-    Card(
+    CyberCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
-        shape = MaterialTheme.shapes.large
+        shape = RoundedCornerShape(20.dp),
+        borderColor = GlassBorderSubtle
     ) {
         Column(Modifier.padding(16.dp)) {
             // Header Row: Schedule Icon + Title + Selected Day subtitle
@@ -181,13 +183,22 @@ private fun WeeklyScheduleWidget(schedules: List<Schedule>, today: Int) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Outlined.CalendarMonth,
-                        contentDescription = null,
-                        modifier = Modifier.size(22.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(NeonEmerald.copy(alpha = 0.12f))
+                            .border(1.dp, NeonEmerald.copy(alpha = 0.25f), RoundedCornerShape(10.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Outlined.CalendarMonth,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = NeonEmerald
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
                     Text(
                         "Weekly Schedule",
                         style = MaterialTheme.typography.titleMedium,
@@ -197,16 +208,18 @@ private fun WeeklyScheduleWidget(schedules: List<Schedule>, today: Int) {
                 }
 
                 // Selected Day Badge
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(NeonCyan.copy(alpha = 0.12f))
+                        .border(1.dp, NeonCyan.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
                         if (selectedDay == today) "Today (${dayLabels[selectedDay]})" else dayFullNames[selectedDay],
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        color = NeonCyan
                     )
                 }
             }
@@ -235,7 +248,7 @@ private fun WeeklyScheduleWidget(schedules: List<Schedule>, today: Int) {
             }
 
             Spacer(Modifier.height(14.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(12.dp))
 
             // Classes for Selected Day
@@ -255,7 +268,7 @@ private fun WeeklyScheduleWidget(schedules: List<Schedule>, today: Int) {
                         Text(
                             "No classes on ${dayFullNames[selectedDay]}",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 } else {
@@ -279,30 +292,32 @@ private fun DayCell(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isDark = MaterialTheme.colorScheme.background == com.bagadbille.tdc.ui.theme.DarkBackground
+
     val bgColor = when {
-        isSelected -> MaterialTheme.colorScheme.primary
-        isToday -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-        classCount > 0 -> MaterialTheme.colorScheme.surface
-        else -> MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
+        isSelected -> if (isDark) NeonEmerald else MaterialTheme.colorScheme.primary
+        isToday -> if (isDark) NeonEmerald.copy(alpha = 0.15f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+        classCount > 0 -> if (isDark) DarkSurfaceVariant else MaterialTheme.colorScheme.surfaceVariant
+        else -> if (isDark) DarkSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     }
 
     val textColor = when {
-        isSelected -> MaterialTheme.colorScheme.onPrimary
-        isToday -> MaterialTheme.colorScheme.primary
+        isSelected -> if (isDark) Color(0xFF070A12) else Color.White
+        isToday -> if (isDark) NeonEmerald else MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.onSurface
     }
 
     val borderColor = when {
-        isSelected -> MaterialTheme.colorScheme.primary
-        isToday -> MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-        else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+        isSelected -> if (isDark) NeonEmerald else MaterialTheme.colorScheme.primary
+        isToday -> if (isDark) NeonEmerald.copy(alpha = 0.4f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+        else -> if (isDark) GlassBorderSubtle else MaterialTheme.colorScheme.outlineVariant
     }
 
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(bgColor)
-            .border(1.dp, borderColor, RoundedCornerShape(10.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
             .padding(vertical = 8.dp, horizontal = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -329,7 +344,7 @@ private fun DayCell(
             Text(
                 "–",
                 style = MaterialTheme.typography.labelMedium,
-                color = textColor.copy(alpha = 0.4f)
+                color = textColor.copy(alpha = 0.35f)
             )
         }
 
@@ -341,7 +356,7 @@ private fun DayCell(
                 Modifier
                     .size(4.dp)
                     .clip(CircleShape)
-                    .background(if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary)
+                    .background(if (isSelected) Color(0xFF070A12) else NeonEmerald)
             )
         } else {
             Spacer(Modifier.height(4.dp))
@@ -362,13 +377,14 @@ private fun LiveNowBadge() {
         label = "alpha_pulse"
     )
 
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = Color(0xFF10B981).copy(alpha = 0.18f),
-        border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.5f))
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(NeonEmerald.copy(alpha = 0.15f))
+            .border(1.dp, NeonEmerald.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 8.dp, vertical = 3.dp)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
@@ -376,13 +392,13 @@ private fun LiveNowBadge() {
                 modifier = Modifier
                     .size(7.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF10B981).copy(alpha = alpha))
+                    .background(NeonEmerald.copy(alpha = alpha))
             )
             Text(
                 "LIVE NOW",
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                 fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFF10B981),
+                color = NeonEmerald,
                 letterSpacing = 0.5.sp
             )
         }
@@ -394,32 +410,29 @@ private fun ScheduleRowItem(schedule: Schedule) {
     val context = LocalContext.current
     val isLive = remember(schedule) { MeetingHelper.isScheduleLive(schedule) }
     val isOnline = remember(schedule.room) { MeetingHelper.isOnlineMeeting(schedule.room) }
-    val liveGreen = Color(0xFF10B981)
 
-    Surface(
-        shape = RoundedCornerShape(10.dp),
-        color = if (isLive) liveGreen.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
-        border = BorderStroke(
-            1.dp,
-            if (isLive) liveGreen.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-        ),
-        modifier = Modifier.fillMaxWidth()
+    CyberCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        borderColor = if (isLive) NeonEmerald.copy(alpha = 0.5f) else GlassBorderSubtle
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Time Badge
-            Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = if (isLive) liveGreen.copy(alpha = 0.15f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (isLive) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant)
+                    .border(1.dp, if (isLive) MaterialTheme.colorScheme.primary.copy(alpha = 0.35f) else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Text(
                     "${schedule.startTime} - ${schedule.endTime}",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = if (isLive) liveGreen else MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    color = if (isLive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
                 )
             }
 
@@ -441,9 +454,9 @@ private fun ScheduleRowItem(schedule: Schedule) {
                         Spacer(Modifier.width(6.dp))
                         Box(
                             modifier = Modifier
-                                .size(8.dp)
+                                .size(7.dp)
                                 .clip(CircleShape)
-                                .background(liveGreen)
+                                .background(MaterialTheme.colorScheme.primary)
                         )
                     }
                 }
@@ -460,16 +473,18 @@ private fun ScheduleRowItem(schedule: Schedule) {
             if (isOnline) {
                 Spacer(Modifier.width(8.dp))
                 if (isLive) {
-                    Button(
-                        onClick = { MeetingHelper.launchMeeting(context, schedule.room) },
-                        shape = RoundedCornerShape(6.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = liveGreen),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                        modifier = Modifier.height(32.dp)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(CyberPrimaryGradient)
+                            .clickable { MeetingHelper.launchMeeting(context, schedule.room) }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        Icon(Icons.Outlined.Videocam, null, Modifier.size(14.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Join", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.Videocam, null, Modifier.size(14.dp), tint = Color(0xFF070A12))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Join", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold, color = Color(0xFF070A12))
+                        }
                     }
                 } else {
                     IconButton(
@@ -479,7 +494,7 @@ private fun ScheduleRowItem(schedule: Schedule) {
                         Icon(
                             Icons.Outlined.Videocam,
                             contentDescription = "Join Class",
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = NeonCyan,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -507,7 +522,15 @@ private fun SectionHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(NeonEmerald.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, Modifier.size(16.dp), tint = NeonEmerald)
+            }
             Spacer(Modifier.width(8.dp))
             Text(
                 title,
@@ -517,16 +540,18 @@ private fun SectionHeader(
             )
             if (count > 0) {
                 Spacer(Modifier.width(8.dp))
-                Surface(
-                    shape = MaterialTheme.shapes.small,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(NeonEmerald.copy(alpha = 0.15f))
+                        .border(1.dp, NeonEmerald.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
                         "$count",
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        fontWeight = FontWeight.Bold,
+                        color = NeonEmerald
                     )
                 }
             }
@@ -553,37 +578,29 @@ private fun UpcomingClassCard(schedule: Schedule, dayLabel: String) {
     val context = LocalContext.current
     val isLive = remember(schedule) { MeetingHelper.isScheduleLive(schedule) }
     val isOnline = remember(schedule.room) { MeetingHelper.isOnlineMeeting(schedule.room) }
-    val liveGreen = Color(0xFF10B981)
 
-    Card(
+    CyberCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isLive) liveGreen.copy(alpha = 0.08f)
-            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        ),
-        border = BorderStroke(
-            1.dp,
-            if (isLive) liveGreen.copy(alpha = 0.5f)
-            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
-        ),
-        shape = MaterialTheme.shapes.medium
+        shape = RoundedCornerShape(18.dp),
+        borderColor = if (isLive) NeonEmerald.copy(alpha = 0.45f) else GlassBorderSubtle
     ) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Relative Day + Time badge
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (isLive) liveGreen.copy(alpha = 0.15f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isLive) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant)
+                        .border(1.dp, if (isLive) MaterialTheme.colorScheme.primary.copy(alpha = 0.35f) else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             dayLabel,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = if (isLive) liveGreen else MaterialTheme.colorScheme.primary
+                            color = if (isLive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
                         )
                         Text(
                             schedule.startTime,
@@ -616,7 +633,7 @@ private fun UpcomingClassCard(schedule: Schedule, dayLabel: String) {
                             LiveNowBadge()
                         }
                     }
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(3.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             "${schedule.startTime} - ${schedule.endTime}",
@@ -627,7 +644,7 @@ private fun UpcomingClassCard(schedule: Schedule, dayLabel: String) {
                             Text(
                                 " • 📍 $platform",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
                         }
                     }
@@ -636,33 +653,49 @@ private fun UpcomingClassCard(schedule: Schedule, dayLabel: String) {
 
             // Quick Join Action Button
             if (isOnline) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 if (isLive) {
-                    Button(
-                        onClick = { MeetingHelper.launchMeeting(context, schedule.room) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = liveGreen),
-                        contentPadding = PaddingValues(vertical = 8.dp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(CyberPrimaryGradient)
+                            .clickable { MeetingHelper.launchMeeting(context, schedule.room) }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Outlined.Videocam, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            "Join Live Class Now",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.Videocam, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFF070A12))
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "Join Live Class Now",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF070A12)
+                            )
+                        }
                     }
                 } else {
-                    OutlinedButton(
-                        onClick = { MeetingHelper.launchMeeting(context, schedule.room) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(vertical = 6.dp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(DarkSurfaceVariant.copy(alpha = 0.5f))
+                            .border(1.dp, NeonCyan.copy(alpha = 0.25f), RoundedCornerShape(10.dp))
+                            .clickable { MeetingHelper.launchMeeting(context, schedule.room) }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Outlined.Videocam, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Join Meeting / Classroom Link", style = MaterialTheme.typography.labelMedium)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.Videocam, contentDescription = null, modifier = Modifier.size(16.dp), tint = NeonCyan)
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "Join Meeting / Classroom Link",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = NeonCyan,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
             }
@@ -672,25 +705,29 @@ private fun UpcomingClassCard(schedule: Schedule, dayLabel: String) {
 
 @Composable
 private fun UpcomingQuizCard(quiz: Quiz, onClick: () -> Unit) {
-    Card(
+    CyberCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-        shape = MaterialTheme.shapes.medium
+        shape = RoundedCornerShape(18.dp),
+        borderColor = GlassBorderSubtle
     ) {
         Row(
             Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(NeonPurple.copy(alpha = 0.12f))
+                    .border(1.dp, NeonPurple.copy(alpha = 0.25f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Outlined.Quiz,
                     contentDescription = null,
-                    modifier = Modifier.padding(10.dp).size(22.dp),
-                    tint = MaterialTheme.colorScheme.tertiary
+                    modifier = Modifier.size(22.dp),
+                    tint = NeonPurple
                 )
             }
             Spacer(Modifier.width(14.dp))
@@ -703,17 +740,19 @@ private fun UpcomingQuizCard(quiz: Quiz, onClick: () -> Unit) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(Modifier.height(3.dp))
+                Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
                             quiz.audience.replaceFirstChar { it.uppercase() },
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                     quiz.createdAt?.let {
@@ -722,13 +761,13 @@ private fun UpcomingQuizCard(quiz: Quiz, onClick: () -> Unit) {
                             Icons.Outlined.AccessTime,
                             null,
                             Modifier.size(12.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
                             it.take(10),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
                     }
                 }
@@ -745,10 +784,9 @@ private fun UpcomingQuizCard(quiz: Quiz, onClick: () -> Unit) {
 
 @Composable
 private fun EmptyCard(message: String) {
-    Card(
+    CyberCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)),
-        shape = MaterialTheme.shapes.medium
+        shape = RoundedCornerShape(16.dp)
     ) {
         Text(
             message,

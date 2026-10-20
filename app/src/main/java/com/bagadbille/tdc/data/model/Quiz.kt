@@ -4,6 +4,7 @@ data class Quiz(
     val id: String,
     val title: String,
     val audience: String,
+    val targetYears: String? = null,
     val createdBy: String? = null,
     val classId: String? = null,
     val createdAt: String? = null,

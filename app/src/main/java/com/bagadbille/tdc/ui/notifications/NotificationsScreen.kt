@@ -12,6 +12,7 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,8 +34,12 @@ import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import com.bagadbille.tdc.ui.components.CyberCard
 import com.bagadbille.tdc.ui.components.TdcPullToRefresh
+import com.bagadbille.tdc.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -233,28 +238,73 @@ private fun NotifCard(n: AppNotification, onClick: () -> Unit) {
         NotificationType.ANNOUNCEMENT -> Icons.Outlined.Campaign
         NotificationType.GENERAL -> Icons.Outlined.Info
     }
-    Card(
+
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val secondaryColor = MaterialTheme.colorScheme.secondary
+    val tertiaryColor = MaterialTheme.colorScheme.tertiary
+
+    val iconColor = when (n.type) {
+        NotificationType.QUIZ_REMINDER -> tertiaryColor
+        NotificationType.CLASS_UPDATE -> primaryColor
+        NotificationType.ANNOUNCEMENT -> WarningAmber
+        NotificationType.GENERAL -> secondaryColor
+    }
+
+    CyberCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (!n.isRead) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
-            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        ),
-        shape = MaterialTheme.shapes.medium
+        shape = RoundedCornerShape(16.dp),
+        borderColor = if (!n.isRead) primaryColor.copy(alpha = 0.35f) else GlassBorderSubtle
     ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
-            if (!n.isRead) {
-                Box(Modifier.size(8.dp).offset(y = 6.dp).background(MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small))
-                Spacer(Modifier.width(8.dp))
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.Top) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(iconColor.copy(alpha = 0.12f))
+                    .border(1.dp, iconColor.copy(alpha = 0.25f), RoundedCornerShape(10.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, Modifier.size(20.dp), tint = iconColor)
             }
-            Icon(icon, null, Modifier.size(24.dp), tint = if (!n.isRead) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(n.title, style = MaterialTheme.typography.titleSmall, fontWeight = if (!n.isRead) FontWeight.SemiBold else FontWeight.Normal, color = MaterialTheme.colorScheme.onSurface)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        n.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = if (!n.isRead) FontWeight.Bold else FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (!n.isRead) {
+                        Spacer(Modifier.width(6.dp))
+                        Box(
+                            Modifier
+                                .size(7.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(primaryColor)
+                        )
+                    }
+                }
                 Spacer(Modifier.height(4.dp))
-                Text(n.body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(4.dp))
-                Text(n.createdAt.take(10), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                Text(
+                    n.body,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    n.createdAt.take(10),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
             }
         }
     }
@@ -282,11 +332,12 @@ private fun AnnouncementsTab(
 
 @Composable
 private fun AnnouncementCard(a: Announcement, onClick: () -> Unit) {
-    Card(
+    val tertiaryColor = MaterialTheme.colorScheme.tertiary
+    CyberCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-        shape = MaterialTheme.shapes.medium
+        shape = RoundedCornerShape(16.dp),
+        borderColor = GlassBorderSubtle
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(
@@ -301,12 +352,18 @@ private fun AnnouncementCard(a: Announcement, onClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
-                Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(tertiaryColor.copy(alpha = 0.15f))
+                        .border(1.dp, tertiaryColor.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
                     Text(
                         a.audience.replaceFirstChar { it.uppercase() },
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        fontWeight = FontWeight.Bold,
+                        color = tertiaryColor
                     )
                 }
             }

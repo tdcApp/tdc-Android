@@ -93,7 +93,7 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun updateProfile(name: String, phone: String, onFinished: (Boolean) -> Unit = {}) {
+    fun updateProfile(name: String, phone: String, year: String? = null, onFinished: (Boolean) -> Unit = {}) {
         val currentState = _uiState.value
         if (currentState !is ProfileUiState.Success) return
 
@@ -102,7 +102,7 @@ class ProfileViewModel @Inject constructor(
                 currentState.data.copy(isUpdating = true)
             )
 
-            val result = profileRepository.updateProfile(name = name.trim(), phone = phone.trim())
+            val result = profileRepository.updateProfile(name = name.trim(), phone = phone.trim(), year = year?.trim())
             result.onSuccess { updatedProfile ->
                 _uiState.value = ProfileUiState.Success(
                     currentState.data.copy(

@@ -25,6 +25,7 @@ fun MentorDashboardScreen(
     onCreateAssignment: () -> Unit = {},
     onCreateQuiz: () -> Unit = {},
     onOpenQuizResults: (String) -> Unit = {},
+    onNavigateToAssignmentsTab: () -> Unit = {},
     hasUnreadNotifications: Boolean = false
 ) {
     val tabs = listOf("Overview", "Batches", "Quiz")
@@ -68,8 +69,8 @@ fun MentorDashboardScreen(
             when (page) {
                 0 -> OverviewTab(
                     viewModel = overviewViewModel,
-                    onCreateAssignment = onCreateAssignment,
-                    onCreateQuiz = onCreateQuiz
+                    onNavigateToAssignments = onNavigateToAssignmentsTab,
+                    onNavigateToQuiz = { scope.launch { pagerState.animateScrollToPage(2) } }
                 )
                 1 -> {
                     androidx.compose.runtime.LaunchedEffect(Unit) {

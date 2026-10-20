@@ -1,6 +1,8 @@
 package com.bagadbille.tdc.ui.mentor.dashboard
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -16,17 +18,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bagadbille.tdc.data.model.Announcement
 import com.bagadbille.tdc.data.model.Schedule
+import com.bagadbille.tdc.ui.components.CyberCard
 import com.bagadbille.tdc.ui.components.ErrorScreen
 import com.bagadbille.tdc.ui.components.LoadingScreen
+import com.bagadbille.tdc.ui.theme.*
 import kotlinx.coroutines.flow.collectLatest
 import java.time.LocalDate
 
@@ -34,8 +42,10 @@ private val DAYS = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
 @Composable
 fun OverviewTab(
-    onCreateAssignment: () -> Unit = {},
-    onCreateQuiz: () -> Unit = {},
+    onNavigateToAssignments: () -> Unit = {},
+    onNavigateToQuiz: () -> Unit = {},
+    onCreateAssignment: () -> Unit = onNavigateToAssignments,
+    onCreateQuiz: () -> Unit = onNavigateToQuiz,
     viewModel: OverviewViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -63,8 +73,8 @@ fun OverviewTab(
             ) {
                 OverviewContent(
                     data = s.data,
-                    onCreateAssignment = onCreateAssignment,
-                    onCreateQuiz = onCreateQuiz,
+                    onNavigateToAssignments = onNavigateToAssignments,
+                    onNavigateToQuiz = onNavigateToQuiz,
                     onPostClick = { showPostDialog = true },
                     onAddScheduleClick = { showAddScheduleDialog = true },
                     onDeleteAnnouncement = { deleteAnnouncementTarget = it },
@@ -148,8 +158,8 @@ fun OverviewTab(
 @Composable
 private fun OverviewContent(
     data: OverviewUiData,
-    onCreateAssignment: () -> Unit,
-    onCreateQuiz: () -> Unit,
+    onNavigateToAssignments: () -> Unit,
+    onNavigateToQuiz: () -> Unit,
     onPostClick: () -> Unit,
     onAddScheduleClick: () -> Unit,
     onDeleteAnnouncement: (String) -> Unit,
@@ -179,14 +189,14 @@ private fun OverviewContent(
                     icon = Icons.Outlined.CalendarMonth,
                     value = "${data.todaySchedules.size}",
                     label = "Today's classes",
-                    color = MaterialTheme.colorScheme.primary
+                    color = NeonEmerald
                 )
                 StatCard(
                     modifier = Modifier.weight(1f),
                     icon = Icons.AutoMirrored.Outlined.Assignment,
                     value = "${data.pendingSubmissions}",
                     label = "Pending reviews",
-                    color = MaterialTheme.colorScheme.secondary
+                    color = NeonCyan
                 )
             }
         }
@@ -195,7 +205,7 @@ private fun OverviewContent(
         item {
             Column {
                 SectionTitle("Quick Actions")
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(10.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -203,19 +213,22 @@ private fun OverviewContent(
                     QuickActionButton(
                         modifier = Modifier.weight(1f),
                         icon = Icons.AutoMirrored.Outlined.Assignment,
-                        label = "New Assignment",
-                        onClick = onCreateAssignment
+                        label = "Assignments",
+                        accentColor = NeonCyan,
+                        onClick = onNavigateToAssignments
                     )
                     QuickActionButton(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Outlined.Quiz,
-                        label = "New Quiz",
-                        onClick = onCreateQuiz
+                        label = "Quizzes",
+                        accentColor = NeonPurple,
+                        onClick = onNavigateToQuiz
                     )
                     QuickActionButton(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Outlined.Campaign,
                         label = "Announce",
+                        accentColor = NeonAmber,
                         onClick = onPostClick
                     )
                 }
@@ -231,9 +244,9 @@ private fun OverviewContent(
             ) {
                 SectionTitle("Class Schedule")
                 TextButton(onClick = onAddScheduleClick) {
-                    Icon(Icons.Outlined.Add, null, Modifier.size(16.dp))
+                    Icon(Icons.Outlined.Add, null, Modifier.size(16.dp), tint = NeonEmerald)
                     Spacer(Modifier.width(4.dp))
-                    Text("Add Timing", style = MaterialTheme.typography.labelMedium)
+                    Text("Add Timing", style = MaterialTheme.typography.labelMedium, color = NeonEmerald)
                 }
             }
         }
@@ -270,11 +283,10 @@ private fun OverviewContent(
 
         if (displayedSchedules.isEmpty()) {
             item {
-                Card(
+                CyberCard(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                    )
+                    shape = RoundedCornerShape(16.dp),
+                    borderColor = GlassBorderSubtle
                 ) {
                     Text(
                         if (selectedDayIndex == 0) "No classes scheduled today" else "No classes scheduled on ${DAYS[selectedDayIndex - 1]}",
@@ -296,27 +308,15 @@ private fun OverviewContent(
 
         // ── Announcements (Phase 3) ──
         item {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                SectionTitle("Announcements")
-                TextButton(onClick = onPostClick) {
-                    Icon(Icons.Outlined.Add, null, Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Post", style = MaterialTheme.typography.labelMedium)
-                }
-            }
+            SectionTitle("Announcements")
         }
 
         if (data.announcements.isEmpty()) {
             item {
-                Card(
+                CyberCard(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                    )
+                    shape = RoundedCornerShape(16.dp),
+                    borderColor = GlassBorderSubtle
                 ) {
                     Text(
                         "No announcements yet",
@@ -342,20 +342,37 @@ private fun QuickActionButton(
     modifier: Modifier = Modifier,
     icon: ImageVector,
     label: String,
+    accentColor: Color = NeonCyan,
     onClick: () -> Unit
 ) {
-    OutlinedButton(
-        onClick = onClick,
+    CyberCard(
         modifier = modifier,
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp),
-        shape = MaterialTheme.shapes.medium
+        shape = RoundedCornerShape(16.dp),
+        borderColor = accentColor.copy(alpha = 0.22f),
+        onClick = onClick
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(icon, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.height(4.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(accentColor.copy(alpha = 0.12f))
+                    .border(1.dp, accentColor.copy(alpha = 0.28f), RoundedCornerShape(10.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, modifier = Modifier.size(20.dp), tint = accentColor)
+            }
+            Spacer(Modifier.height(8.dp))
             Text(
                 label,
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -369,19 +386,41 @@ private fun StatCard(
     icon: ImageVector,
     value: String,
     label: String,
-    color: androidx.compose.ui.graphics.Color
+    color: Color
 ) {
-    Card(
+    CyberCard(
         modifier = modifier,
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)),
-        border = BorderStroke(1.dp, color.copy(alpha = 0.2f))
+        shape = RoundedCornerShape(18.dp),
+        borderColor = color.copy(alpha = 0.25f)
     ) {
-        Column(Modifier.padding(14.dp)) {
-            Icon(icon, null, tint = color, modifier = Modifier.size(22.dp))
-            Spacer(Modifier.height(8.dp))
-            Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = color)
-            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(color.copy(alpha = 0.12f))
+                    .border(1.dp, color.copy(alpha = 0.25f), RoundedCornerShape(10.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                value,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = color
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -390,7 +429,7 @@ private fun StatCard(
 private fun SectionTitle(text: String) {
     Text(
         text,
-        style = MaterialTheme.typography.titleSmall,
+        style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurface
     )
@@ -402,13 +441,10 @@ private fun ScheduleChip(
     classNames: Map<String, String>,
     onDelete: () -> Unit
 ) {
-    Card(
+    CyberCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+        shape = RoundedCornerShape(16.dp),
+        borderColor = GlassBorderSubtle
     ) {
         Row(
             Modifier
@@ -416,19 +452,20 @@ private fun ScheduleChip(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .border(1.dp, NeonEmerald.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Column(
-                    Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         schedule.startTime,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = NeonEmerald
                     )
                     Text(
                         schedule.endTime,
@@ -447,14 +484,27 @@ private fun ScheduleChip(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        classNames[schedule.classId] ?: schedule.classId,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                Spacer(Modifier.height(2.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(NeonCyan.copy(alpha = 0.12f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            classNames[schedule.classId] ?: schedule.classId,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = NeonCyan,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                     schedule.room?.let {
-                        Text("· $it", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "· $it",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
                     }
                 }
             }
@@ -462,7 +512,7 @@ private fun ScheduleChip(
                 Icon(
                     Icons.Outlined.Delete,
                     contentDescription = "Remove schedule",
-                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                    tint = ErrorRed.copy(alpha = 0.8f),
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -472,53 +522,66 @@ private fun ScheduleChip(
 
 @Composable
 private fun AnnouncementCard(announcement: Announcement, onDelete: () -> Unit) {
-    Card(
+    CyberCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-        ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+        shape = RoundedCornerShape(16.dp),
+        borderColor = GlassBorderSubtle
     ) {
-        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.Top) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.Top
+        ) {
             Column(Modifier.weight(1f)) {
-                Text(
-                    announcement.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        announcement.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (announcement.audience != "all") {
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(NeonPurple.copy(alpha = 0.15f))
+                                .border(1.dp, NeonPurple.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                announcement.audience.replaceFirstChar { it.uppercase() },
+                                style = MaterialTheme.typography.labelSmall,
+                                color = NeonPurple,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
                 Text(
                     announcement.content,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (announcement.audience != "all") {
-                    Spacer(Modifier.height(6.dp))
-                    Surface(
-                        shape = MaterialTheme.shapes.extraSmall,
-                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
-                    ) {
-                        Text(
-                            announcement.audience.replaceFirstChar { it.uppercase() },
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                }
             }
+            Spacer(Modifier.width(8.dp))
             IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
                 Icon(
                     Icons.Outlined.Delete,
-                    contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                    modifier = Modifier.size(18.dp)
+                    contentDescription = "Delete announcement",
+                    tint = ErrorRed.copy(alpha = 0.8f),
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }

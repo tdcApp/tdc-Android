@@ -19,6 +19,7 @@ data class CreateQuizUiState(
     val title: String = "",
     val audience: String = "all",
     val classId: String? = null,
+    val targetYears: Set<String> = emptySet(),
     val classes: Map<String, String> = emptyMap(),
     val questions: List<QuizQuestionDraft> = listOf(
         QuizQuestionDraft(question = "", optionA = "", optionB = "", optionC = "", optionD = "", correctOption = "a")
@@ -73,6 +74,20 @@ class CreateQuizViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(classId = classId, errorMessage = null)
     }
 
+    fun toggleTargetYear(year: String) {
+        val current = _uiState.value.targetYears.toMutableSet()
+        if (current.contains(year)) {
+            current.remove(year)
+        } else {
+            current.add(year)
+        }
+        _uiState.value = _uiState.value.copy(targetYears = current, errorMessage = null)
+    }
+
+    fun selectAllYears() {
+        _uiState.value = _uiState.value.copy(targetYears = emptySet(), errorMessage = null)
+    }
+
     fun addQuestion() {
         val current = _uiState.value.questions.toMutableList()
         current.add(QuizQuestionDraft(question = "", optionA = "", optionB = "", optionC = "", optionD = "", correctOption = "a"))
@@ -124,12 +139,19 @@ class CreateQuizViewModel @Inject constructor(
             }
         }
 
+        val targetYearsString = if (state.targetYears.isEmpty()) {
+            null
+        } else {
+            state.targetYears.sorted().joinToString(",")
+        }
+
         viewModelScope.launch {
             _uiState.value = state.copy(isSaving = true, errorMessage = null)
             quizRepository.createQuiz(
                 title = title,
                 audience = state.audience,
                 classId = state.classId,
+                targetYears = targetYearsString,
                 questions = state.questions
             ).onSuccess {
                 _events.emit(CreateQuizEvent.ShowMessage("Quiz created successfully!"))

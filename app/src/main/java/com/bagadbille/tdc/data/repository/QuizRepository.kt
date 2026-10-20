@@ -28,6 +28,7 @@ interface QuizRepository {
         title: String,
         audience: String,
         classId: String?,
+        targetYears: String? = null,
         questions: List<QuizQuestionDraft>
     ): Result<Quiz>
     suspend fun deleteQuiz(quizId: String): Result<Unit>
@@ -130,14 +131,17 @@ class QuizRepositoryImpl @Inject constructor(
         title: String,
         audience: String,
         classId: String?,
+        targetYears: String?,
         questions: List<QuizQuestionDraft>
     ): Result<Quiz> = runCatching {
         val finalAudience = if (!classId.isNullOrBlank()) "CLASS" else audience.trim().uppercase()
         val finalClassId = if (finalAudience == "CLASS") classId?.trim() else null
+        val cleanTargetYears = targetYears?.trim()?.ifBlank { null }
 
         val request = CreateQuizRequest(
             title = title.trim(),
             audience = finalAudience,
+            targetYears = cleanTargetYears,
             classId = finalClassId,
             questions = questions.map {
                 CreateQuizQuestionRequest(

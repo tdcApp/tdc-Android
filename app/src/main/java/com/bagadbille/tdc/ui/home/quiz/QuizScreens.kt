@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bagadbille.tdc.data.model.Quiz
 import com.bagadbille.tdc.data.model.QuizQuestion
 import com.bagadbille.tdc.data.model.QuizResult
+import com.bagadbille.tdc.ui.components.CyberCard
 import com.bagadbille.tdc.ui.components.EmptyStateScreen
 import com.bagadbille.tdc.ui.components.ErrorScreen
 import com.bagadbille.tdc.ui.components.LoadingScreen
@@ -122,11 +123,10 @@ private fun QuizCard(
     isCompleted: Boolean,
     onClick: () -> Unit
 ) {
-    Card(
+    CyberCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-        shape = MaterialTheme.shapes.medium
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -165,6 +165,20 @@ private fun QuizCard(
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
+                    }
+                    quiz.targetYears?.let { years ->
+                        Spacer(Modifier.width(6.dp))
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
+                        ) {
+                            Text(
+                                years,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                     quiz.createdAt?.let {
                         Spacer(Modifier.width(8.dp))

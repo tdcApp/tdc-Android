@@ -1,6 +1,7 @@
 package com.bagadbille.tdc.ui.main
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Dashboard
@@ -9,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bagadbille.tdc.navigation.BottomNavItem
@@ -18,6 +20,7 @@ import com.bagadbille.tdc.ui.home.HomeScreen
 import com.bagadbille.tdc.ui.mentor.assignments.MentorAssignmentsScreen
 import com.bagadbille.tdc.ui.mentor.dashboard.MentorDashboardScreen
 import com.bagadbille.tdc.ui.profile.ProfileScreen
+import com.bagadbille.tdc.ui.theme.*
 
 @Composable
 fun MainScreen(
@@ -45,29 +48,35 @@ fun MainScreen(
 
     Scaffold(
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-                tabs.forEachIndexed { index, item ->
-                    val isDashboard = mentor && item == BottomNavItem.HOME
-                    val title = if (isDashboard) "Dashboard" else item.title
-                    val icon = when {
-                        isDashboard && selectedTab == index -> Icons.Filled.Dashboard
-                        isDashboard -> Icons.Outlined.Dashboard
-                        selectedTab == index -> item.selectedIcon
-                        else -> item.unselectedIcon
-                    }
-                    NavigationBarItem(
-                        icon = { Icon(icon, title) },
-                        label = { Text(title) },
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+            Column {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 0.dp
+                ) {
+                    tabs.forEachIndexed { index, item ->
+                        val isDashboard = mentor && item == BottomNavItem.HOME
+                        val title = if (isDashboard) "Dashboard" else item.title
+                        val icon = when {
+                            isDashboard && selectedTab == index -> Icons.Filled.Dashboard
+                            isDashboard -> Icons.Outlined.Dashboard
+                            selectedTab == index -> item.selectedIcon
+                            else -> item.unselectedIcon
+                        }
+                        NavigationBarItem(
+                            icon = { Icon(icon, title) },
+                            label = { Text(title) },
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
@@ -85,6 +94,7 @@ fun MainScreen(
                         onCreateAssignment = onNavigateToCreateAssignment,
                         onCreateQuiz = onNavigateToCreateQuiz,
                         onOpenQuizResults = onNavigateToQuizResults,
+                        onNavigateToAssignmentsTab = { selectedTab = 2 },
                         hasUnreadNotifications = hasUnreadNotifications
                     )
                 } else {

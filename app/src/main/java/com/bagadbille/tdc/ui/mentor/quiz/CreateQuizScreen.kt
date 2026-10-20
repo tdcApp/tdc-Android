@@ -2,7 +2,9 @@ package com.bagadbille.tdc.ui.mentor.quiz
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -189,6 +191,45 @@ fun CreateQuizScreen(
                                         )
                                     }
                                 }
+                            }
+                        }
+
+                        Spacer(Modifier.height(14.dp))
+
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Target Academic Year",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                if (uiState.targetYears.isEmpty()) "All Years" else uiState.targetYears.sorted().joinToString(", "),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        Spacer(Modifier.height(6.dp))
+
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FilterChip(
+                                selected = uiState.targetYears.isEmpty(),
+                                onClick = { viewModel.selectAllYears() },
+                                label = { Text("All Years", style = MaterialTheme.typography.labelSmall) }
+                            )
+                            listOf("1st Year", "2nd Year", "3rd Year", "4th Year").forEach { yr ->
+                                FilterChip(
+                                    selected = uiState.targetYears.contains(yr),
+                                    onClick = { viewModel.toggleTargetYear(yr) },
+                                    label = { Text(yr, style = MaterialTheme.typography.labelSmall) }
+                                )
                             }
                         }
                     }

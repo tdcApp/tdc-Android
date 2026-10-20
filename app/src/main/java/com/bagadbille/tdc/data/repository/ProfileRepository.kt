@@ -24,7 +24,7 @@ interface ProfileRepository {
         mobileNumber: String? = null
     ): Result<UserProfile>
     suspend fun setupProfile(name: String, enrollmentNumber: String, year: String): Result<UserProfile>
-    suspend fun updateProfile(name: String?, phone: String?): Result<UserProfile>
+    suspend fun updateProfile(name: String?, phone: String?, year: String? = null): Result<UserProfile>
 }
 
 @Singleton
@@ -109,6 +109,8 @@ class ProfileRepositoryImpl @Inject constructor(
             throw IllegalArgumentException("Please select a technology class")
         }
 
+        val cleanYear = year?.trim()?.ifBlank { null }
+
         try {
             // POST /users/profile to NestJS backend to persist into Neon PostgreSQL
             val createdDto = profileApi.createProfile(
@@ -116,7 +118,8 @@ class ProfileRepositoryImpl @Inject constructor(
                     name = cleanName,
                     mobileNumber = cleanMobile,
                     languageClassId = langId,
-                    technologyClassId = techId
+                    technologyClassId = techId,
+                    year = cleanYear
                 )
             )
 
@@ -150,14 +153,16 @@ class ProfileRepositoryImpl @Inject constructor(
     override suspend fun setupProfile(name: String, enrollmentNumber: String, year: String): Result<UserProfile> =
         setupProfile(name, null, null, enrollmentNumber, year)
 
-    override suspend fun updateProfile(name: String?, phone: String?): Result<UserProfile> = runCatching {
+    override suspend fun updateProfile(name: String?, phone: String?, year: String?): Result<UserProfile> = runCatching {
         val cleanName = name?.trim()
         val cleanPhone = phone?.trim()
+        val cleanYear = year?.trim()?.ifBlank { null }
 
         val updatedDto = profileApi.updateProfile(
             UpdateProfileRequest(
                 name = cleanName,
-                mobileNumber = cleanPhone
+                mobileNumber = cleanPhone,
+                year = cleanYear
             )
         )
         dataStoreManager.saveUserName(updatedDto.name ?: cleanName ?: "")

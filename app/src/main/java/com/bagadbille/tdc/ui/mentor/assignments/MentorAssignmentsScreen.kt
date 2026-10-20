@@ -1,5 +1,7 @@
 package com.bagadbille.tdc.ui.mentor.assignments
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,15 +20,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bagadbille.tdc.ui.components.CyberCard
 import com.bagadbille.tdc.ui.components.EmptyStateScreen
 import com.bagadbille.tdc.ui.components.ErrorScreen
 import com.bagadbille.tdc.ui.components.LoadingScreen
 import com.bagadbille.tdc.ui.components.TdcHeader
+import com.bagadbille.tdc.ui.theme.*
 import com.bagadbille.tdc.ui.util.TdcDates
 import kotlinx.coroutines.launch
 
@@ -146,13 +151,18 @@ private fun SectionHeader(title: String, count: Int) {
             color = MaterialTheme.colorScheme.onSurface
         )
         Spacer(Modifier.width(8.dp))
-        Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)) {
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                .padding(horizontal = 8.dp, vertical = 2.dp)
+        ) {
             Text(
                 "$count",
                 style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }
@@ -160,23 +170,30 @@ private fun SectionHeader(title: String, count: Int) {
 
 @Composable
 private fun MentorAssignmentCard(item: MentorAssignmentItem, isPast: Boolean, onClick: () -> Unit) {
-    val accent = if (isPast) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
+    val accent = if (isPast) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.primary
     val allSubmitted = item.totalStudents > 0 && item.submittedCount >= item.totalStudents
     val progress = if (item.totalStudents == 0) 0f else item.submittedCount.toFloat() / item.totalStudents
 
-    Card(
+    CyberCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-        shape = MaterialTheme.shapes.medium
+        shape = RoundedCornerShape(18.dp),
+        borderColor = if (allSubmitted) MaterialTheme.colorScheme.primary.copy(alpha = 0.35f) else GlassBorderSubtle
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = RoundedCornerShape(10.dp), color = accent.copy(alpha = 0.12f)) {
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(accent.copy(alpha = 0.12f))
+                        .border(1.dp, accent.copy(alpha = 0.25f), RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(
                         if (allSubmitted) Icons.Outlined.TaskAlt else Icons.AutoMirrored.Outlined.Assignment,
                         contentDescription = null,
-                        modifier = Modifier.padding(12.dp).size(24.dp),
+                        modifier = Modifier.size(24.dp),
                         tint = accent
                     )
                 }
@@ -195,16 +212,18 @@ private fun MentorAssignmentCard(item: MentorAssignmentItem, isPast: Boolean, on
                     Spacer(Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         item.className?.let { name ->
-                            Surface(
-                                shape = MaterialTheme.shapes.small,
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                modifier = Modifier.weight(1f, fill = false)
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 7.dp, vertical = 2.dp)
                             ) {
                                 Text(
                                     name,
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    color = MaterialTheme.colorScheme.secondary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -216,13 +235,13 @@ private fun MentorAssignmentCard(item: MentorAssignmentItem, isPast: Boolean, on
                                 Icons.Outlined.AccessTime,
                                 contentDescription = null,
                                 modifier = Modifier.size(12.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
                             Spacer(Modifier.width(3.dp))
                             Text(
                                 due,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 maxLines = 1,
                                 softWrap = false
                             )
@@ -238,7 +257,7 @@ private fun MentorAssignmentCard(item: MentorAssignmentItem, isPast: Boolean, on
                         "${item.submittedCount}/${item.totalStudents}",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = if (allSubmitted) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface
+                        color = if (allSubmitted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         "submitted",
@@ -252,9 +271,9 @@ private fun MentorAssignmentCard(item: MentorAssignmentItem, isPast: Boolean, on
 
             LinearProgressIndicator(
                 progress = { progress },
-                modifier = Modifier.fillMaxWidth().height(4.dp),
-                color = if (allSubmitted) MaterialTheme.colorScheme.secondary else accent,
-                trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+                color = if (allSubmitted) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 drawStopIndicator = {}
             )
         }

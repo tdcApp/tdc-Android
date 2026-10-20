@@ -1,5 +1,7 @@
 package com.bagadbille.tdc.ui.assignments
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,15 +23,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bagadbille.tdc.ui.components.CyberCard
 import com.bagadbille.tdc.ui.components.EmptyStateScreen
 import com.bagadbille.tdc.ui.components.ErrorScreen
 import com.bagadbille.tdc.ui.components.LoadingScreen
+import com.bagadbille.tdc.ui.theme.*
 import kotlinx.coroutines.launch
 
 @Composable
@@ -116,16 +121,18 @@ fun AssignmentsScreen(
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Spacer(Modifier.width(8.dp))
-                                    Surface(
-                                        shape = MaterialTheme.shapes.small,
-                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(NeonEmerald.copy(alpha = 0.15f))
+                                            .border(1.dp, NeonEmerald.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                                            .padding(horizontal = 8.dp, vertical = 2.dp)
                                     ) {
                                         Text(
                                             "${assignments.size}",
                                             style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                            fontWeight = FontWeight.Bold,
+                                            color = NeonEmerald
                                         )
                                     }
                                 }
@@ -154,26 +161,39 @@ private fun AssignmentCard(
 ) {
     val isSubmitted = item.submission != null
 
-    Card(
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val secondaryColor = MaterialTheme.colorScheme.secondary
+
+    val borderColor = when {
+        item.isOverdue -> ErrorRed.copy(alpha = 0.4f)
+        isSubmitted -> primaryColor.copy(alpha = 0.35f)
+        else -> GlassBorderSubtle
+    }
+
+    val iconTint = when {
+        isSubmitted -> primaryColor
+        item.isOverdue -> ErrorRed
+        else -> secondaryColor
+    }
+
+    CyberCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        ),
-        shape = MaterialTheme.shapes.medium
+        shape = RoundedCornerShape(18.dp),
+        borderColor = borderColor
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left Icon Badge (matching ClassesScreen & QuizScreens)
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = when {
-                    isSubmitted -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
-                    item.isOverdue -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
-                    else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                }
+            // Left Icon Badge
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(iconTint.copy(alpha = 0.12f))
+                    .border(1.dp, iconTint.copy(alpha = 0.28f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     when {
@@ -182,12 +202,8 @@ private fun AssignmentCard(
                         else -> Icons.Outlined.Code
                     },
                     contentDescription = null,
-                    modifier = Modifier.padding(12.dp).size(24.dp),
-                    tint = when {
-                        isSubmitted -> MaterialTheme.colorScheme.secondary
-                        item.isOverdue -> MaterialTheme.colorScheme.error
-                        else -> MaterialTheme.colorScheme.primary
-                    }
+                    modifier = Modifier.size(24.dp),
+                    tint = iconTint
                 )
             }
 
@@ -204,21 +220,23 @@ private fun AssignmentCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(5.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // Class badge — constrained so it doesn't push date off-screen
                     item.className?.let { className ->
-                        Surface(
-                            shape = MaterialTheme.shapes.small,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                            modifier = Modifier.weight(1f, fill = false)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f, fill = false)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 7.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 className,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                color = secondaryColor,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -232,13 +250,13 @@ private fun AssignmentCard(
                             Icons.Outlined.AccessTime,
                             contentDescription = null,
                             modifier = Modifier.size(12.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
                         Spacer(Modifier.width(3.dp))
                         Text(
                             due.take(10),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             maxLines = 1,
                             softWrap = false
                         )
@@ -248,68 +266,70 @@ private fun AssignmentCard(
 
             Spacer(Modifier.width(8.dp))
 
-            // Right Action / Status Pill (matching QuizCard "Start" button)
+            // Right Action / Status Pill
             when {
                 isSubmitted -> {
-                    Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(primaryColor.copy(alpha = 0.15f))
+                            .border(1.dp, primaryColor.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 Icons.Outlined.CheckCircle,
                                 contentDescription = null,
                                 modifier = Modifier.size(11.dp),
-                                tint = MaterialTheme.colorScheme.secondary
+                                tint = primaryColor
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
                                 "Done",
                                 style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.secondary
+                                fontWeight = FontWeight.Bold,
+                                color = primaryColor
                             )
                         }
                     }
                 }
                 item.isOverdue -> {
-                    Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(ErrorRed.copy(alpha = 0.15f))
+                            .border(1.dp, ErrorRed.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
                             "Overdue",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            color = ErrorRed
                         )
                     }
                 }
                 else -> {
-                    Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(primaryColor.copy(alpha = 0.15f))
+                            .border(1.dp, primaryColor.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 "Submit",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                color = primaryColor
                             )
                             Spacer(Modifier.width(4.dp))
                             Icon(
                                 Icons.AutoMirrored.Outlined.ArrowForward,
                                 contentDescription = null,
                                 modifier = Modifier.size(12.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = primaryColor
                             )
                         }
                     }

@@ -13,6 +13,7 @@ import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material.icons.outlined.School
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -46,8 +47,11 @@ fun SetupScreen(
     var enrollment by remember { mutableStateOf("") }
     var selectedLanguageClassId by remember { mutableStateOf<String?>(null) }
     var selectedTechnologyClassId by remember { mutableStateOf<String?>(null) }
+    var selectedYear by remember { mutableStateOf<String?>(null) }
     var langDropdownExpanded by remember { mutableStateOf(false) }
     var techDropdownExpanded by remember { mutableStateOf(false) }
+    var yearDropdownExpanded by remember { mutableStateOf(false) }
+    val yearOptions = remember { listOf("1st Year", "2nd Year", "3rd Year", "4th Year") }
 
     LaunchedEffect(uiState) {
         if (uiState is SetupUiState.Success) {
@@ -233,6 +237,43 @@ fun SetupScreen(
 
             Spacer(Modifier.height(16.dp))
 
+            // Academic Year Dropdown (Required)
+            ExposedDropdownMenuBox(
+                expanded = yearDropdownExpanded,
+                onExpandedChange = { yearDropdownExpanded = it }
+            ) {
+                OutlinedTextField(
+                    value = selectedYear ?: "Select Academic Year",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Academic Year *") },
+                    leadingIcon = {
+                        Icon(Icons.Outlined.School, null, tint = MaterialTheme.colorScheme.primary)
+                    },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = yearDropdownExpanded) },
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                )
+                ExposedDropdownMenu(
+                    expanded = yearDropdownExpanded,
+                    onDismissRequest = { yearDropdownExpanded = false }
+                ) {
+                    yearOptions.forEach { yr ->
+                        DropdownMenuItem(
+                            text = { Text(yr) },
+                            onClick = {
+                                selectedYear = yr
+                                yearDropdownExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
             // Enrollment Number (Optional)
             TdcTextField(
                 value = enrollment,
@@ -265,6 +306,7 @@ fun SetupScreen(
                         languageClassId = selectedLanguageClassId,
                         technologyClassId = selectedTechnologyClassId,
                         enrollmentNumber = enrollment,
+                        year = selectedYear,
                         mobileNumber = mobileNumber
                     )
                 },
