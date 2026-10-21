@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
 
 @Composable
 fun TdcTextField(
@@ -43,11 +44,17 @@ fun TdcTextField(
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
         singleLine = singleLine,
-        shape = MaterialTheme.shapes.medium,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
         colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
             focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
             focusedLabelColor = MaterialTheme.colorScheme.primary,
+            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
+            unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            cursorColor = MaterialTheme.colorScheme.primary
         )
     )
 }

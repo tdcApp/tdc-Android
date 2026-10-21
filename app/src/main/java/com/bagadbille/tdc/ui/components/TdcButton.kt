@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,8 +26,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bagadbille.tdc.ui.theme.CyberPrimaryGradient
-import com.bagadbille.tdc.ui.theme.NeonEmerald
+import com.bagadbille.tdc.ui.theme.BrandCyan
+import com.bagadbille.tdc.ui.theme.DarkBackground
+import com.bagadbille.tdc.ui.theme.DarkSurfaceBorder
 
 @Composable
 fun TdcButton(
@@ -36,40 +38,46 @@ fun TdcButton(
     enabled: Boolean = true,
     isLoading: Boolean = false,
     icon: ImageVector? = null,
-    shape: Shape = RoundedCornerShape(16.dp)
+    trailingIcon: ImageVector? = null,
+    shape: Shape = RoundedCornerShape(26.dp)
 ) {
     val isInteractive = enabled && !isLoading
-    val isDark = MaterialTheme.colorScheme.background == com.bagadbille.tdc.ui.theme.DarkBackground
-    val backgroundBrush = if (isInteractive) {
-        CyberPrimaryGradient
+    val isDark = MaterialTheme.colorScheme.background == DarkBackground
+    val buttonColor = if (isInteractive) {
+        BrandCyan
     } else {
-        androidx.compose.ui.graphics.SolidColor(if (isDark) Color(0xFF222C40) else Color(0xFFE2E8F0))
+        if (isDark) Color(0xFF20252F) else Color(0xFFE2E5EB)
+    }
+    val contentColor = if (isInteractive) {
+        Color(0xFF071216)
+    } else {
+        if (isDark) Color(0xFF7A8290) else Color(0xFF9CA3AF)
     }
 
     Box(
         modifier = modifier
             .height(52.dp)
             .clip(shape)
-            .background(backgroundBrush, shape)
+            .background(buttonColor, shape)
             .then(if (isInteractive) Modifier.clickable { onClick() } else Modifier),
         contentAlignment = Alignment.Center
     ) {
         if (isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(22.dp),
-                color = Color(0xFF070A12),
+                color = contentColor,
                 strokeWidth = 2.5.dp
             )
         } else {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 20.dp)
+                modifier = Modifier.padding(horizontal = 24.dp)
             ) {
                 if (icon != null) {
-                    androidx.compose.material3.Icon(
+                    Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = if (isInteractive) Color(0xFF070A12) else Color(0xFF94A3B8),
+                        tint = contentColor,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(8.dp))
@@ -80,9 +88,65 @@ fun TdcButton(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.5.sp
                     ),
-                    color = if (isInteractive) Color(0xFF070A12) else Color(0xFF94A3B8)
+                    color = contentColor
                 )
+                if (trailingIcon != null) {
+                    Spacer(Modifier.width(8.dp))
+                    Icon(
+                        imageVector = trailingIcon,
+                        contentDescription = null,
+                        tint = contentColor,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
+        }
+    }
+}
+
+@Composable
+fun TdcSecondaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    icon: ImageVector? = null,
+    shape: Shape = RoundedCornerShape(26.dp)
+) {
+    val isDark = MaterialTheme.colorScheme.background == DarkBackground
+    val containerColor = if (isDark) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surface
+    val borderColor = if (isDark) DarkSurfaceBorder else MaterialTheme.colorScheme.outline
+    val contentColor = MaterialTheme.colorScheme.onSurface
+
+    Box(
+        modifier = modifier
+            .height(48.dp)
+            .clip(shape)
+            .border(1.dp, borderColor, shape)
+            .background(containerColor, shape)
+            .then(if (enabled) Modifier.clickable { onClick() } else Modifier),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 20.dp)
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = contentColor
+            )
         }
     }
 }
@@ -94,30 +158,30 @@ fun TdcOutlinedButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     icon: ImageVector? = null,
-    shape: Shape = RoundedCornerShape(16.dp)
+    shape: Shape = RoundedCornerShape(26.dp)
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
-    val disabledColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+    val contentColor = if (enabled) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(52.dp)
             .clip(shape)
-            .border(1.dp, primaryColor.copy(alpha = if (enabled) 0.45f else 0.15f), shape)
-            .background(primaryColor.copy(alpha = if (enabled) 0.08f else 0.03f), shape)
+            .border(1.dp, primaryColor.copy(alpha = if (enabled) 0.5f else 0.2f), shape)
+            .background(primaryColor.copy(alpha = if (enabled) 0.08f else 0.02f), shape)
             .then(if (enabled) Modifier.clickable { onClick() } else Modifier),
         contentAlignment = Alignment.Center
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 20.dp)
+            modifier = Modifier.padding(horizontal = 24.dp)
         ) {
             if (icon != null) {
-                androidx.compose.material3.Icon(
+                Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = if (enabled) primaryColor else disabledColor,
+                    tint = contentColor,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(Modifier.width(8.dp))
@@ -125,10 +189,10 @@ fun TdcOutlinedButton(
             Text(
                 text = text,
                 style = MaterialTheme.typography.titleSmall.copy(
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp
                 ),
-                color = if (enabled) primaryColor else disabledColor
+                color = contentColor
             )
         }
     }

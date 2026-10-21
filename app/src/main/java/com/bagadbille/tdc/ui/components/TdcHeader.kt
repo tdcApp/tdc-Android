@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import com.bagadbille.tdc.ui.theme.CyberPrimaryGradient
 import com.bagadbille.tdc.ui.theme.NeonEmerald
 import com.bagadbille.tdc.ui.theme.NeonCyan
+import com.bagadbille.tdc.ui.theme.GlassBorderSubtle
 
 /**
  * Modern Cyber-styled App Header: Glowing emblem, gradient TDC branding, and frosted action buttons.
@@ -44,36 +45,14 @@ fun TdcHeader(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Glowing Emblem
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .border(
-                    width = 1.dp,
-                    color = if (isDark) NeonEmerald.copy(alpha = 0.35f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                    shape = RoundedCornerShape(12.dp)
-                )
-                .background(
-                    if (isDark) {
-                        Brush.radialGradient(
-                            listOf(NeonEmerald.copy(alpha = 0.25f), Color(0xFF0F172A))
-                        )
-                    } else {
-                        Brush.radialGradient(
-                            listOf(Color(0xFFCCFBF1), Color(0xFFF1F5F9))
-                        )
-                    }
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Filled.School,
-                contentDescription = "Logo",
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
+        // Official Logo (Light theme uses tdc_logo_light with black middle slash)
+        val logoRes = if (isDark) com.bagadbille.tdc.R.drawable.tdc_logo else com.bagadbille.tdc.R.drawable.tdc_logo_light
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(id = logoRes),
+            contentDescription = "TDC Logo",
+            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+            modifier = Modifier.size(36.dp)
+        )
 
         Spacer(Modifier.width(12.dp))
 
@@ -82,16 +61,12 @@ fun TdcHeader(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.Center
         ) {
-            val titleGradient = if (isDark) {
-                CyberPrimaryGradient
-            } else {
-                Brush.horizontalGradient(listOf(Color(0xFF0F766E), Color(0xFF0284C7)))
-            }
+            val titleColor = if (isDark) Color.White else Color.Black
 
             Text(
                 text = "TDC",
                 style = TextStyle(
-                    brush = titleGradient,
+                    color = titleColor,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 2.sp
@@ -106,7 +81,11 @@ fun TdcHeader(
             )
         }
 
-        // Action Buttons: Refresh & Notifications in modern frosted circles
+        // Action Buttons: Refresh & Notifications in modern elevated circles with visible outlines
+        val actionBtnBg = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f) else Color.White
+        val actionBtnBorder = if (isDark) GlassBorderSubtle else Color(0xFFCBD5E1)
+        val actionBtnIconTint = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF334155)
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -118,8 +97,8 @@ fun TdcHeader(
                     modifier = Modifier
                         .size(38.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isDark) 0.6f else 0.85f))
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                        .background(actionBtnBg)
+                        .border(if (isDark) 1.dp else 1.2.dp, actionBtnBorder, CircleShape)
                 ) {
                     if (isRefreshing) {
                         CircularProgressIndicator(
@@ -132,7 +111,7 @@ fun TdcHeader(
                             Icons.Outlined.Refresh,
                             contentDescription = "Refresh",
                             modifier = Modifier.size(19.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = actionBtnIconTint
                         )
                     }
                 }
@@ -143,15 +122,15 @@ fun TdcHeader(
                 modifier = Modifier
                     .size(38.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isDark) 0.6f else 0.85f))
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                    .background(actionBtnBg)
+                    .border(if (isDark) 1.dp else 1.2.dp, actionBtnBorder, CircleShape)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         Icons.Outlined.Notifications,
                         contentDescription = "Notifications",
                         modifier = Modifier.size(20.dp),
-                        tint = if (hasUnreadNotifications) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = if (hasUnreadNotifications) MaterialTheme.colorScheme.primary else actionBtnIconTint
                     )
                     if (hasUnreadNotifications) {
                         Box(

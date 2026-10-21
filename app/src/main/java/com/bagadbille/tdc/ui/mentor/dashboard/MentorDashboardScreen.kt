@@ -1,5 +1,6 @@
 package com.bagadbille.tdc.ui.mentor.dashboard
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
@@ -28,9 +29,15 @@ fun MentorDashboardScreen(
     onNavigateToAssignmentsTab: () -> Unit = {},
     hasUnreadNotifications: Boolean = false
 ) {
-    val tabs = listOf("Overview", "Batches", "Quiz")
+    val tabs = listOf("Overview", "Classes", "Quiz")
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
+
+    BackHandler(enabled = pagerState.currentPage != 0) {
+        scope.launch {
+            pagerState.animateScrollToPage(0)
+        }
+    }
 
     val overviewViewModel: OverviewViewModel = hiltViewModel()
     val rosterViewModel: RosterViewModel = hiltViewModel()

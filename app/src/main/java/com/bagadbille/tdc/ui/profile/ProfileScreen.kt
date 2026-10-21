@@ -14,15 +14,19 @@ import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bagadbille.tdc.data.model.ClassInfo
@@ -92,11 +96,12 @@ fun ProfileScreen(
                             currentName = state.data.profile.name ?: "",
                             currentPhone = state.data.profile.phone,
                             currentYear = state.data.profile.year,
+                            currentEnrollment = state.data.profile.enrollmentNumber,
                             isStudent = !state.data.profile.isMentor,
                             isUpdating = state.data.isUpdating,
                             onDismiss = { showEditDialog = false },
-                            onSave = { name, phone, year ->
-                                viewModel.updateProfile(name, phone, year) { success ->
+                            onSave = { name, phone, year, enrollment ->
+                                viewModel.updateProfile(name, phone, year, enrollment) { success ->
                                     if (success) showEditDialog = false
                                 }
                             }
@@ -119,8 +124,9 @@ fun ProfileScreen(
                                 Button(
                                     onClick = {
                                         showLogoutDialog = false
-                                        viewModel.logout()
-                                        onLogout()
+                                        viewModel.logout {
+                                            onLogout()
+                                        }
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                                 ) {
@@ -165,16 +171,26 @@ private fun ProfileContent(
         // ─── Hero Profile Card ───
         CyberCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(22.dp),
-            borderColor = GlassBorderSubtle
+            shape = RoundedCornerShape(24.dp),
+            borderColor = MaterialTheme.colorScheme.outlineVariant
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Avatar with initials
+                // Top decorative curved gradient banner
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(84.dp)
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(BrandCyan.copy(alpha = 0.35f), BrandOrange.copy(alpha = 0.35f))
+                            )
+                        )
+                )
+
+                // Avatar with edit badge overlay
                 val initials = (profile.name?.takeIf { it.isNotBlank() } ?: profile.email)
                     .split(" ")
                     .filter { it.isNotBlank() }
@@ -185,134 +201,171 @@ private fun ProfileContent(
 
                 Box(
                     modifier = Modifier
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
-                        .border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), CircleShape),
-                    contentAlignment = Alignment.Center
+                        .offset(y = (-44).dp)
+                        .size(88.dp)
                 ) {
-                    Text(
-                        text = initials,
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(Modifier.height(14.dp))
-
-                Text(
-                    text = profile.name?.ifBlank { null } ?: profile.email.substringBefore("@").ifBlank { "User" },
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Spacer(Modifier.height(4.dp))
-
-                Text(
-                    text = profile.email,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(Modifier.height(14.dp))
-
-                // Badges row: Role, Year, Status
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Role badge
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
-                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(3.dp, BrandCyan, CircleShape),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = profile.role.uppercase(),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            text = initials,
+                            style = MaterialTheme.typography.headlineMedium.copy(fontSize = 32.sp),
+                            color = BrandCyan,
+                            fontWeight = FontWeight.ExtraBold
                         )
                     }
 
-                    // Year badge
-                    profile.year?.let { yr ->
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f))
-                                .border(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = yr,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-                    }
-
-                    // Active badge
+                    // Small edit icon button at bottom right
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(NeonPurple.copy(alpha = 0.15f))
-                            .border(1.dp, NeonPurple.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .align(Alignment.BottomEnd)
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(BrandCyan)
+                            .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                            .clickable { onEditClick() },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(NeonPurple)
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = "Active",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = NeonPurple
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Outlined.Edit,
+                            contentDescription = "Edit",
+                            tint = Color(0xFF071216),
+                            modifier = Modifier.size(14.dp)
+                        )
                     }
                 }
 
-                Spacer(Modifier.height(16.dp))
-
-                // Edit Profile Button
-                OutlinedButton(
-                    onClick = onEditClick,
-                    modifier = Modifier.fillMaxWidth(0.6f),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    border = BorderStroke(1.dp, NeonEmerald.copy(alpha = 0.45f))
+                // Profile Info
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = (-32).dp)
+                        .padding(horizontal = 20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        Icons.Outlined.Edit,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = NeonEmerald
-                    )
-                    Spacer(Modifier.width(6.dp))
                     Text(
-                        "Edit Profile",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = NeonEmerald
+                        text = profile.name?.ifBlank { null } ?: profile.email.substringBefore("@").ifBlank { "User" },
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 22.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(Modifier.height(4.dp))
+
+                    val subtitle = buildString {
+                        if (!profile.year.isNullOrBlank()) append("${profile.year} • ")
+                        append(profile.role.replaceFirstChar { it.uppercase() })
+                    }
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = BrandOrange
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Text(
+                        text = "Student • Developer • Learner\nBuilding cool things and exploring tech.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // Edit Profile Pill Button
+                    com.bagadbille.tdc.ui.components.TdcSecondaryButton(
+                        text = "Edit Profile",
+                        icon = Icons.Outlined.Edit,
+                        onClick = onEditClick,
+                        modifier = Modifier.fillMaxWidth(0.55f)
                     )
                 }
             }
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
+
+        // ─── 3 Stats Counters Row (Quizzes, Assignments, Batches) ───
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            ProfileStatCard(
+                count = data.completedQuizzesCount.toString(),
+                label = "Quizzes",
+                accentColor = BrandCyan,
+                modifier = Modifier.weight(1f)
+            )
+            ProfileStatCard(
+                count = data.submittedAssignmentsCount.toString(),
+                label = "Assignments",
+                accentColor = BrandOrange,
+                modifier = Modifier.weight(1f)
+            )
+            ProfileStatCard(
+                count = data.enrolledBatchesCount.toString(),
+                label = "Classes",
+                accentColor = BrandCoral,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        // ─── Skills Section ───
+        Text(
+            text = "Skills & Technologies",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(Modifier.height(10.dp))
+
+        val skillList = remember(data.languageClass, data.technologyClass) {
+            val list = mutableListOf<String>()
+            data.languageClass?.name?.let { list.add(it) }
+            data.technologyClass?.name?.let { list.add(it) }
+            if (list.isEmpty()) {
+                list.addAll(listOf("Kotlin", "Android", "Jetpack Compose", "Java", "Python"))
+            } else {
+                list.addAll(listOf("Android", "Jetpack Compose", "Problem Solving"))
+            }
+            list.distinct()
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            skillList.take(4).forEach { skill ->
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(20.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = skill,
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(20.dp))
 
         // ─── Enrolled Batches Section (students only) ───
         if (!profile.isMentor) {
@@ -329,7 +382,7 @@ private fun ProfileContent(
                 trackLabel = "Language Track",
                 classInfo = data.languageClass,
                 icon = Icons.Outlined.Code,
-                accentColor = MaterialTheme.colorScheme.primary
+                accentColor = BrandCyan
             )
 
             Spacer(Modifier.height(10.dp))
@@ -338,10 +391,10 @@ private fun ProfileContent(
                 trackLabel = "Technology Track",
                 classInfo = data.technologyClass,
                 icon = Icons.Outlined.Terminal,
-                accentColor = MaterialTheme.colorScheme.secondary
+                accentColor = BrandOrange
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(20.dp))
         }
 
         // ─── Personal Details Section ───
@@ -598,14 +651,16 @@ private fun EditProfileDialog(
     currentName: String,
     currentPhone: String,
     currentYear: String?,
+    currentEnrollment: String? = null,
     isStudent: Boolean = true,
     isUpdating: Boolean,
     onDismiss: () -> Unit,
-    onSave: (String, String, String?) -> Unit
+    onSave: (name: String, phone: String, year: String?, enrollment: String?) -> Unit
 ) {
     var name by remember { mutableStateOf(currentName) }
     var phone by remember { mutableStateOf(currentPhone) }
     var year by remember { mutableStateOf(currentYear) }
+    var enrollmentNumber by remember { mutableStateOf(currentEnrollment ?: "") }
     var yearDropdownExpanded by remember { mutableStateOf(false) }
     val yearOptions = remember { listOf("1st Year", "2nd Year", "3rd Year", "4th Year") }
     var validationError by remember { mutableStateOf<String?>(null) }
@@ -660,6 +715,23 @@ private fun EditProfileDialog(
                 )
 
                 if (isStudent) {
+                    Spacer(Modifier.height(14.dp))
+
+                    OutlinedTextField(
+                        value = enrollmentNumber,
+                        onValueChange = {
+                            enrollmentNumber = it
+                            validationError = null
+                        },
+                        label = { Text("Enrollment Number") },
+                        leadingIcon = {
+                            Icon(Icons.Outlined.Badge, contentDescription = null)
+                        },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium
+                    )
+
                     Spacer(Modifier.height(14.dp))
 
                     val isYearLocked = !currentYear.isNullOrBlank()
@@ -744,7 +816,7 @@ private fun EditProfileDialog(
                         validationError = "Phone number cannot be empty"
                         return@Button
                     }
-                    onSave(name, phone, if (isStudent) year else null)
+                    onSave(name, phone, if (isStudent) year else null, if (isStudent) enrollmentNumber.trim().ifBlank { null } else null)
                 },
                 enabled = !isUpdating
             ) {
@@ -768,4 +840,43 @@ private fun EditProfileDialog(
             }
         }
     )
+}
+
+@Composable
+private fun ProfileStatCard(
+    count: String,
+    label: String,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    CyberCard(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        borderColor = MaterialTheme.colorScheme.outlineVariant
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 14.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = count,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 22.sp
+                ),
+                color = accentColor
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            )
+        }
+    }
 }

@@ -42,22 +42,31 @@ fun CyberCard(
 
     val resolvedBorder = if (borderBrush != null) {
         BorderStroke(borderWidth, borderBrush)
-    } else {
+    } else if (borderColor != null) {
         val color = if (isDark) {
-            borderColor ?: Color.White.copy(alpha = 0.08f)
+            borderColor
         } else {
             when {
-                borderColor == null || borderColor == GlassBorderSubtle || borderColor == Color.White.copy(alpha = 0.08f) ->
-                    Color(0xFFE2E8F0) // Clean slate border in light mode
+                borderColor == GlassBorderSubtle -> Color(0xFFE2E8F0)
                 borderColor == com.bagadbille.tdc.ui.theme.NeonEmerald || borderColor.copy(alpha = 1f) == com.bagadbille.tdc.ui.theme.NeonEmerald ->
                     MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
                 borderColor == com.bagadbille.tdc.ui.theme.NeonCyan || borderColor.copy(alpha = 1f) == com.bagadbille.tdc.ui.theme.NeonCyan ->
                     MaterialTheme.colorScheme.secondary.copy(alpha = 0.45f)
-                else ->
-                    borderColor.copy(alpha = 0.4f)
+                else -> borderColor.copy(alpha = 0.4f)
             }
         }
         BorderStroke(borderWidth, color)
+    } else {
+        if (isDark) {
+            BorderStroke(
+                borderWidth,
+                Brush.verticalGradient(
+                    listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.03f))
+                )
+            )
+        } else {
+            BorderStroke(borderWidth, Color(0xFFE2E8F0))
+        }
     }
 
     val shadowModifier = if (!isDark) {

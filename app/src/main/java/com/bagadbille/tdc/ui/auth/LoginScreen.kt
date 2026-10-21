@@ -1,13 +1,16 @@
 package com.bagadbille.tdc.ui.auth
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.Email
@@ -17,8 +20,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -28,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bagadbille.tdc.R
+import com.bagadbille.tdc.ui.components.AmbientGlowBackground
 import com.bagadbille.tdc.ui.components.TdcButton
 import com.bagadbille.tdc.ui.components.TdcTextField
 
@@ -50,67 +57,80 @@ fun LoginScreen(
         }
     }
 
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
+    AmbientGlowBackground {
         Column(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(24.dp),
+                .padding(horizontal = 24.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(64.dp))
+            Spacer(Modifier.height(36.dp))
+
+            // TIT Developers Brand Logo
+            Image(
+                painter = painterResource(id = R.drawable.tdc_logo),
+                contentDescription = "TIT Developers Logo",
+                modifier = Modifier.size(76.dp)
+            )
+
+            Spacer(Modifier.height(14.dp))
 
             Text(
-                "TDC",
-                style = MaterialTheme.typography.displayLarge.copy(
-                    fontSize = 54.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 6.sp
+                "TIT DEVELOPERS",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.sp
                 ),
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "TIT Developer Community",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onBackground
             )
 
-            Spacer(Modifier.height(48.dp))
+            Spacer(Modifier.height(4.dp))
 
             Text(
-                "Welcome to TDC",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                "Build • Learn • Connect • Grow",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
             )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "Sign in with your community credentials",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+
+            Spacer(Modifier.height(42.dp))
+
+            // Welcome Back Header
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    "Welcome Back 👋",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Sign in to continue to the community.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             Spacer(Modifier.height(32.dp))
 
-            // Email field
+            // Email or Username field
             TdcTextField(
                 value = email,
                 onValueChange = {
                     email = it
                     if (uiState is AuthUiState.Error) viewModel.resetState()
                 },
-                label = "Email Address",
+                label = "Email or Username",
                 leadingIcon = Icons.Outlined.Email,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { fm.moveFocus(FocusDirection.Down) })
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(18.dp))
 
             // Password field
             TdcTextField(
@@ -136,7 +156,7 @@ fun LoginScreen(
                 )
             )
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
 
             // Error Banner: "You're not a part of TDC"
             AnimatedVisibility(uiState is AuthUiState.Error) {
@@ -156,7 +176,7 @@ fun LoginScreen(
                         )
                         Spacer(Modifier.width(10.dp))
                         Text(
-                            text = (uiState as? AuthUiState.Error)?.message ?: "You're not a part of TDC",
+                            text = (uiState as? AuthUiState.Error)?.message ?: "Invalid credentials",
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
@@ -165,11 +185,12 @@ fun LoginScreen(
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(28.dp))
 
-            // Sign In Button
+            // Sign In Pill Button with Arrow
             TdcButton(
                 text = "Sign In",
+                trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
                 onClick = {
                     fm.clearFocus()
                     viewModel.signInWithEmail(email, password)
@@ -178,7 +199,7 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(32.dp))
         }
     }
 }

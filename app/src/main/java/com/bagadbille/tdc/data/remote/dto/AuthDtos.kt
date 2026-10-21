@@ -52,7 +52,8 @@ data class UserProfileDto(
     @SerialName("mobile_number") val mobileNumberSnake: String = "",
     val name: String? = null,
     val role: String = "STUDENT",
-    @SerialName("enrollment_number") val enrollmentNumber: String? = null,
+    val enrollmentNumber: String? = null,
+    @SerialName("enrollment_number") val enrollmentNumberSnake: String? = null,
     val year: String? = null,
     @SerialName("is_profile_complete") val isProfileComplete: Boolean = false,
     @SerialName("languageClassId") val languageClassId: String? = null,
@@ -70,6 +71,9 @@ data class UserProfileDto(
     val effectiveMobile: String
         get() = mobileNumber.ifBlank { mobileNumberSnake.ifBlank { phone } }
 
+    val effectiveEnrollmentNumber: String?
+        get() = enrollmentNumber ?: enrollmentNumberSnake
+
     val effectiveLanguageClassId: String?
         get() = languageClassId ?: languageClassIdSnake
 
@@ -83,7 +87,8 @@ data class CreateProfileRequest(
     val mobileNumber: String,
     val languageClassId: String,
     val technologyClassId: String,
-    val year: String? = null
+    val year: String? = null,
+    @SerialName("enrollment_number") val enrollmentNumber: String? = null
 )
 
 @Serializable
@@ -98,5 +103,6 @@ data class SetupProfileRequest(
 data class UpdateProfileRequest(
     val name: String? = null,
     val mobileNumber: String? = null,
-    val year: String? = null
+    val year: String? = null,
+    @SerialName("enrollment_number") val enrollmentNumber: String? = null
 )

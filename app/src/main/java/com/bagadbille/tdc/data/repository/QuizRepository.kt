@@ -46,14 +46,16 @@ class QuizRepositoryImpl @Inject constructor(
     private val studentCache = ConcurrentHashMap<String, UserProfileDto>()
 
     override suspend fun getQuizzes(): Result<List<Quiz>> = runCatching {
+        val currentUid = dataStoreManager.firebaseUid.firstOrNull().orEmpty()
         val localSubmitted = dataStoreManager.submittedQuizIds.firstOrNull() ?: emptySet()
         val dtos = quizApi.getQuizzes()
         dtos.map { dto ->
             val quiz = dto.toDomain()
+            val userScopedQuizKey = if (currentUid.isNotBlank()) "${currentUid}_${quiz.id}" else quiz.id
             if (quiz.isSubmitted) {
-                dataStoreManager.markQuizSubmitted(quiz.id)
+                if (currentUid.isNotBlank()) dataStoreManager.markQuizSubmitted(userScopedQuizKey)
                 quiz
-            } else if (quiz.id in localSubmitted) {
+            } else if (userScopedQuizKey in localSubmitted) {
                 quiz.copy(isSubmitted = true)
             } else {
                 quiz
@@ -62,11 +64,13 @@ class QuizRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getQuiz(quizId: String): Result<Quiz> = runCatching {
+        val currentUid = dataStoreManager.firebaseUid.firstOrNull().orEmpty()
+        val userScopedQuizKey = if (currentUid.isNotBlank()) "${currentUid}_${quizId}" else quizId
         val localSubmitted = dataStoreManager.submittedQuizIds.firstOrNull() ?: emptySet()
         val detail = quizApi.getQuizDetail(quizId)
         val quiz = detail.toDomain()
-        if (quiz.isSubmitted || quiz.id in localSubmitted) {
-            dataStoreManager.markQuizSubmitted(quiz.id)
+        if (quiz.isSubmitted || userScopedQuizKey in localSubmitted) {
+            if (currentUid.isNotBlank()) dataStoreManager.markQuizSubmitted(userScopedQuizKey)
             quiz.copy(isSubmitted = true)
         } else {
             quiz
@@ -74,12 +78,14 @@ class QuizRepositoryImpl @Inject constructor(
     }
 
     override suspend fun isQuizSubmitted(quizId: String): Boolean {
+        val currentUid = dataStoreManager.firebaseUid.firstOrNull().orEmpty()
+        val userScopedQuizKey = if (currentUid.isNotBlank()) "${currentUid}_${quizId}" else quizId
         val localSubmitted = dataStoreManager.submittedQuizIds.firstOrNull() ?: emptySet()
-        if (quizId in localSubmitted) return true
+        if (userScopedQuizKey in localSubmitted) return true
 
         return try {
             val sub = quizApi.getMySubmission(quizId)
-            dataStoreManager.markQuizSubmitted(quizId)
+            if (currentUid.isNotBlank()) dataStoreManager.markQuizSubmitted(userScopedQuizKey)
             true
         } catch (_: Exception) {
             false
@@ -87,7 +93,9 @@ class QuizRepositoryImpl @Inject constructor(
     }
 
     override suspend fun markQuizSubmittedLocally(quizId: String) {
-        dataStoreManager.markQuizSubmitted(quizId)
+        val currentUid = dataStoreManager.firebaseUid.firstOrNull().orEmpty()
+        val userScopedQuizKey = if (currentUid.isNotBlank()) "${currentUid}_${quizId}" else quizId
+        dataStoreManager.markQuizSubmitted(userScopedQuizKey)
     }
 
     override suspend fun getQuizQuestions(quizId: String): Result<List<QuizQuestion>> = runCatching {
@@ -101,6 +109,8 @@ class QuizRepositoryImpl @Inject constructor(
         clientSubmissionId: String,
         isDisqualified: Boolean
     ): Result<QuizSubmission> = runCatching {
+        val currentUid = dataStoreManager.firebaseUid.firstOrNull().orEmpty()
+        val userScopedQuizKey = if (currentUid.isNotBlank()) "${currentUid}_${quizId}" else quizId
         val mappedAnswers = answers.map {
             QuizAnswerDto(
                 questionId = it.questionId,
@@ -112,13 +122,15 @@ class QuizRepositoryImpl @Inject constructor(
             answers = mappedAnswers
         )
         val submission = quizApi.submitQuiz(quizId, request).toDomain()
-        dataStoreManager.markQuizSubmitted(quizId)
+        dataStoreManager.markQuizSubmitted(userScopedQuizKey)
         submission
     }
 
     override suspend fun getQuizResult(quizId: String): Result<QuizResult> = runCatching {
+        val currentUid = dataStoreManager.firebaseUid.firstOrNull().orEmpty()
+        val userScopedQuizKey = if (currentUid.isNotBlank()) "${currentUid}_${quizId}" else quizId
         val sub = quizApi.getMySubmission(quizId)
-        dataStoreManager.markQuizSubmitted(quizId)
+        dataStoreManager.markQuizSubmitted(userScopedQuizKey)
         QuizResult(
             quizId = sub.quizId ?: quizId,
             score = sub.score,

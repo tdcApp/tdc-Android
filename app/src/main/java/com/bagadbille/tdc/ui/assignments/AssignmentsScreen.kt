@@ -16,6 +16,7 @@ import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -28,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bagadbille.tdc.ui.components.CyberCard
@@ -35,6 +37,7 @@ import com.bagadbille.tdc.ui.components.EmptyStateScreen
 import com.bagadbille.tdc.ui.components.ErrorScreen
 import com.bagadbille.tdc.ui.components.LoadingScreen
 import com.bagadbille.tdc.ui.theme.*
+import androidx.activity.compose.BackHandler
 import kotlinx.coroutines.launch
 
 @Composable
@@ -49,6 +52,12 @@ fun AssignmentsScreen(
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
 
+    BackHandler(enabled = pagerState.currentPage != 0) {
+        scope.launch {
+            pagerState.animateScrollToPage(0)
+        }
+    }
+
     Column(Modifier.fillMaxSize()) {
         // ─── Header: Matching HomeScreen (Logo | TDC | Notification Bell) ───
         com.bagadbille.tdc.ui.components.TdcHeader(
@@ -56,11 +65,21 @@ fun AssignmentsScreen(
             hasUnreadNotifications = hasUnreadNotifications
         )
 
-        // ─── TabRow: Matching HomeScreen (surface background, primary active indicator) ───
+        // ─── TabRow: Matching HomeScreen (transparent container, primary active indicator, theme divider) ───
         TabRow(
             selectedTabIndex = pagerState.currentPage,
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.primary
+            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.primary,
+            divider = {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+            },
+            indicator = { tabPositions ->
+                TabRowDefaults.SecondaryIndicator(
+                    modifier = Modifier.then(with(TabRowDefaults) { Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]) }),
+                    color = MaterialTheme.colorScheme.primary,
+                    height = 3.dp
+                )
+            }
         ) {
             tabs.forEachIndexed { index, title ->
                 Tab(
@@ -259,6 +278,29 @@ private fun AssignmentCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             maxLines = 1,
                             softWrap = false
+                        )
+                    }
+                }
+
+                // Creator name: ADMIN or Teacher name
+                val creator = item.assignment.createdByName?.ifBlank { null }
+                if (!creator.isNullOrBlank()) {
+                    Spacer(Modifier.height(3.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Outlined.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(11.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                        Spacer(Modifier.width(3.dp))
+                        Text(
+                            "By $creator",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                            fontWeight = if (creator == "ADMIN") FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }

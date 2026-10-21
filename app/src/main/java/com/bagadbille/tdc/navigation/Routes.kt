@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class Screen(val route: String) {
     data object Splash : Screen("splash")
+    data object Onboarding : Screen("onboarding")
     data object Login : Screen("login")
     data object Setup : Screen("setup")
     data object Main : Screen("main")
@@ -32,7 +33,7 @@ enum class BottomNavItem(
     val route: String, val title: String,
     val selectedIcon: ImageVector, val unselectedIcon: ImageVector
 ) {
-    PROFILE("profile", "Profile", Icons.Filled.Person, Icons.Outlined.Person),
     HOME("home", "Home", Icons.Filled.Home, Icons.Outlined.Home),
-    ASSIGNMENTS("assignments", "Assignments", Icons.AutoMirrored.Filled.Assignment, Icons.AutoMirrored.Outlined.Assignment)
+    ASSIGNMENTS("assignments", "Assignments", Icons.AutoMirrored.Filled.Assignment, Icons.AutoMirrored.Outlined.Assignment),
+    PROFILE("profile", "Profile", Icons.Filled.Person, Icons.Outlined.Person)
 }

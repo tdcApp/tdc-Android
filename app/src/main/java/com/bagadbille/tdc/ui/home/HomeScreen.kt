@@ -27,6 +27,7 @@ import com.bagadbille.tdc.ui.home.classes.ClassesScreen
 import com.bagadbille.tdc.ui.home.classes.ClassesViewModel
 import com.bagadbille.tdc.ui.home.general.GeneralScreen
 import com.bagadbille.tdc.ui.home.general.GeneralViewModel
+import androidx.activity.compose.BackHandler
 import com.bagadbille.tdc.ui.home.quiz.QuizListScreen
 import com.bagadbille.tdc.ui.home.quiz.QuizViewModel
 import kotlinx.coroutines.launch
@@ -35,12 +36,19 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     onNavigateToQuizTaking: (String) -> Unit,
     onNavigateToQuizResult: (String) -> Unit,
+    onNavigateToAssignments: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
     hasUnreadNotifications: Boolean = false
 ) {
-    val tabs = listOf("General", "Classes", "Quiz")
+    val tabs = listOf("Overview", "Classes", "Quiz")
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
+
+    BackHandler(enabled = pagerState.currentPage != 0) {
+        scope.launch {
+            pagerState.animateScrollToPage(0)
+        }
+    }
 
     val generalViewModel: GeneralViewModel = hiltViewModel()
     val classesViewModel: ClassesViewModel = hiltViewModel()
@@ -61,13 +69,33 @@ fun HomeScreen(
 
         TabRow(
             selectedTabIndex = pagerState.currentPage,
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.primary
+            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.primary,
+            divider = {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+            },
+            indicator = { tabPositions ->
+                TabRowDefaults.SecondaryIndicator(
+                    modifier = Modifier.then(with(TabRowDefaults) { Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]) }),
+                    color = MaterialTheme.colorScheme.primary,
+                    height = 3.dp
+                )
+            }
         ) {
             tabs.forEachIndexed { index, title ->
-                Tab(selected = pagerState.currentPage == index, onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                    text = { Text(title, style = MaterialTheme.typography.labelLarge) },
-                    selectedContentColor = MaterialTheme.colorScheme.primary, unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                Tab(
+                    selected = pagerState.currentPage == index,
+                    onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                    text = {
+                        Text(
+                            title,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = if (pagerState.currentPage == index) FontWeight.Bold else FontWeight.Medium
+                        )
+                    },
+                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
@@ -76,7 +104,9 @@ fun HomeScreen(
                     viewModel = generalViewModel,
                     onQuizClick = onNavigateToQuizTaking,
                     onNavigateToClasses = { scope.launch { pagerState.animateScrollToPage(1) } },
-                    onNavigateToQuizzes = { scope.launch { pagerState.animateScrollToPage(2) } }
+                    onNavigateToQuizzes = { scope.launch { pagerState.animateScrollToPage(2) } },
+                    onNavigateToAssignments = onNavigateToAssignments,
+                    onNavigateToNotices = onNotificationClick
                 )
                 1 -> ClassesScreen(viewModel = classesViewModel)
                 2 -> QuizListScreen(

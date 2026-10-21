@@ -2,8 +2,11 @@ package com.bagadbille.tdc.ui.home.general
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bagadbille.tdc.data.model.Announcement
 import com.bagadbille.tdc.data.model.Quiz
 import com.bagadbille.tdc.data.model.Schedule
+import com.bagadbille.tdc.data.repository.AnnouncementRepository
+import com.bagadbille.tdc.data.repository.ProfileRepository
 import com.bagadbille.tdc.data.repository.QuizRepository
 import com.bagadbille.tdc.data.repository.ScheduleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,8 +19,10 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class DashboardData(
+    val userName: String = "",
     val schedules: List<Schedule> = emptyList(),
-    val upcomingQuizzes: List<Quiz> = emptyList()
+    val upcomingQuizzes: List<Quiz> = emptyList(),
+    val recentAnnouncements: List<Announcement> = emptyList()
 )
 
 sealed class GeneralUiState {
@@ -29,7 +34,9 @@ sealed class GeneralUiState {
 @HiltViewModel
 class GeneralViewModel @Inject constructor(
     private val scheduleRepository: ScheduleRepository,
-    private val quizRepository: QuizRepository
+    private val quizRepository: QuizRepository,
+    private val profileRepository: ProfileRepository,
+    private val announcementRepository: AnnouncementRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<GeneralUiState>(GeneralUiState.Loading)
     val uiState: StateFlow<GeneralUiState> = _uiState.asStateFlow()
@@ -40,21 +47,26 @@ class GeneralViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = GeneralUiState.Loading
             try {
-                val schedules: List<Schedule>
-                val quizzes: List<Quiz>
                 coroutineScope {
                     val sDef = async { scheduleRepository.getSchedules().getOrDefault(emptyList()) }
                     val qDef = async { quizRepository.getQuizzes().getOrDefault(emptyList()) }
-                    schedules = sDef.await()
-                    quizzes = qDef.await()
-                }
+                    val pDef = async { profileRepository.getProfile().getOrNull() }
+                    val aDef = async { announcementRepository.getAnnouncements().getOrDefault(emptyList()) }
 
-                _uiState.value = GeneralUiState.Success(
-                    DashboardData(
-                        schedules = schedules,
-                        upcomingQuizzes = quizzes.take(3)
+                    val schedules = sDef.await()
+                    val quizzes = qDef.await()
+                    val profile = pDef.await()
+                    val announcements = aDef.await()
+
+                    _uiState.value = GeneralUiState.Success(
+                        DashboardData(
+                            userName = profile?.name?.trim()?.split(" ")?.firstOrNull() ?: "",
+                            schedules = schedules,
+                            upcomingQuizzes = quizzes.take(3),
+                            recentAnnouncements = announcements.take(3)
+                        )
                     )
-                )
+                }
             } catch (e: Exception) {
                 _uiState.value = GeneralUiState.Error(e.message ?: "Failed to load dashboard")
             }

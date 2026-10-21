@@ -34,7 +34,10 @@ class DataStoreManager @Inject constructor(
         private val TECH_CLASS_ID_KEY = stringPreferencesKey("tech_class_id")
         private val READ_NOTIF_IDS_KEY = stringSetPreferencesKey("read_notif_ids")
         private val SUBMITTED_QUIZ_IDS_KEY = stringSetPreferencesKey("submitted_quiz_ids")
+        private val HAS_COMPLETED_ONBOARDING_KEY = booleanPreferencesKey("has_completed_onboarding")
     }
+
+    val hasCompletedOnboarding: Flow<Boolean> = context.dataStore.data.map { it[HAS_COMPLETED_ONBOARDING_KEY] ?: false }
 
     val authToken: Flow<String?> = context.dataStore.data.map { it[AUTH_TOKEN_KEY] }
 
@@ -142,5 +145,9 @@ class DataStoreManager @Inject constructor(
 
     suspend fun setDarkTheme(isDark: Boolean) {
         context.dataStore.edit { it[IS_DARK_THEME_KEY] = isDark }
+    }
+
+    suspend fun setCompletedOnboarding(completed: Boolean = true) {
+        context.dataStore.edit { it[HAS_COMPLETED_ONBOARDING_KEY] = completed }
     }
 }

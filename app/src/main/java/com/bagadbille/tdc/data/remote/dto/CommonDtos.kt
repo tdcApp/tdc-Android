@@ -122,6 +122,12 @@ data class AssignmentDto(
     @SerialName("due_at") val dueAtSnake: String? = null,
     val mentorUid: String? = null,
     @SerialName("mentor_uid") val mentorUidSnake: String? = null,
+    val createdBy: String? = null,
+    @SerialName("created_by") val createdBySnake: String? = null,
+    val createdByName: String? = null,
+    @SerialName("created_by_name") val createdByNameSnake: String? = null,
+    val creatorRole: String? = null,
+    @SerialName("creator_role") val creatorRoleSnake: String? = null,
     val createdAt: String? = null,
     @SerialName("created_at") val createdAtSnake: String? = null,
     val updatedAt: String? = null,
@@ -135,7 +141,9 @@ data class AssignmentDto(
         dueAt = dueAt ?: dueAtSnake ?: "",
         mentorUid = mentorUid ?: mentorUidSnake ?: "",
         createdAt = createdAt ?: createdAtSnake ?: "",
-        updatedAt = updatedAt ?: updatedAtSnake
+        updatedAt = updatedAt ?: updatedAtSnake,
+        createdByName = createdByName ?: createdByNameSnake,
+        creatorRole = creatorRole ?: creatorRoleSnake
     )
 }
 

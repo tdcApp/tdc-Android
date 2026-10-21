@@ -3,72 +3,86 @@ package com.bagadbille.tdc.ui.theme
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// ─── Cyber Dark & Neon Palette (Linear / Arc Inspired) ───
+// ─── TIT Developers Design System Palette ───
 
-// Neon Primary — Electric Mint / Emerald
-val NeonEmerald = Color(0xFF00F5A0)
-val NeonEmeraldDark = Color(0xFF00B87A)
-val NeonEmeraldLight = Color(0xFF6EFCBF)
+// Core Brand Colors
+val BrandCyan = Color(0xFF55D6E8)           // Primary Brand Cyan
+val BrandCyanDark = Color(0xFF1CB5CB)
+val BrandCyanLight = Color(0xFF8DE8F3)
 
-// Neon Secondary — Cyber Cyan
-val NeonCyan = Color(0xFF00D9F5)
-val NeonCyanDark = Color(0xFF009BB0)
+val BrandOrange = Color(0xFFFF8A32)         // Secondary Brand Orange
+val BrandOrangeDark = Color(0xFFE06E1A)
+val BrandOrangeLight = Color(0xFFFFB378)
 
-// Neon Accents
-val NeonPurple = Color(0xFFA855F7)
-val NeonPurpleDark = Color(0xFF7C3AED)
-val NeonAmber = Color(0xFFFBBF24)
-val NeonRose = Color(0xFFFB7185)
+val BrandCoral = Color(0xFFF46B66)          // Accent Coral / Rose
 
 // Backward-compatible aliases for existing screens
-val TealPrimary = NeonEmerald
-val TealPrimaryDark = NeonEmeraldDark
-val TealPrimaryLight = NeonEmeraldLight
-val BlueSecondary = NeonCyan
-val BlueSecondaryDark = NeonCyanDark
+val NeonEmerald = BrandCyan
+val NeonEmeraldDark = BrandCyanDark
+val NeonEmeraldLight = BrandCyanLight
+val NeonCyan = BrandCyan
+val NeonCyanDark = BrandCyanDark
+val NeonPurple = BrandOrange
+val NeonPurpleDark = BrandOrangeDark
+val NeonAmber = BrandOrange
+val NeonRose = BrandCoral
 
-// ─── Deep Midnight OLED Surfaces ───
-val DarkBackground = Color(0xFF070A12)       // Ultra-deep space black
-val DarkSurface = Color(0xFF0F1523)          // Cyber base surface
-val DarkSurfaceVariant = Color(0xFF161F33)   // Elevated glass card surface
-val DarkSurfaceBorder = Color(0xFF222E47)    // Crisp subtle border
+val TealPrimary = BrandCyan
+val TealPrimaryDark = BrandCyanDark
+val TealPrimaryLight = BrandCyanLight
+val BlueSecondary = BrandOrange
+val BlueSecondaryDark = BrandOrangeDark
+
+// ─── Dark Theme Surfaces ───
+val DarkBackground = Color(0xFF0B0B0D)       // Dark Background #0B0B0D
+val DarkSurface = Color(0xFF17191E)          // Dark Surface #17191E
+val DarkSurfaceVariant = Color(0xFF20242A)   // Dark Surface Variant
+val DarkSurfaceBorder = Color(0xFF2D333E)    // Subtle Card Border
 
 // Glassmorphism overlays
-val GlassBackground = Color(0xB30F1523)     // 70% opacity frosted glass
-val GlassSurface = Color(0xCC161F33)        // 80% opacity card glass
-val GlassBorderSubtle = Color(0x1AFFFFFF)   // 10% white micro-edge
-val GlassBorderNeon = Color(0x3300F5A0)     // Translucent neon glow stroke
+val GlassBackground = Color(0xD917191E)
+val GlassSurface = Color(0xEB20242A)
+val GlassBorderSubtle = Color(0x1FFFFFFF)
+val GlassBorderNeon = Color(0x3355D6E8)
 
-// Light Theme Surfaces (Clean Ice Slate)
-val LightBackground = Color(0xFFF8FAFC)
+// Light Theme Surfaces
+val LightBackground = Color(0xFFF5F5F7)
 val LightSurface = Color(0xFFFFFFFF)
-val LightSurfaceVariant = Color(0xFFF1F5F9)
+val LightSurfaceVariant = Color(0xFFEDEFF2)
+val LightSurfaceBorder = Color(0xFFE2E5EB)
 
-// Text
-val DarkTextPrimary = Color(0xFFF8FAFC)     // Slate 50 — ultra crisp
-val DarkTextSecondary = Color(0xFF94A3B8)   // Slate 400 — smooth readable
-val DarkTextMuted = Color(0xFF64748B)       // Slate 500 — subtle metadata
-val LightTextPrimary = Color(0xFF0F172A)
-val LightTextSecondary = Color(0xFF64748B)
+// Typography Text Colors
+val DarkTextPrimary = Color(0xFFF5F5F7)     // #F5F5F7
+val DarkTextSecondary = Color(0xFFA5ABB5)   // #A5ABB5
+val DarkTextMuted = Color(0xFF7A8290)
+val LightTextPrimary = Color(0xFF0B0B0D)
+val LightTextSecondary = Color(0xFF5A6270)
+val LightTextMuted = Color(0xFF8B93A0)
 
-// Status
-val ErrorRed = Color(0xFFF43F5E)            // Rose 500
-val SuccessGreen = Color(0xFF10B981)        // Emerald 500
-val WarningAmber = Color(0xFFF59E0B)        // Amber 500
+// Status Colors
+val ErrorRed = Color(0xFFF46B66)            // Accent Coral
+val SuccessGreen = Color(0xFF34D399)        // Mint Emerald
+val WarningAmber = Color(0xFFFF8A32)        // Brand Orange
 
-// ─── Reusable Cyber Gradients ───
+// ─── Branded Gradients ───
 val CyberPrimaryGradient = Brush.horizontalGradient(
-    listOf(NeonEmerald, NeonCyan)
+    listOf(BrandCyan, Color(0xFF22B8CF))
 )
 
-val CyberPurpleGradient = Brush.horizontalGradient(
-    listOf(NeonPurple, Color(0xFF6366F1))
+val CyberOrangeGradient = Brush.horizontalGradient(
+    listOf(BrandOrange, BrandCoral)
 )
+
+val CyberPurpleGradient = CyberOrangeGradient
 
 val CyberGlassCardGradient = Brush.verticalGradient(
-    listOf(Color(0xFF151D2F), Color(0xFF0A0F1D))
+    listOf(Color(0xD91A1E27), Color(0xBF12151D))
+)
+
+val FrostedGlassBarGradient = Brush.verticalGradient(
+    listOf(Color(0xD9171C26), Color(0xEB0E121A))
 )
 
 val CyberHeroGradient = Brush.linearGradient(
-    listOf(Color(0xFF063327), Color(0xFF0A1224))
+    listOf(Color(0xFF0E252D), Color(0xFF1E1712))
 )

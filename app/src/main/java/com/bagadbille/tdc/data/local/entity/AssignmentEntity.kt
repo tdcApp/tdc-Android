@@ -13,7 +13,9 @@ data class AssignmentEntity(
     val mentorUid: String,
     val classId: String,
     val createdAt: String? = null,
-    val updatedAt: String? = null
+    val updatedAt: String? = null,
+    val createdByName: String? = null,
+    val creatorRole: String? = null
 ) {
     fun toDomain(): Assignment = Assignment(
         id = id,
@@ -23,7 +25,9 @@ data class AssignmentEntity(
         mentorUid = mentorUid,
         classId = classId,
         createdAt = createdAt,
-        updatedAt = updatedAt
+        updatedAt = updatedAt,
+        createdByName = createdByName,
+        creatorRole = creatorRole
     )
 
     companion object {
@@ -35,7 +39,9 @@ data class AssignmentEntity(
             mentorUid = assignment.mentorUid,
             classId = assignment.classId,
             createdAt = assignment.createdAt,
-            updatedAt = assignment.updatedAt
+            updatedAt = assignment.updatedAt,
+            createdByName = assignment.createdByName,
+            creatorRole = assignment.creatorRole
         )
     }
 }

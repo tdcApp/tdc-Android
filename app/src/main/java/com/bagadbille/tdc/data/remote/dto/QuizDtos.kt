@@ -15,6 +15,10 @@ data class QuizDto(
     @SerialName("target_years") val targetYearsSnake: String? = null,
     val createdBy: String? = null,
     @SerialName("created_by") val createdBySnake: String? = null,
+    val createdByName: String? = null,
+    @SerialName("created_by_name") val createdByNameSnake: String? = null,
+    val creatorRole: String? = null,
+    @SerialName("creator_role") val creatorRoleSnake: String? = null,
     val classId: String? = null,
     @SerialName("class_id") val classIdSnake: String? = null,
     val createdAt: String? = null,
@@ -33,7 +37,9 @@ data class QuizDto(
         classId = classId ?: classIdSnake,
         createdAt = createdAt ?: createdAtSnake,
         updatedAt = updatedAt ?: updatedAtSnake,
-        isSubmitted = isSubmitted || (isSubmittedSnake == true)
+        isSubmitted = isSubmitted || (isSubmittedSnake == true),
+        createdByName = createdByName ?: createdByNameSnake,
+        creatorRole = creatorRole ?: creatorRoleSnake
     )
 }
 

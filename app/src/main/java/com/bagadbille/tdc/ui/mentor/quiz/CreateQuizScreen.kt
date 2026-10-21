@@ -390,16 +390,24 @@ private fun QuestionEditorCard(
             Text("Select Correct Option", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(6.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                listOf("a" to "Option A", "b" to "Option B", "c" to "Option C", "d" to "Option D").forEach { (key, label) ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("a" to "A", "b" to "B", "c" to "C", "d" to "D").forEach { (key, letter) ->
                     val selected = draft.correctOption.equals(key, ignoreCase = true)
                     FilterChip(
+                        modifier = Modifier.weight(1f),
                         selected = selected,
                         onClick = { onUpdate(draft.copy(correctOption = key)) },
                         leadingIcon = if (selected) {
                             { Icon(Icons.Outlined.Check, null, Modifier.size(14.dp)) }
                         } else null,
-                        label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                        label = {
+                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                Text(letter, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
                     )
                 }
             }

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Class
 import androidx.compose.material.icons.outlined.EventAvailable
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.Schedule
@@ -51,6 +52,13 @@ import com.bagadbille.tdc.ui.components.ErrorScreen
 import com.bagadbille.tdc.ui.components.LoadingScreen
 import com.bagadbille.tdc.ui.theme.*
 import com.bagadbille.tdc.util.MeetingHelper
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.Assignment
+import androidx.compose.material.icons.outlined.Campaign
+import androidx.compose.ui.graphics.Brush
+import com.bagadbille.tdc.ui.components.TdcButton
 import java.util.Calendar
 
 private val dayLabels = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
@@ -61,6 +69,8 @@ fun GeneralScreen(
     onQuizClick: (String) -> Unit = {},
     onNavigateToClasses: () -> Unit = {},
     onNavigateToQuizzes: () -> Unit = {},
+    onNavigateToAssignments: () -> Unit = {},
+    onNavigateToNotices: () -> Unit = {},
     viewModel: GeneralViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -75,7 +85,9 @@ fun GeneralScreen(
                 data = s.data,
                 onQuizClick = onQuizClick,
                 onNavigateToClasses = onNavigateToClasses,
-                onNavigateToQuizzes = onNavigateToQuizzes
+                onNavigateToQuizzes = onNavigateToQuizzes,
+                onNavigateToAssignments = onNavigateToAssignments,
+                onNavigateToNotices = onNavigateToNotices
             )
         }
     }
@@ -86,13 +98,15 @@ private fun DashboardContent(
     data: DashboardData,
     onQuizClick: (String) -> Unit,
     onNavigateToClasses: () -> Unit,
-    onNavigateToQuizzes: () -> Unit
+    onNavigateToQuizzes: () -> Unit,
+    onNavigateToAssignments: () -> Unit,
+    onNavigateToNotices: () -> Unit
 ) {
+    val context = LocalContext.current
     val today = remember { Calendar.getInstance().get(Calendar.DAY_OF_WEEK) - 1 } // 0=Sun, 1=Mon, ..., 6=Sat
 
     // Compute upcoming classes starting from today onwards
     val upcomingClasses = remember(data.schedules, today) {
-        // Collect schedules from today through upcoming days
         val orderedDays = (today..6) + (0 until today)
         val sortedList = mutableListOf<Pair<Schedule, String>>()
         for (day in orderedDays) {
@@ -110,51 +124,333 @@ private fun DashboardContent(
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        // ─── 1. INTERACTIVE WEEKLY SCHEDULE WIDGET ───
+        // ─── 1. USER GREETING ───
         item {
-            WeeklyScheduleWidget(schedules = data.schedules, today = today)
-        }
-
-        // ─── 2. UPCOMING CLASSES ───
-        item {
-            SectionHeader(
-                icon = Icons.Outlined.PlayArrow,
-                title = "Upcoming Classes",
-                count = upcomingClasses.size,
-                actionLabel = "All Classes",
-                onActionClick = onNavigateToClasses
-            )
-        }
-        if (upcomingClasses.isEmpty()) {
-            item { EmptyCard("No upcoming classes scheduled. Enjoy your break! 🎉") }
-        } else {
-            items(upcomingClasses, key = { "${it.first.id}_${it.second}" }) { (schedule, dayRelative) ->
-                UpcomingClassCard(schedule = schedule, dayLabel = dayRelative)
+            Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                Text(
+                    text = if (data.userName.isNotBlank()) "Hey ${data.userName} 👋" else "Hey Developer 👋",
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Build something amazing today",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
-        // ─── 3. UPCOMING QUIZZES ───
+        // ─── 2. TDC CODING QUEST 2026 HERO BANNER ───
         item {
-            SectionHeader(
-                icon = Icons.Outlined.Quiz,
-                title = "Upcoming Quizzes",
-                count = data.upcomingQuizzes.size,
-                actionLabel = "All Quizzes",
-                onActionClick = onNavigateToQuizzes
+            val isDark = MaterialTheme.colorScheme.background == DarkBackground
+            CyberCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                backgroundBrush = if (isDark) {
+                    Brush.linearGradient(
+                        listOf(Color(0xFF0F2B33), Color(0xFF2C1910), Color(0xFF17191E))
+                    )
+                } else {
+                    Brush.linearGradient(
+                        listOf(Color(0xFFF0FDFA), Color(0xFFFFF7ED), Color(0xFFFFFFFF))
+                    )
+                },
+                borderBrush = Brush.horizontalGradient(
+                    listOf(
+                        BrandCyan.copy(alpha = if (isDark) 0.6f else 0.45f),
+                        BrandOrange.copy(alpha = if (isDark) 0.6f else 0.45f)
+                    )
+                )
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isDark) BrandOrange.copy(alpha = 0.2f) else Color(0xFFFFEDD5))
+                            .border(1.dp, if (isDark) BrandOrange.copy(alpha = 0.4f) else Color(0xFFFDBA74), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "CODING QUEST",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 1.sp
+                            ),
+                            color = if (isDark) BrandOrange else Color(0xFFC2410C)
+                        )
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+
+                    Text(
+                        text = "TDC Coding Quest 2026",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 22.sp
+                        ),
+                        color = if (isDark) Color.White else Color(0xFF0F172A)
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Innovate • Build • Collaborate",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (isDark) Color.White.copy(alpha = 0.8f) else Color(0xFF475569)
+                    )
+
+                    Spacer(Modifier.height(18.dp))
+
+                    TdcButton(
+                        text = "Register Now",
+                        trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://forms.gle/placeholder"))
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.wrapContentWidth()
+                    )
+                }
+            }
+        }
+
+        // ─── 3. QUICK ACCESS GRID ───
+        item {
+            Column {
+                Text(
+                    text = "Quick Access",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    QuickAccessCard(
+                        icon = Icons.Outlined.Class,
+                        label = "Classes",
+                        accentColor = BrandCyan,
+                        onClick = onNavigateToClasses,
+                        modifier = Modifier.weight(1f)
+                    )
+                    QuickAccessCard(
+                        icon = Icons.Outlined.Quiz,
+                        label = "Quizzes",
+                        accentColor = BrandOrange,
+                        onClick = onNavigateToQuizzes,
+                        modifier = Modifier.weight(1f)
+                    )
+                    QuickAccessCard(
+                        icon = Icons.AutoMirrored.Outlined.Assignment,
+                        label = "Assignments",
+                        accentColor = BrandCyan,
+                        onClick = onNavigateToAssignments,
+                        modifier = Modifier.weight(1f)
+                    )
+                    QuickAccessCard(
+                        icon = Icons.Outlined.Campaign,
+                        label = "Notices",
+                        accentColor = BrandCoral,
+                        onClick = onNavigateToNotices,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+
+        // ─── 4. RECENT UPDATES / ANNOUNCEMENTS ───
+        if (data.recentAnnouncements.isNotEmpty()) {
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Recent Updates",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = "See all",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable { onNavigateToNotices() }
+                    )
+                }
+            }
+            items(data.recentAnnouncements, key = { it.id }) { announcement ->
+                CyberCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateToNotices() },
+                    shape = RoundedCornerShape(16.dp),
+                    borderColor = MaterialTheme.colorScheme.outlineVariant
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(BrandCyan.copy(alpha = 0.14f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Outlined.Campaign,
+                                contentDescription = null,
+                                tint = BrandCyan,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = announcement.title,
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = announcement.content,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ─── 5. WEEKLY SCHEDULE WIDGET ───
+        item {
+            WeeklyScheduleWidget(
+                schedules = data.schedules,
+                today = today,
+                onNavigateToBatches = onNavigateToClasses
             )
         }
-        if (data.upcomingQuizzes.isEmpty()) {
-            item { EmptyCard("No upcoming quizzes right now. Stay tuned!") }
+
+        // ─── 6. COMBINED UPCOMING (1 CLASS, 1 QUIZ) ───
+        val nextClass = upcomingClasses.firstOrNull()
+        val nextQuiz = data.upcomingQuizzes.firstOrNull()
+
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Upcoming",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = "View Classes →",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable { onNavigateToClasses() }
+                )
+            }
+        }
+
+        if (nextClass == null && nextQuiz == null) {
+            item {
+                EmptyCard("No upcoming classes or quizzes scheduled. You're all caught up! 🎉")
+            }
         } else {
-            items(data.upcomingQuizzes, key = { it.id }) { quiz ->
-                UpcomingQuizCard(quiz = quiz, onClick = { onQuizClick(quiz.id) })
+            // Next 1 upcoming class
+            nextClass?.let { (schedule, dayRelative) ->
+                item {
+                    UpcomingClassCard(
+                        schedule = schedule,
+                        dayLabel = dayRelative,
+                        onClick = onNavigateToClasses
+                    )
+                }
+            }
+
+            // Next 1 upcoming quiz
+            nextQuiz?.let { quiz ->
+                item {
+                    UpcomingQuizCard(
+                        quiz = quiz,
+                        onClick = { onQuizClick(quiz.id) }
+                    )
+                }
             }
         }
 
         // Bottom spacing
-        item { Spacer(Modifier.height(16.dp)) }
+        item { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+@Composable
+private fun QuickAccessCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    accentColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isDark = MaterialTheme.colorScheme.background == DarkBackground
+    val resolvedColor = if (isDark) {
+        accentColor
+    } else {
+        when (accentColor) {
+            BrandCyan -> MaterialTheme.colorScheme.primary
+            BrandOrange -> MaterialTheme.colorScheme.secondary
+            else -> accentColor
+        }
+    }
+
+    CyberCard(
+        modifier = modifier.clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        borderColor = MaterialTheme.colorScheme.outlineVariant
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 14.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(resolvedColor.copy(alpha = if (isDark) 0.12f else 0.10f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = resolvedColor,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            )
+        }
     }
 }
 
@@ -163,7 +459,11 @@ private fun DashboardContent(
 // ═══════════════════════════════════════════════════════
 
 @Composable
-private fun WeeklyScheduleWidget(schedules: List<Schedule>, today: Int) {
+private fun WeeklyScheduleWidget(
+    schedules: List<Schedule>,
+    today: Int,
+    onNavigateToBatches: () -> Unit
+) {
     var selectedDay by remember { mutableIntStateOf(today) }
     val grouped = remember(schedules) { schedules.groupBy { it.dayOfWeek } }
     val selectedDaySchedules = remember(grouped, selectedDay) {
@@ -176,9 +476,11 @@ private fun WeeklyScheduleWidget(schedules: List<Schedule>, today: Int) {
         borderColor = GlassBorderSubtle
     ) {
         Column(Modifier.padding(16.dp)) {
-            // Header Row: Schedule Icon + Title + Selected Day subtitle
+            // Header Row: Schedule Icon + Title + Batches shortcut
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onNavigateToBatches() },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -207,19 +509,30 @@ private fun WeeklyScheduleWidget(schedules: List<Schedule>, today: Int) {
                     )
                 }
 
-                // Selected Day Badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(NeonCyan.copy(alpha = 0.12f))
-                        .border(1.dp, NeonCyan.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // Selected Day Badge
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(NeonCyan.copy(alpha = 0.12f))
+                            .border(1.dp, NeonCyan.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            if (selectedDay == today) "Today" else dayFullNames[selectedDay],
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = NeonCyan
+                        )
+                    }
+
                     Text(
-                        if (selectedDay == today) "Today (${dayLabels[selectedDay]})" else dayFullNames[selectedDay],
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = NeonCyan
+                        "Classes →",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -574,12 +887,17 @@ private fun SectionHeader(
 }
 
 @Composable
-private fun UpcomingClassCard(schedule: Schedule, dayLabel: String) {
+private fun UpcomingClassCard(
+    schedule: Schedule,
+    dayLabel: String,
+    onClick: (() -> Unit)? = null
+) {
     val context = LocalContext.current
     val isLive = remember(schedule) { MeetingHelper.isScheduleLive(schedule) }
     val isOnline = remember(schedule.room) { MeetingHelper.isOnlineMeeting(schedule.room) }
 
     CyberCard(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         borderColor = if (isLive) NeonEmerald.copy(alpha = 0.45f) else GlassBorderSubtle
@@ -768,6 +1086,29 @@ private fun UpcomingQuizCard(quiz: Quiz, onClick: () -> Unit) {
                             it.take(10),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+
+                // Creator name: ADMIN or Teacher name
+                val creator = quiz.createdByName?.ifBlank { null }
+                if (!creator.isNullOrBlank()) {
+                    Spacer(Modifier.height(3.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Outlined.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(11.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                        Spacer(Modifier.width(3.dp))
+                        Text(
+                            "By $creator",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                            fontWeight = if (creator == "ADMIN") FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }

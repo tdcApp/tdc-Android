@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
@@ -193,6 +194,29 @@ private fun QuizCard(
                             it.take(10),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+
+                // Creator name: ADMIN or Teacher name
+                val creator = quiz.createdByName?.ifBlank { null }
+                if (!creator.isNullOrBlank()) {
+                    Spacer(Modifier.height(3.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Outlined.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(11.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                        Spacer(Modifier.width(3.dp))
+                        Text(
+                            "By $creator",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                            fontWeight = if (creator == "ADMIN") FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }

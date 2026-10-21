@@ -9,7 +9,9 @@ data class Quiz(
     val classId: String? = null,
     val createdAt: String? = null,
     val updatedAt: String? = null,
-    val isSubmitted: Boolean = false
+    val isSubmitted: Boolean = false,
+    val createdByName: String? = null,
+    val creatorRole: String? = null
 )
 
 data class QuizQuestion(

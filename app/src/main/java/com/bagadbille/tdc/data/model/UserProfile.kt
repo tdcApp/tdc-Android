@@ -44,7 +44,7 @@ fun com.bagadbille.tdc.data.remote.dto.UserProfileDto.toDomain(
         mobileNumber = effectiveMobile,
         name = name,
         role = cleanRole,
-        enrollmentNumber = enrollmentNumber,
+        enrollmentNumber = effectiveEnrollmentNumber,
         year = year,
         isProfileComplete = complete,
         languageClassId = effectiveLanguageClassId,

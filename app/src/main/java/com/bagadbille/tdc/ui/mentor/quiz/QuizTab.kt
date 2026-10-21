@@ -215,16 +215,45 @@ private fun MentorQuizCard(
                             )
                         }
 
-                        Surface(
-                            shape = MaterialTheme.shapes.extraSmall,
-                            color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
-                        ) {
-                            Text(
-                                quiz.targetYears ?: "All Years",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.tertiary,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
+                        quiz.targetYears?.let { years ->
+                            Surface(
+                                shape = MaterialTheme.shapes.extraSmall,
+                                color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
+                            ) {
+                                Text(
+                                    years,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        val creator = quiz.createdByName?.ifBlank { null }
+                        if (!creator.isNullOrBlank()) {
+                            Surface(
+                                shape = MaterialTheme.shapes.extraSmall,
+                                color = MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.Person,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(10.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(Modifier.width(3.dp))
+                                    Text(
+                                        "By $creator",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = if (creator == "ADMIN") FontWeight.Bold else FontWeight.Medium
+                                    )
+                                }
+                            }
                         }
                     }
                 }

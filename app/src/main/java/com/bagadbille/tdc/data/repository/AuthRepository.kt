@@ -17,7 +17,12 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import retrofit2.HttpException
 import com.bagadbille.tdc.data.remote.api.NotificationApi
 import com.bagadbille.tdc.data.remote.dto.RegisterFcmTokenRequest
+import com.bagadbille.tdc.data.local.TdcDatabase
 import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -26,6 +31,8 @@ interface AuthRepository {
     fun isLoggedIn(): Flow<Boolean>
     fun isProfileComplete(): Flow<Boolean>
     fun getUserRole(): Flow<String?>
+    fun hasCompletedOnboarding(): Flow<Boolean>
+    suspend fun setCompletedOnboarding(completed: Boolean = true)
     suspend fun signInWithEmail(email: String, password: String): Result<UserProfile>
     suspend fun signUpWithEmail(email: String, password: String): Result<UserProfile>
     suspend fun logout()
@@ -37,7 +44,8 @@ class AuthRepositoryImpl @Inject constructor(
     private val firebaseAuthApi: FirebaseAuthApi,
     private val authApi: AuthApi,
     private val profileApi: ProfileApi,
-    private val notificationApi: NotificationApi
+    private val notificationApi: NotificationApi,
+    private val database: TdcDatabase
 ) : AuthRepository {
 
     private val firebaseAuth: FirebaseAuth? by lazy {
@@ -56,6 +64,10 @@ class AuthRepositoryImpl @Inject constructor(
     override fun isProfileComplete(): Flow<Boolean> = dataStoreManager.isProfileComplete
 
     override fun getUserRole(): Flow<String?> = dataStoreManager.userRole
+
+    override fun hasCompletedOnboarding(): Flow<Boolean> = dataStoreManager.hasCompletedOnboarding
+
+    override suspend fun setCompletedOnboarding(completed: Boolean) = dataStoreManager.setCompletedOnboarding(completed)
 
     override suspend fun signInWithEmail(email: String, password: String): Result<UserProfile> {
         val cleanEmail = email.trim().lowercase()
@@ -226,16 +238,24 @@ class AuthRepositoryImpl @Inject constructor(
         )
     }
 
-    override suspend fun logout() {
+    override suspend fun logout() = withContext(Dispatchers.IO + NonCancellable) {
         try {
-            val token = FirebaseMessaging.getInstance().token.awaitTask()
-            if (!token.isNullOrBlank()) {
-                notificationApi.unregisterFcmToken(token)
+            withTimeoutOrNull(2000L) {
+                val token = com.google.firebase.messaging.FirebaseMessaging.getInstance().token.awaitTask()
+                if (!token.isNullOrBlank()) {
+                    notificationApi.unregisterFcmToken(token)
+                }
             }
         } catch (_: Exception) {}
+
         try {
             firebaseAuth?.signOut()
         } catch (_: Exception) {}
+
+        try {
+            database.clearAllTables()
+        } catch (_: Exception) {}
+
         dataStoreManager.clearSession()
     }
 

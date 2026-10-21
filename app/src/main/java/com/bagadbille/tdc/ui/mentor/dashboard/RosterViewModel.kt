@@ -50,7 +50,7 @@ class RosterViewModel @Inject constructor(
                             )
                         }
                     }.awaitAll()
-                }.filter { it.students.isNotEmpty() }
+                }.sortedBy { it.classInfo.name }
 
                 _uiState.value = RosterUiState.Success(batches)
             } catch (e: Exception) {

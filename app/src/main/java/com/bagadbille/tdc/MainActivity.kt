@@ -1,19 +1,14 @@
 package com.bagadbille.tdc
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.bagadbille.tdc.data.local.DataStoreManager
@@ -37,21 +32,10 @@ class MainActivity : ComponentActivity() {
 
     private var pendingNotificationDestination by mutableStateOf<Pair<String, String>?>(null)
 
-    private val requestPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
-            Log.d("MainActivity", "Notification permission granted")
-        } else {
-            Log.w("MainActivity", "Notification permission denied")
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        requestNotificationPermission()
         syncFcmToken()
         handleIntent(intent)
 
@@ -85,17 +69,6 @@ class MainActivity : ComponentActivity() {
         syncFcmToken()
     }
 
-    private fun requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
-    }
 
     private fun syncFcmToken() {
         lifecycleScope.launch {

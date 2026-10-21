@@ -8,5 +8,7 @@ data class Assignment(
     val mentorUid: String,
     val classId: String,
     val createdAt: String? = null,
-    val updatedAt: String? = null
+    val updatedAt: String? = null,
+    val createdByName: String? = null,
+    val creatorRole: String? = null
 )

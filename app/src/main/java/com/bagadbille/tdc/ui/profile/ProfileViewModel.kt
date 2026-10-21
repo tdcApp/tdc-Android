@@ -20,10 +20,16 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import com.bagadbille.tdc.data.repository.AssignmentRepository
+import com.bagadbille.tdc.data.repository.QuizRepository
+
 data class ProfileUiData(
     val profile: UserProfile,
     val languageClass: ClassInfo? = null,
     val technologyClass: ClassInfo? = null,
+    val completedQuizzesCount: Int = 0,
+    val submittedAssignmentsCount: Int = 0,
+    val enrolledBatchesCount: Int = 0,
     val isUpdating: Boolean = false
 )
 
@@ -42,6 +48,8 @@ class ProfileViewModel @Inject constructor(
     private val profileRepository: ProfileRepository,
     private val classRepository: ClassRepository,
     private val authRepository: AuthRepository,
+    private val assignmentRepository: AssignmentRepository,
+    private val quizRepository: QuizRepository,
     private val dataStoreManager: DataStoreManager
 ) : ViewModel() {
 
@@ -76,12 +84,27 @@ class ProfileViewModel @Inject constructor(
 
             val langClass = classes.find { it.id == profile.languageClassId }
             val techClass = classes.find { it.id == profile.technologyClassId }
+            val enrolledCount = listOfNotNull(langClass, techClass).size
+
+            val submissionsMap = assignmentRepository.getSubmissions().getOrDefault(emptyMap())
+            val submittedAssignments = submissionsMap.size
+
+            val allQuizzes = quizRepository.getQuizzes().getOrDefault(emptyList())
+            var completedQuizzes = 0
+            for (q in allQuizzes) {
+                if (quizRepository.isQuizSubmitted(q.id)) {
+                    completedQuizzes++
+                }
+            }
 
             _uiState.value = ProfileUiState.Success(
                 ProfileUiData(
                     profile = profile,
                     languageClass = langClass,
-                    technologyClass = techClass
+                    technologyClass = techClass,
+                    completedQuizzesCount = completedQuizzes,
+                    submittedAssignmentsCount = submittedAssignments,
+                    enrolledBatchesCount = enrolledCount
                 )
             )
         }
@@ -93,7 +116,7 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun updateProfile(name: String, phone: String, year: String? = null, onFinished: (Boolean) -> Unit = {}) {
+    fun updateProfile(name: String, phone: String, year: String? = null, enrollmentNumber: String? = null, onFinished: (Boolean) -> Unit = {}) {
         val currentState = _uiState.value
         if (currentState !is ProfileUiState.Success) return
 
@@ -102,7 +125,12 @@ class ProfileViewModel @Inject constructor(
                 currentState.data.copy(isUpdating = true)
             )
 
-            val result = profileRepository.updateProfile(name = name.trim(), phone = phone.trim(), year = year?.trim())
+            val result = profileRepository.updateProfile(
+                name = name.trim(),
+                phone = phone.trim(),
+                year = year?.trim(),
+                enrollmentNumber = enrollmentNumber?.trim()
+            )
             result.onSuccess { updatedProfile ->
                 _uiState.value = ProfileUiState.Success(
                     currentState.data.copy(
@@ -123,9 +151,12 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun logout() {
-        viewModelScope.launch {
+    fun logout(onComplete: () -> Unit = {}) {
+        viewModelScope.launch(kotlinx.coroutines.NonCancellable) {
             authRepository.logout()
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                onComplete()
+            }
         }
     }
 }

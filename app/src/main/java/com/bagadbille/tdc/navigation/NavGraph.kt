@@ -12,6 +12,7 @@ import com.bagadbille.tdc.ui.assignments.AssignmentDetailScreen
 import com.bagadbille.tdc.ui.auth.LoginScreen
 import com.bagadbille.tdc.ui.auth.SetupScreen
 import com.bagadbille.tdc.ui.auth.SplashScreen
+import com.bagadbille.tdc.ui.onboarding.OnboardingScreen
 import com.bagadbille.tdc.ui.home.quiz.QuizResultScreen
 import com.bagadbille.tdc.ui.home.quiz.QuizTakingScreen
 import com.bagadbille.tdc.ui.main.MainScreen
@@ -30,9 +31,15 @@ fun TdcNavGraph(
     NavHost(navController = navController, startDestination = Screen.Splash.route) {
         composable(Screen.Splash.route) {
             SplashScreen(
+                onNavigateToOnboarding = { navController.navigate(Screen.Onboarding.route) { popUpTo(Screen.Splash.route) { inclusive = true } } },
                 onNavigateToLogin = { navController.navigate(Screen.Login.route) { popUpTo(Screen.Splash.route) { inclusive = true } } },
                 onNavigateToSetup = { navController.navigate(Screen.Setup.route) { popUpTo(Screen.Splash.route) { inclusive = true } } },
                 onNavigateToMain = { navController.navigate(Screen.Main.route) { popUpTo(Screen.Splash.route) { inclusive = true } } }
+            )
+        }
+        composable(Screen.Onboarding.route) {
+            OnboardingScreen(
+                onNavigateToLogin = { navController.navigate(Screen.Login.route) { popUpTo(Screen.Onboarding.route) { inclusive = true } } }
             )
         }
         composable(Screen.Login.route) {

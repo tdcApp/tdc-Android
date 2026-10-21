@@ -369,8 +369,11 @@ private fun AssignmentDetailContent(
 
                     Spacer(Modifier.height(12.dp))
 
-                    assignment.dueAt?.let { due ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        assignment.dueAt?.let { due ->
                             Surface(
                                 shape = MaterialTheme.shapes.small,
                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
@@ -391,6 +394,32 @@ private fun AssignmentDetailContent(
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+
+                        assignment.createdByName?.ifBlank { null }?.let { creator ->
+                            Surface(
+                                shape = MaterialTheme.shapes.small,
+                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.Person,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.secondary
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        "Created by: $creator",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.secondary
                                     )
                                 }
                             }

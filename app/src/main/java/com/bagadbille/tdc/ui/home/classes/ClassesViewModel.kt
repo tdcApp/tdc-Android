@@ -3,7 +3,9 @@ package com.bagadbille.tdc.ui.home.classes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bagadbille.tdc.data.model.ClassInfo
+import com.bagadbille.tdc.data.model.Schedule
 import com.bagadbille.tdc.data.repository.ClassRepository
+import com.bagadbille.tdc.data.repository.ScheduleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -13,16 +15,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class ClassFilterTab {
-    ENROLLED,
-    ALL
-}
-
 data class ClassesData(
-    val enrolledClasses: List<ClassInfo>,
-    val allClasses: List<ClassInfo>,
-    val enrolledClassIds: Set<String>,
-    val selectedFilter: ClassFilterTab = ClassFilterTab.ENROLLED
+    val enrolledClasses: List<ClassInfo> = emptyList(),
+    val schedules: List<Schedule> = emptyList()
 )
 
 sealed class ClassesUiState {
@@ -33,7 +28,8 @@ sealed class ClassesUiState {
 
 @HiltViewModel
 class ClassesViewModel @Inject constructor(
-    private val repo: ClassRepository
+    private val repo: ClassRepository,
+    private val scheduleRepo: ScheduleRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ClassesUiState>(ClassesUiState.Loading)
@@ -46,41 +42,24 @@ class ClassesViewModel @Inject constructor(
     fun loadClasses() {
         viewModelScope.launch {
             _uiState.value = ClassesUiState.Loading
-            val myClassesResult: Result<List<ClassInfo>>
-            val allClassesResult: Result<List<ClassInfo>>
-            coroutineScope {
-                val myDef = async { repo.getMyClasses() }
-                val allDef = async { repo.getClasses() }
-                myClassesResult = myDef.await()
-                allClassesResult = allDef.await()
-            }
+            try {
+                coroutineScope {
+                    val myDef = async { repo.getMyClasses().getOrDefault(emptyList()) }
+                    val schedDef = async { scheduleRepo.getSchedules().getOrDefault(emptyList()) }
 
-            val myClasses = myClassesResult.getOrDefault(emptyList())
-            val allClasses = allClassesResult.getOrDefault(emptyList())
+                    val myClasses = myDef.await()
+                    val schedules = schedDef.await()
 
-            if (myClasses.isEmpty() && allClasses.isEmpty()) {
-                val err = myClassesResult.exceptionOrNull()?.message
-                    ?: allClassesResult.exceptionOrNull()?.message
-                    ?: "Failed to load classes"
-                _uiState.value = ClassesUiState.Error(err)
-            } else {
-                val enrolledIds = myClasses.map { it.id }.toSet()
-                _uiState.value = ClassesUiState.Success(
-                    ClassesData(
-                        enrolledClasses = myClasses,
-                        allClasses = allClasses,
-                        enrolledClassIds = enrolledIds,
-                        selectedFilter = ClassFilterTab.ENROLLED
+                    _uiState.value = ClassesUiState.Success(
+                        ClassesData(
+                            enrolledClasses = myClasses,
+                            schedules = schedules
+                        )
                     )
-                )
+                }
+            } catch (e: Exception) {
+                _uiState.value = ClassesUiState.Error(e.message ?: "Failed to load upcoming classes")
             }
-        }
-    }
-
-    fun setFilterTab(tab: ClassFilterTab) {
-        val current = _uiState.value
-        if (current is ClassesUiState.Success) {
-            _uiState.value = ClassesUiState.Success(current.data.copy(selectedFilter = tab))
         }
     }
 }

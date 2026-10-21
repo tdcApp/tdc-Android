@@ -28,6 +28,13 @@ class AuthViewModel @Inject constructor(
     val isLoggedIn: Flow<Boolean> = authRepository.isLoggedIn()
     val isProfileComplete: Flow<Boolean> = authRepository.isProfileComplete()
     val userRole: Flow<String?> = authRepository.getUserRole()
+    val hasCompletedOnboarding: Flow<Boolean> = authRepository.hasCompletedOnboarding()
+
+    fun completeOnboarding() {
+        viewModelScope.launch {
+            authRepository.setCompletedOnboarding(true)
+        }
+    }
 
     fun signInWithEmail(email: String, password: String) {
         if (email.isBlank() || password.isBlank()) {

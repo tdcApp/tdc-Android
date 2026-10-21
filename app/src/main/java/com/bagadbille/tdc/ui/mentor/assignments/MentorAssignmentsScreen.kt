@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.TaskAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -33,6 +34,7 @@ import com.bagadbille.tdc.ui.components.LoadingScreen
 import com.bagadbille.tdc.ui.components.TdcHeader
 import com.bagadbille.tdc.ui.theme.*
 import com.bagadbille.tdc.ui.util.TdcDates
+import androidx.activity.compose.BackHandler
 import kotlinx.coroutines.launch
 
 @Composable
@@ -47,6 +49,12 @@ fun MentorAssignmentsScreen(
     val tabs = listOf("Ongoing", "Past")
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
+
+    BackHandler(enabled = pagerState.currentPage != 0) {
+        scope.launch {
+            pagerState.animateScrollToPage(0)
+        }
+    }
 
     // Runs on first show and every time we come back from the editor/submissions screens
     LaunchedEffect(Unit) { viewModel.load() }
@@ -244,6 +252,29 @@ private fun MentorAssignmentCard(item: MentorAssignmentItem, isPast: Boolean, on
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 maxLines = 1,
                                 softWrap = false
+                            )
+                        }
+                    }
+
+                    // Creator name (ADMIN or Teacher name)
+                    val creator = item.assignment.createdByName?.ifBlank { null }
+                    if (!creator.isNullOrBlank()) {
+                        Spacer(Modifier.height(3.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Outlined.Person,
+                                contentDescription = null,
+                                modifier = Modifier.size(11.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                            Spacer(Modifier.width(3.dp))
+                            Text(
+                                "By $creator",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                                fontWeight = if (creator == "ADMIN") FontWeight.Bold else FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }

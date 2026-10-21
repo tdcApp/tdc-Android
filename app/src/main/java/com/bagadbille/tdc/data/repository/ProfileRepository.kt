@@ -24,7 +24,7 @@ interface ProfileRepository {
         mobileNumber: String? = null
     ): Result<UserProfile>
     suspend fun setupProfile(name: String, enrollmentNumber: String, year: String): Result<UserProfile>
-    suspend fun updateProfile(name: String?, phone: String?, year: String? = null): Result<UserProfile>
+    suspend fun updateProfile(name: String?, phone: String?, year: String? = null, enrollmentNumber: String? = null): Result<UserProfile>
 }
 
 @Singleton
@@ -110,6 +110,7 @@ class ProfileRepositoryImpl @Inject constructor(
         }
 
         val cleanYear = year?.trim()?.ifBlank { null }
+        val cleanEnrollment = enrollmentNumber?.trim()?.ifBlank { null }
 
         try {
             // POST /users/profile to NestJS backend to persist into Neon PostgreSQL
@@ -119,7 +120,8 @@ class ProfileRepositoryImpl @Inject constructor(
                     mobileNumber = cleanMobile,
                     languageClassId = langId,
                     technologyClassId = techId,
-                    year = cleanYear
+                    year = cleanYear,
+                    enrollmentNumber = cleanEnrollment
                 )
             )
 
@@ -153,16 +155,18 @@ class ProfileRepositoryImpl @Inject constructor(
     override suspend fun setupProfile(name: String, enrollmentNumber: String, year: String): Result<UserProfile> =
         setupProfile(name, null, null, enrollmentNumber, year)
 
-    override suspend fun updateProfile(name: String?, phone: String?, year: String?): Result<UserProfile> = runCatching {
+    override suspend fun updateProfile(name: String?, phone: String?, year: String?, enrollmentNumber: String?): Result<UserProfile> = runCatching {
         val cleanName = name?.trim()
         val cleanPhone = phone?.trim()
         val cleanYear = year?.trim()?.ifBlank { null }
+        val cleanEnrollment = enrollmentNumber?.trim()?.ifBlank { null }
 
         val updatedDto = profileApi.updateProfile(
             UpdateProfileRequest(
                 name = cleanName,
                 mobileNumber = cleanPhone,
-                year = cleanYear
+                year = cleanYear,
+                enrollmentNumber = cleanEnrollment
             )
         )
         dataStoreManager.saveUserName(updatedDto.name ?: cleanName ?: "")
