@@ -15,7 +15,10 @@ interface AnnouncementRepository {
         title: String,
         content: String,
         audience: String,      // "all" | "language" | "technology" | "class"
-        classId: String?
+        classId: String?,
+        tag: String = "GENERAL",
+        targetScreen: String? = null,
+        targetId: String? = null
     ): Result<Announcement>
     suspend fun deleteAnnouncement(id: String): Result<Unit>
 }
@@ -47,7 +50,10 @@ class AnnouncementRepositoryImpl @Inject constructor(
         title: String,
         content: String,
         audience: String,
-        classId: String?
+        classId: String?,
+        tag: String,
+        targetScreen: String?,
+        targetId: String?
     ): Result<Announcement> = runCatching {
         val finalAudience = if (!classId.isNullOrBlank()) "CLASS" else audience.trim().uppercase()
         val finalClassId = if (finalAudience == "CLASS") classId?.trim() else null
@@ -56,7 +62,10 @@ class AnnouncementRepositoryImpl @Inject constructor(
             title = title.trim(),
             content = content.trim(),
             audience = finalAudience,
-            classId = finalClassId
+            classId = finalClassId,
+            tag = tag.trim().uppercase(),
+            targetScreen = targetScreen?.trim()?.uppercase(),
+            targetId = targetId?.trim()
         )
         val created = announcementApi.createAnnouncement(req).toDomain()
         announcementDao.insertAnnouncement(AnnouncementEntity.fromDomain(created))

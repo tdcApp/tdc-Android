@@ -12,6 +12,9 @@ data class AnnouncementEntity(
     val createdBy: String,
     val classId: String? = null,
     val audience: String,
+    val tag: String = "GENERAL",
+    val targetScreen: String? = null,
+    val targetId: String? = null,
     val createdAt: String? = null,
     val updatedAt: String? = null
 ) {
@@ -22,6 +25,9 @@ data class AnnouncementEntity(
         createdBy = createdBy,
         classId = classId,
         audience = audience,
+        tag = tag,
+        targetScreen = targetScreen,
+        targetId = targetId,
         createdAt = createdAt,
         updatedAt = updatedAt
     )
@@ -34,8 +40,12 @@ data class AnnouncementEntity(
             createdBy = announcement.createdBy,
             classId = announcement.classId,
             audience = announcement.audience,
+            tag = announcement.tag,
+            targetScreen = announcement.targetScreen,
+            targetId = announcement.targetId,
             createdAt = announcement.createdAt,
             updatedAt = announcement.updatedAt
         )
     }
 }
+

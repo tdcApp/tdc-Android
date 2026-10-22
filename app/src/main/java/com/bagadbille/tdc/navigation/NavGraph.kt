@@ -127,7 +127,26 @@ fun TdcNavGraph(
             )
         }
         composable(Screen.Notifications.route) {
-            NotificationsScreen(onNavigateBack = { navController.popBackStack() })
+            NotificationsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToQuiz = { quizId ->
+                    if (quizId.isNotBlank()) {
+                        navController.navigate("quizTaking/$quizId")
+                    } else {
+                        navController.popBackStack(Screen.Main.route, inclusive = false)
+                    }
+                },
+                onNavigateToAssignment = { assignmentId ->
+                    if (assignmentId.isNotBlank()) {
+                        navController.navigate(Screen.AssignmentDetail.createRoute(assignmentId))
+                    } else {
+                        navController.popBackStack(Screen.Main.route, inclusive = false)
+                    }
+                },
+                onNavigateToSchedule = {
+                    navController.popBackStack(Screen.Main.route, inclusive = false)
+                }
+            )
         }
         composable(
             Screen.AssignmentDetail.route,

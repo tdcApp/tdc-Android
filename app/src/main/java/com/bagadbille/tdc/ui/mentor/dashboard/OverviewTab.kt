@@ -96,8 +96,8 @@ fun OverviewTab(
             isPosting = successData?.isPostingAnnouncement == true,
             classList = successData?.classList ?: emptyList(),
             onDismiss = { showPostDialog = false },
-            onPost = { title, content, audience, selectedClassIds ->
-                viewModel.postAnnouncement(title, content, audience, selectedClassIds)
+            onPost = { title, content, audience, selectedClassIds, tag, targetScreen ->
+                viewModel.postAnnouncement(title, content, audience, selectedClassIds, tag, targetScreen)
                 showPostDialog = false
             }
         )
@@ -739,11 +739,12 @@ private fun PostAnnouncementDialog(
     isPosting: Boolean,
     classList: List<com.bagadbille.tdc.data.model.ClassInfo>,
     onDismiss: () -> Unit,
-    onPost: (title: String, content: String, audience: String, selectedClassIds: Set<String>) -> Unit
+    onPost: (title: String, content: String, audience: String, selectedClassIds: Set<String>, tag: String, targetScreen: String) -> Unit
 ) {
     var title by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
     var audienceMode by remember { mutableStateOf("all") } // "all" or "custom"
+    var selectedTag by remember { mutableStateOf("GENERAL") }
     val selectedClassIds = remember { mutableStateListOf<String>() }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -783,6 +784,52 @@ private fun PostAnnouncementDialog(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.medium
                 )
+                Spacer(Modifier.height(14.dp))
+
+                // Notification Tag & Action
+                Text(
+                    "Notification Category & Action",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(6.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    listOf(
+                        "GENERAL" to "📢 General",
+                        "QUIZ" to "📝 Quiz Alert",
+                        "ASSIGNMENT" to "📚 Assignment",
+                        "SCHEDULE" to "📅 Schedule",
+                        "URGENT" to "🚨 Urgent"
+                    ).forEach { (tag, label) ->
+                        FilterChip(
+                            selected = selectedTag == tag,
+                            onClick = { selectedTag = tag },
+                            label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
+                Surface(
+                    shape = MaterialTheme.shapes.extraSmall,
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                ) {
+                    Text(
+                        text = when (selectedTag) {
+                            "QUIZ" -> "👉 Tapping notification opens the Quizzes screen"
+                            "ASSIGNMENT" -> "👉 Tapping notification opens the Assignments screen"
+                            "SCHEDULE" -> "👉 Tapping notification opens the Class Timetable screen"
+                            "URGENT" -> "👉 High-priority alert opens Notifications feed"
+                            else -> "👉 Tapping notification opens Notifications feed"
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
                 Spacer(Modifier.height(14.dp))
 
                 // Audience Target Switch
@@ -947,7 +994,14 @@ private fun PostAnnouncementDialog(
                         audienceMode == "custom" && selectedClassIds.isEmpty() -> {
                             error = "Select at least one language or technology"
                         }
-                        else -> onPost(title.trim(), content.trim(), if (audienceMode == "all") "all" else "class", selectedClassIds.toSet())
+                        else -> onPost(
+                            title.trim(),
+                            content.trim(),
+                            if (audienceMode == "all") "all" else "class",
+                            selectedClassIds.toSet(),
+                            selectedTag,
+                            selectedTag
+                        )
                     }
                 },
                 enabled = !isPosting

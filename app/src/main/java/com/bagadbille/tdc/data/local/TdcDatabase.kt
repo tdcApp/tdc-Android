@@ -23,7 +23,7 @@ import com.bagadbille.tdc.data.local.entity.ScheduleEntity
         AssignmentEntity::class,
         ClassEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class TdcDatabase : RoomDatabase() {

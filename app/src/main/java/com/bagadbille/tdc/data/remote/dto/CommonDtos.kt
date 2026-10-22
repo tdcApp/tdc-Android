@@ -17,6 +17,11 @@ data class AnnouncementDto(
     val classId: String? = null,
     @SerialName("class_id") val classIdSnake: String? = null,
     val audience: String = "ALL",
+    val tag: String? = null,
+    val targetScreen: String? = null,
+    @SerialName("target_screen") val targetScreenSnake: String? = null,
+    val targetId: String? = null,
+    @SerialName("target_id") val targetIdSnake: String? = null,
     val createdAt: String? = null,
     @SerialName("created_at") val createdAtSnake: String? = null,
     val updatedAt: String? = null,
@@ -29,6 +34,9 @@ data class AnnouncementDto(
         createdBy = createdBy ?: createdBySnake ?: "",
         classId = classId ?: classIdSnake,
         audience = audience.lowercase(),
+        tag = (tag ?: "GENERAL").uppercase(),
+        targetScreen = targetScreen ?: targetScreenSnake,
+        targetId = targetId ?: targetIdSnake,
         createdAt = createdAt ?: createdAtSnake ?: "",
         updatedAt = updatedAt ?: updatedAtSnake
     )
@@ -39,7 +47,10 @@ data class CreateAnnouncementRequest(
     val title: String,
     val content: String,
     val audience: String,
-    val classId: String? = null
+    val classId: String? = null,
+    val tag: String? = null,
+    val targetScreen: String? = null,
+    val targetId: String? = null
 )
 
 @Serializable

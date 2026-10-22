@@ -113,14 +113,16 @@ class OverviewViewModel @Inject constructor(
         title: String,
         content: String,
         audience: String,
-        selectedClassIds: Set<String>
+        selectedClassIds: Set<String>,
+        tag: String = "GENERAL",
+        targetScreen: String? = null
     ) {
         val current = _uiState.value as? OverviewUiState.Success ?: return
         viewModelScope.launch {
             _uiState.value = OverviewUiState.Success(current.data.copy(isPostingAnnouncement = true))
 
             if (audience == "all" || selectedClassIds.isEmpty()) {
-                announcementRepo.createAnnouncement(title, content, "ALL", null)
+                announcementRepo.createAnnouncement(title, content, "ALL", null, tag, targetScreen)
                     .onSuccess {
                         _events.emit(OverviewEvent.ShowMessage("Announcement posted to all members!"))
                         load()
@@ -132,7 +134,7 @@ class OverviewViewModel @Inject constructor(
             } else {
                 var successCount = 0
                 for (cid in selectedClassIds) {
-                    val result = announcementRepo.createAnnouncement(title, content, "CLASS", cid)
+                    val result = announcementRepo.createAnnouncement(title, content, "CLASS", cid, tag, targetScreen)
                     if (result.isSuccess) successCount++
                 }
                 if (successCount > 0) {

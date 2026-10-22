@@ -7,6 +7,10 @@ data class Announcement(
     val createdBy: String,
     val classId: String? = null,
     val audience: String,
+    val tag: String = "GENERAL",
+    val targetScreen: String? = null,
+    val targetId: String? = null,
     val createdAt: String? = null,
     val updatedAt: String? = null
 )
+

@@ -41,10 +41,18 @@ import com.bagadbille.tdc.ui.components.CyberCard
 import com.bagadbille.tdc.ui.components.TdcPullToRefresh
 import com.bagadbille.tdc.ui.theme.*
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.automirrored.outlined.Assignment
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsScreen(
     onNavigateBack: () -> Unit = {},
+    onNavigateToQuiz: (String) -> Unit = {},
+    onNavigateToAssignment: (String) -> Unit = {},
+    onNavigateToSchedule: () -> Unit = {},
     viewModel: NotificationsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -96,7 +104,10 @@ fun NotificationsScreen(
                 ) {
                     NotificationsContent(
                         data = s.data,
-                        onMarkAsRead = { viewModel.markAsRead(it) }
+                        onMarkAsRead = { viewModel.markAsRead(it) },
+                        onNavigateToQuiz = onNavigateToQuiz,
+                        onNavigateToAssignment = onNavigateToAssignment,
+                        onNavigateToSchedule = onNavigateToSchedule
                     )
                 }
             }
@@ -105,7 +116,13 @@ fun NotificationsScreen(
 }
 
 @Composable
-private fun NotificationsContent(data: NotificationsData, onMarkAsRead: (String) -> Unit) {
+private fun NotificationsContent(
+    data: NotificationsData,
+    onMarkAsRead: (String) -> Unit,
+    onNavigateToQuiz: (String) -> Unit,
+    onNavigateToAssignment: (String) -> Unit,
+    onNavigateToSchedule: () -> Unit
+) {
     val tabs = listOf("Notifications", "Announcements")
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
@@ -174,27 +191,57 @@ private fun NotificationsContent(data: NotificationsData, onMarkAsRead: (String)
     }
 
     selectedAnnouncement?.let { ann ->
+        val tagStyle = getAnnouncementTagStyle(ann.tag, ann.targetScreen)
+        val targetScreenUpper = (ann.targetScreen ?: ann.tag).uppercase()
+        val hasTargetAction = targetScreenUpper in listOf("QUIZ", "ASSIGNMENT", "SCHEDULE")
+
         AlertDialog(
             onDismissRequest = { selectedAnnouncement = null },
-            icon = { Icon(Icons.Outlined.Campaign, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            icon = { Icon(tagStyle.icon, contentDescription = null, tint = tagStyle.color) },
             title = { Text(ann.title) },
             text = {
                 Column {
-                    Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            "Audience: ${ann.audience.replaceFirstChar { it.uppercase() }}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = tagStyle.color.copy(alpha = 0.15f),
+                            border = BorderStroke(1.dp, tagStyle.color.copy(alpha = 0.35f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(tagStyle.icon, contentDescription = null, modifier = Modifier.size(13.dp), tint = tagStyle.color)
+                                Text(
+                                    tagStyle.label,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = tagStyle.color
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+                        ) {
+                            Text(
+                                "Audience: ${ann.audience.replaceFirstChar { it.uppercase() }}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
                     }
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
                     Text(ann.content, style = MaterialTheme.typography.bodyMedium)
                     ann.createdAt?.let {
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(10.dp))
                         Text(
                             it.take(16).replace('T', ' '),
                             style = MaterialTheme.typography.labelSmall,
@@ -204,8 +251,37 @@ private fun NotificationsContent(data: NotificationsData, onMarkAsRead: (String)
                 }
             },
             confirmButton = {
-                TextButton(onClick = { selectedAnnouncement = null }) { Text("Close") }
-            }
+                if (hasTargetAction) {
+                    Button(
+                        onClick = {
+                            val tId = ann.targetId ?: ""
+                            selectedAnnouncement = null
+                            when (targetScreenUpper) {
+                                "QUIZ" -> onNavigateToQuiz(tId)
+                                "ASSIGNMENT" -> onNavigateToAssignment(tId)
+                                "SCHEDULE" -> onNavigateToSchedule()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = tagStyle.color)
+                    ) {
+                        Text(
+                            when (targetScreenUpper) {
+                                "QUIZ" -> if (!ann.targetId.isNullOrBlank()) "Take Quiz" else "Open Quizzes"
+                                "ASSIGNMENT" -> if (!ann.targetId.isNullOrBlank()) "Open Assignment" else "View Assignments"
+                                "SCHEDULE" -> "View Schedule"
+                                else -> "Open"
+                            },
+                            color = Color.Black,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                } else {
+                    TextButton(onClick = { selectedAnnouncement = null }) { Text("Close") }
+                }
+            },
+            dismissButton = if (hasTargetAction) {
+                { TextButton(onClick = { selectedAnnouncement = null }) { Text("Close") } }
+            } else null
         )
     }
 }
@@ -330,14 +406,69 @@ private fun AnnouncementsTab(
     }
 }
 
+private data class AnnouncementTagStyle(
+    val label: String,
+    val icon: ImageVector,
+    val color: Color,
+    val actionText: String?
+)
+
+@Composable
+private fun getAnnouncementTagStyle(tag: String, targetScreen: String?): AnnouncementTagStyle {
+    val normTag = tag.trim().uppercase()
+    val target = (targetScreen ?: normTag).trim().uppercase()
+    return when (normTag) {
+        "QUIZ" -> AnnouncementTagStyle(
+            label = "Quiz Alert",
+            icon = Icons.Outlined.Quiz,
+            color = BrandOrange,
+            actionText = if (target == "QUIZ") "Open Quizzes" else null
+        )
+        "ASSIGNMENT" -> AnnouncementTagStyle(
+            label = "Assignment",
+            icon = Icons.AutoMirrored.Outlined.Assignment,
+            color = BrandCyan,
+            actionText = if (target == "ASSIGNMENT") "View Assignment" else null
+        )
+        "SCHEDULE" -> AnnouncementTagStyle(
+            label = "Schedule",
+            icon = Icons.Outlined.CalendarMonth,
+            color = SuccessGreen,
+            actionText = if (target == "SCHEDULE") "View Schedule" else null
+        )
+        "URGENT" -> AnnouncementTagStyle(
+            label = "Urgent",
+            icon = Icons.Outlined.Warning,
+            color = BrandCoral,
+            actionText = null
+        )
+        else -> AnnouncementTagStyle(
+            label = "General",
+            icon = Icons.Outlined.Campaign,
+            color = BrandCyanLight,
+            actionText = null
+        )
+    }
+}
+
 @Composable
 private fun AnnouncementCard(a: Announcement, onClick: () -> Unit) {
+    val tagStyle = getAnnouncementTagStyle(a.tag, a.targetScreen)
     val tertiaryColor = MaterialTheme.colorScheme.tertiary
+
+    val borderColor = when (a.tag.uppercase()) {
+        "URGENT" -> BrandCoral.copy(alpha = 0.5f)
+        "QUIZ" -> BrandOrange.copy(alpha = 0.35f)
+        "ASSIGNMENT" -> BrandCyan.copy(alpha = 0.35f)
+        "SCHEDULE" -> SuccessGreen.copy(alpha = 0.35f)
+        else -> GlassBorderSubtle
+    }
+
     CyberCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        borderColor = GlassBorderSubtle
+        borderColor = borderColor
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(
@@ -345,29 +476,52 @@ private fun AnnouncementCard(a: Announcement, onClick: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    a.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f)
-                )
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(tertiaryColor.copy(alpha = 0.15f))
-                        .border(1.dp, tertiaryColor.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = tagStyle.color.copy(alpha = 0.15f),
+                    border = BorderStroke(1.dp, tagStyle.color.copy(alpha = 0.35f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(tagStyle.icon, contentDescription = null, modifier = Modifier.size(13.dp), tint = tagStyle.color)
+                        Text(
+                            tagStyle.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = tagStyle.color
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = tertiaryColor.copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, tertiaryColor.copy(alpha = 0.25f))
                 ) {
                     Text(
                         a.audience.replaceFirstChar { it.uppercase() },
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = tertiaryColor
+                        fontWeight = FontWeight.Medium,
+                        color = tertiaryColor,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
             }
-            Spacer(Modifier.height(8.dp))
+
+            Spacer(Modifier.height(10.dp))
+
+            Text(
+                a.title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Spacer(Modifier.height(6.dp))
+
             Text(
                 a.content,
                 style = MaterialTheme.typography.bodySmall,
@@ -375,9 +529,30 @@ private fun AnnouncementCard(a: Announcement, onClick: () -> Unit) {
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(Modifier.height(8.dp))
-            a.createdAt?.let {
-                Text(it.take(10), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+
+            Spacer(Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                a.createdAt?.let {
+                    Text(
+                        it.take(16).replace('T', ' '),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                } ?: Spacer(Modifier.width(1.dp))
+
+                if (tagStyle.actionText != null) {
+                    Text(
+                        "👉 ${tagStyle.actionText}",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = tagStyle.color
+                    )
+                }
             }
         }
     }
