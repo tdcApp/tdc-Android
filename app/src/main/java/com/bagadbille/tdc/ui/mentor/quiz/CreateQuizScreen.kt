@@ -2,29 +2,44 @@ package com.bagadbille.tdc.ui.mentor.quiz
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material.icons.outlined.UploadFile
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -47,7 +62,29 @@ fun CreateQuizScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     var classDropdownExpanded by remember { mutableStateOf(false) }
+    var showPasteDialog by remember { mutableStateOf(false) }
+    var pastedJsonText by remember { mutableStateOf("") }
     val calendar = remember { Calendar.getInstance() }
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            try {
+                val fileName = getFileName(context, uri) ?: "questions.json"
+                val jsonContent = context.contentResolver.openInputStream(uri)?.use { stream ->
+                    stream.bufferedReader().readText()
+                } ?: ""
+                if (jsonContent.isBlank()) {
+                    viewModel.setErrorMessage("The selected file is empty.")
+                } else {
+                    viewModel.loadQuestionsFromJson(jsonContent, fileName)
+                }
+            } catch (e: Exception) {
+                viewModel.setErrorMessage("Failed to read file: ${e.localizedMessage}")
+            }
+        }
+    }
 
     fun showDateTimePicker() {
         DatePickerDialog(
@@ -470,52 +507,318 @@ fun CreateQuizScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        "Questions (${uiState.questions.size})",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    OutlinedButton(onClick = { viewModel.addQuestion() }) {
-                        Icon(Icons.Outlined.Add, null, Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Add Question")
+                    Column {
+                        Text(
+                            "Questions (${uiState.questions.size})",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            "Upload or paste question bank in JSON format",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (uiState.questions.isNotEmpty()) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Outlined.CheckCircle,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    "${uiState.questions.size} Ready",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-            // Question Cards
-            itemsIndexed(uiState.questions) { index, question ->
-                QuestionEditorCard(
-                    index = index,
-                    draft = question,
-                    canDelete = uiState.questions.size > 1,
-                    onUpdate = { updated -> viewModel.updateQuestion(index, updated) },
-                    onDelete = { viewModel.removeQuestion(index) }
-                )
+            // Expected JSON Format & Copy Template Card
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Outlined.Description,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    "JSON Format Template",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            TextButton(
+                                onClick = {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clip = ClipData.newPlainText("Quiz Questions Template", CreateQuizViewModel.SAMPLE_QUIZ_JSON_TEMPLATE)
+                                    clipboard.setPrimaryClip(clip)
+                                    Toast.makeText(context, "JSON template copied to clipboard! 📋", Toast.LENGTH_SHORT).show()
+                                },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Copy Template", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Prepare your questions in this format (JSON array of question objects):",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(Modifier.height(10.dp))
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.7f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f))
+                        ) {
+                            Text(
+                                text = CreateQuizViewModel.SAMPLE_QUIZ_JSON_TEMPLATE,
+                                fontFamily = FontFamily.Monospace,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
+                    }
+                }
             }
 
-            // Bottom Add Question button
+            // Upload & Paste Action Buttons Card
             item {
-                OutlinedButton(
-                    onClick = { viewModel.addQuestion() },
-                    modifier = Modifier.fillMaxWidth()
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
                 ) {
-                    Icon(Icons.Outlined.Add, null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Add Another Question")
+                    Column(Modifier.padding(16.dp)) {
+                        Text(
+                            if (uiState.questions.isEmpty()) "Import Questions" else "Replace Questions",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Button(
+                                onClick = { filePickerLauncher.launch("*/*") },
+                                modifier = Modifier.weight(1f),
+                                shape = MaterialTheme.shapes.medium
+                            ) {
+                                Icon(Icons.Outlined.UploadFile, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Upload JSON")
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    pastedJsonText = ""
+                                    showPasteDialog = true
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = MaterialTheme.shapes.medium
+                            ) {
+                                Icon(Icons.Outlined.ContentPaste, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Paste JSON")
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Loaded Questions Summary & Preview Toggle
+            if (uiState.questions.isNotEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+                    ) {
+                        Column(Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            Icons.Outlined.CheckCircle,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(
+                                            "${uiState.questions.size} Questions Loaded",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        "Source: ${uiState.jsonFileName ?: "Custom JSON"}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                Row {
+                                    IconButton(onClick = { viewModel.togglePreviewExpanded() }) {
+                                        Icon(
+                                            if (uiState.isPreviewExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                                            contentDescription = if (uiState.isPreviewExpanded) "Hide Preview" else "Show Preview",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                    IconButton(onClick = { viewModel.clearQuestions() }) {
+                                        Icon(
+                                            Icons.Outlined.Delete,
+                                            contentDescription = "Clear Questions",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Expandable preview items
+                if (uiState.isPreviewExpanded) {
+                    itemsIndexed(uiState.questions) { index, q ->
+                        QuestionPreviewCard(
+                            index = index,
+                            draft = q,
+                            onDelete = { viewModel.removeQuestion(index) }
+                        )
+                    }
                 }
             }
         }
     }
+
+    // Dialog for Pasting JSON directly
+    if (showPasteDialog) {
+        AlertDialog(
+            onDismissRequest = { showPasteDialog = false },
+            title = {
+                Text("Paste Questions JSON", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column(Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Paste your JSON content below:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(
+                            onClick = {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                val clipItem = clipboard.primaryClip?.getItemAt(0)
+                                val text = clipItem?.text?.toString() ?: ""
+                                if (text.isNotBlank()) {
+                                    pastedJsonText = text
+                                } else {
+                                    Toast.makeText(context, "Clipboard is empty", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Icon(Icons.Outlined.ContentPaste, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Paste from Clipboard", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = pastedJsonText,
+                        onValueChange = { pastedJsonText = it },
+                        placeholder = { Text("[\n  {\n    \"question\": \"...\",\n    \"optionA\": \"...\",\n    \"optionB\": \"...\",\n    \"optionC\": \"...\",\n    \"optionD\": \"...\",\n    \"correctOption\": \"A\"\n  }\n]") },
+                        minLines = 7,
+                        maxLines = 14,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (pastedJsonText.isBlank()) {
+                            Toast.makeText(context, "Please paste JSON content", Toast.LENGTH_SHORT).show()
+                        } else {
+                            val success = viewModel.loadQuestionsFromJson(pastedJsonText, "Pasted JSON")
+                            if (success) {
+                                showPasteDialog = false
+                            }
+                        }
+                    }
+                ) {
+                    Text("Load Questions")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPasteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 @Composable
-private fun QuestionEditorCard(
+private fun QuestionPreviewCard(
     index: Int,
     draft: QuizQuestionDraft,
-    canDelete: Boolean,
-    onUpdate: (QuizQuestionDraft) -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
@@ -524,7 +827,7 @@ private fun QuestionEditorCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
     ) {
-        Column(Modifier.padding(16.dp)) {
+        Column(Modifier.padding(14.dp)) {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -535,7 +838,7 @@ private fun QuestionEditorCard(
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                 ) {
                     Text(
-                        "Question ${index + 1}",
+                        "Q${index + 1}",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -543,135 +846,101 @@ private fun QuestionEditorCard(
                     )
                 }
 
-                if (canDelete) {
-                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            Icons.Outlined.Delete,
-                            contentDescription = "Delete Question",
-                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        Icons.Outlined.Delete,
+                        contentDescription = "Remove Question",
+                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
 
+            Spacer(Modifier.height(8.dp))
+            Text(
+                draft.question,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
             Spacer(Modifier.height(10.dp))
 
-            OutlinedTextField(
-                value = draft.question,
-                onValueChange = { onUpdate(draft.copy(question = it)) },
-                label = { Text("Question Prompt") },
-                placeholder = { Text("e.g. What is the output of print(2 ** 3)?") },
-                minLines = 2,
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            Text("Options", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(6.dp))
-
-            // Option A
-            OptionTextField(
-                letter = "A",
-                value = draft.optionA,
-                isCorrect = draft.correctOption.equals("a", ignoreCase = true),
-                onValueChange = { onUpdate(draft.copy(optionA = it)) }
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            // Option B
-            OptionTextField(
-                letter = "B",
-                value = draft.optionB,
-                isCorrect = draft.correctOption.equals("b", ignoreCase = true),
-                onValueChange = { onUpdate(draft.copy(optionB = it)) }
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            // Option C
-            OptionTextField(
-                letter = "C",
-                value = draft.optionC,
-                isCorrect = draft.correctOption.equals("c", ignoreCase = true),
-                onValueChange = { onUpdate(draft.copy(optionC = it)) }
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            // Option D
-            OptionTextField(
-                letter = "D",
-                value = draft.optionD,
-                isCorrect = draft.correctOption.equals("d", ignoreCase = true),
-                onValueChange = { onUpdate(draft.copy(optionD = it)) }
-            )
-
-            Spacer(Modifier.height(14.dp))
-
-            // Correct Option Selector
-            Text("Select Correct Option", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(6.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                listOf("a" to "A", "b" to "B", "c" to "C", "d" to "D").forEach { (key, letter) ->
-                    val selected = draft.correctOption.equals(key, ignoreCase = true)
-                    FilterChip(
-                        modifier = Modifier.weight(1f),
-                        selected = selected,
-                        onClick = { onUpdate(draft.copy(correctOption = key)) },
-                        leadingIcon = if (selected) {
-                            { Icon(Icons.Outlined.Check, null, Modifier.size(14.dp)) }
-                        } else null,
-                        label = {
-                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                Text(letter, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+            listOf(
+                "a" to ("A" to draft.optionA),
+                "b" to ("B" to draft.optionB),
+                "c" to ("C" to draft.optionC),
+                "d" to ("D" to draft.optionD)
+            ).forEach { (key, pair) ->
+                val (letter, text) = pair
+                val isCorrect = draft.correctOption.equals(key, ignoreCase = true)
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isCorrect) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 3.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(20.dp),
+                            shape = CircleShape,
+                            color = if (isCorrect) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    letter,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isCorrect) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
-                    )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isCorrect) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (isCorrect) {
+                            Icon(
+                                Icons.Outlined.Check,
+                                contentDescription = "Correct Answer",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-@Composable
-private fun OptionTextField(
-    letter: String,
-    value: String,
-    isCorrect: Boolean,
-    onValueChange: (String) -> Unit
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        placeholder = { Text("Option $letter") },
-        leadingIcon = {
-            Surface(
-                modifier = Modifier.size(26.dp),
-                shape = CircleShape,
-                color = if (isCorrect) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        letter,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isCorrect) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+private fun getFileName(context: Context, uri: Uri): String? {
+    var name: String? = null
+    if (uri.scheme == "content") {
+        try {
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (index != -1) {
+                        name = cursor.getString(index)
+                    }
                 }
             }
-        },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium
-    )
+        } catch (_: Exception) {}
+    }
+    if (name == null) {
+        name = uri.path?.let { p ->
+            val cut = p.lastIndexOf('/')
+            if (cut != -1) p.substring(cut + 1) else p
+        }
+    }
+    return name
 }
+
