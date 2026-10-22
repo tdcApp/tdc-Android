@@ -87,17 +87,13 @@ class AssignmentRepositoryImpl @Inject constructor(
 
     override suspend fun getSubmissions(): Result<Map<String, AssignmentSubmission>> = runCatching {
         val assignments = getAssignments().getOrDefault(emptyList())
-        coroutineScope {
-            assignments.map { a ->
-                async {
-                    try {
-                        val sub = assignmentApi.getMySubmission(a.id).toDomain()
-                        a.id to sub
-                    } catch (_: Exception) {
-                        null
-                    }
-                }
-            }.mapNotNull { it.await() }.toMap()
+        assignments.filter { it.isSubmitted }.associate { a ->
+            a.id to AssignmentSubmission(
+                assignmentId = a.id,
+                menteeUid = "",
+                submissionUrl = a.submissionUrl ?: "",
+                submittedAt = a.submittedAt ?: ""
+            )
         }
     }
 

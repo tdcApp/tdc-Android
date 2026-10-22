@@ -11,7 +11,10 @@ data class Quiz(
     val updatedAt: String? = null,
     val isSubmitted: Boolean = false,
     val createdByName: String? = null,
-    val creatorRole: String? = null
+    val creatorRole: String? = null,
+    val questionCount: Int = 0,
+    val submissionCount: Int = 0,
+    val avgScore: Double = 0.0
 )
 
 data class QuizQuestion(

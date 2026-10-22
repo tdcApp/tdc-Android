@@ -103,23 +103,19 @@ class QuizTakingViewModel @Inject constructor(private val repo: QuizRepository) 
         viewModelScope.launch {
             _uiState.value = QuizTakingUiState.Loading
 
-            // Guard: Check if student has already submitted this quiz
-            if (repo.isQuizSubmitted(id)) {
+            // Fast-path guard: check if locally submitted (0 network requests)
+            if (repo.isQuizSubmittedLocally(id)) {
                 _uiState.value = QuizTakingUiState.AlreadySubmitted(id)
                 return@launch
             }
 
-            val questionsResult = repo.getQuizQuestions(id)
-            val quizResult = repo.getQuiz(id)
-
-            val quiz = quizResult.getOrNull()
-            if (quiz?.isSubmitted == true) {
-                _uiState.value = QuizTakingUiState.AlreadySubmitted(id)
-                return@launch
-            }
-
-            questionsResult
-                .onSuccess { questions ->
+            // Single network call fetching quiz metadata, questions, and submission status together
+            repo.getQuizWithQuestions(id)
+                .onSuccess { (quiz, questions) ->
+                    if (quiz.isSubmitted) {
+                        _uiState.value = QuizTakingUiState.AlreadySubmitted(id)
+                        return@launch
+                    }
                     loadedQuestions = questions
                     _uiState.value = QuizTakingUiState.Confirmation(quiz, questions)
                 }

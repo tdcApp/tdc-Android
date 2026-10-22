@@ -26,7 +26,13 @@ data class QuizDto(
     val updatedAt: String? = null,
     @SerialName("updated_at") val updatedAtSnake: String? = null,
     val isSubmitted: Boolean = false,
-    @SerialName("is_submitted") val isSubmittedSnake: Boolean? = null
+    @SerialName("is_submitted") val isSubmittedSnake: Boolean? = null,
+    val questionCount: Int = 0,
+    @SerialName("question_count") val questionCountSnake: Int = 0,
+    val submissionCount: Int = 0,
+    @SerialName("submission_count") val submissionCountSnake: Int = 0,
+    val avgScore: Double = 0.0,
+    @SerialName("avg_score") val avgScoreSnake: Double = 0.0
 ) {
     fun toDomain(): Quiz = Quiz(
         id = id,
@@ -39,7 +45,10 @@ data class QuizDto(
         updatedAt = updatedAt ?: updatedAtSnake,
         isSubmitted = isSubmitted || (isSubmittedSnake == true),
         createdByName = createdByName ?: createdByNameSnake,
-        creatorRole = creatorRole ?: creatorRoleSnake
+        creatorRole = creatorRole ?: creatorRoleSnake,
+        questionCount = if (questionCount > 0) questionCount else questionCountSnake,
+        submissionCount = if (submissionCount > 0) submissionCount else submissionCountSnake,
+        avgScore = if (avgScore > 0.0) avgScore else avgScoreSnake
     )
 }
 

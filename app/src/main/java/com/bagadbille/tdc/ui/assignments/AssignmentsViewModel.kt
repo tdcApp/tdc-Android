@@ -52,21 +52,25 @@ class AssignmentsViewModel @Inject constructor(
             _uiState.value = AssignmentsUiState.Loading
             try {
                 val assignments: List<Assignment>
-                val submissions: Map<String, AssignmentSubmission>
                 val classes: Map<String, ClassInfo>
                 coroutineScope {
                     val aDef = async { repo.getAssignments().getOrDefault(emptyList()) }
-                    val sDef = async { repo.getSubmissions().getOrDefault(emptyMap()) }
                     val cDef = async { classRepo.getClasses().getOrDefault(emptyList()).associateBy { it.id } }
                     assignments = aDef.await()
-                    submissions = sDef.await()
                     classes = cDef.await()
                 }
 
                 val now = Instant.now()
 
                 val items = assignments.map { assignment ->
-                    val submission = submissions[assignment.id]
+                    val submission = if (assignment.isSubmitted) {
+                        AssignmentSubmission(
+                            assignmentId = assignment.id,
+                            menteeUid = "",
+                            submissionUrl = assignment.submissionUrl ?: "",
+                            submittedAt = assignment.submittedAt ?: ""
+                        )
+                    } else null
                     val dueInstant = assignment.dueAt?.let {
                         try { Instant.parse(it) } catch (_: Exception) { null }
                     }

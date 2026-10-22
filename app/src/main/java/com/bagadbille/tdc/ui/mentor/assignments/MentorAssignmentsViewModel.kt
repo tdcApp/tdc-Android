@@ -52,29 +52,25 @@ class MentorAssignmentsViewModel @Inject constructor(
             }
             try {
                 val assignments: List<Assignment>
-                val submissions: List<com.bagadbille.tdc.data.model.AssignmentSubmission>
                 val classNames: Map<String, String>
 
                 coroutineScope {
                     val aDef = async { assignmentRepo.getMentorAssignments().getOrThrow() }
-                    val sDef = async { assignmentRepo.getAllSubmissions().getOrDefault(emptyList()) }
                     val cDef = async { classRepo.getClasses().getOrDefault(emptyList()).associate { it.id to it.name } }
                     assignments = aDef.await()
-                    submissions = sDef.await()
                     classNames = cDef.await()
                 }
 
                 val studentCounts = rosterRepo.getClassStudentCounts(assignments.map { it.classId })
                     .getOrDefault(emptyMap())
 
-                val submittedByAssignment = submissions.groupingBy { it.assignmentId }.eachCount()
                 val now = Instant.now()
 
                 val items = assignments.map {
                     MentorAssignmentItem(
                         assignment = it,
                         className = classNames[it.classId],
-                        submittedCount = submittedByAssignment[it.id] ?: 0,
+                        submittedCount = it.submissionCount,
                         totalStudents = studentCounts[it.classId] ?: 0
                     )
                 }

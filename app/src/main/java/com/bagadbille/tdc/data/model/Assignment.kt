@@ -10,5 +10,9 @@ data class Assignment(
     val createdAt: String? = null,
     val updatedAt: String? = null,
     val createdByName: String? = null,
-    val creatorRole: String? = null
+    val creatorRole: String? = null,
+    val isSubmitted: Boolean = false,
+    val submissionUrl: String? = null,
+    val submittedAt: String? = null,
+    val submissionCount: Int = 0
 )

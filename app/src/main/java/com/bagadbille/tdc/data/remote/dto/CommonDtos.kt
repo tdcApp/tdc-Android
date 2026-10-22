@@ -133,7 +133,15 @@ data class AssignmentDto(
     val createdAt: String? = null,
     @SerialName("created_at") val createdAtSnake: String? = null,
     val updatedAt: String? = null,
-    @SerialName("updated_at") val updatedAtSnake: String? = null
+    @SerialName("updated_at") val updatedAtSnake: String? = null,
+    val isSubmitted: Boolean = false,
+    @SerialName("is_submitted") val isSubmittedSnake: Boolean? = null,
+    val submissionUrl: String? = null,
+    @SerialName("submission_url") val submissionUrlSnake: String? = null,
+    val submittedAt: String? = null,
+    @SerialName("submitted_at") val submittedAtSnake: String? = null,
+    val submissionCount: Int = 0,
+    @SerialName("submission_count") val submissionCountSnake: Int = 0
 ) {
     fun toDomain(): Assignment = Assignment(
         id = id,
@@ -145,7 +153,11 @@ data class AssignmentDto(
         createdAt = createdAt ?: createdAtSnake ?: "",
         updatedAt = updatedAt ?: updatedAtSnake,
         createdByName = createdByName ?: createdByNameSnake,
-        creatorRole = creatorRole ?: creatorRoleSnake
+        creatorRole = creatorRole ?: creatorRoleSnake,
+        isSubmitted = isSubmitted || (isSubmittedSnake == true),
+        submissionUrl = submissionUrl ?: submissionUrlSnake,
+        submittedAt = submittedAt ?: submittedAtSnake,
+        submissionCount = if (submissionCount > 0) submissionCount else submissionCountSnake
     )
 }
 

@@ -64,17 +64,19 @@ class MentorQuizViewModel @Inject constructor(
                     val classes = classesDef.await()
 
                     quizzes.map { quiz ->
-                        async {
-                            val questionsDef = async { quizRepository.getQuizQuestions(quiz.id).getOrDefault(emptyList()) }
-                            val statsDef = async { quizRepository.getQuizStats(quiz.id).getOrNull() }
-                            MentorQuizItem(
-                                quiz = quiz,
-                                className = quiz.classId?.let { classes[it] },
-                                questionCount = questionsDef.await().size,
-                                stats = statsDef.await()
+                        MentorQuizItem(
+                            quiz = quiz,
+                            className = quiz.classId?.let { classes[it] },
+                            questionCount = quiz.questionCount,
+                            stats = QuizStats(
+                                quizId = quiz.id,
+                                totalAttempts = quiz.submissionCount,
+                                averageScore = quiz.avgScore,
+                                highestScore = 0,
+                                totalQuestions = quiz.questionCount
                             )
-                        }
-                    }.awaitAll()
+                        )
+                    }
                 }
                 _uiState.value = MentorQuizUiState.Success(items, isRefreshing = false)
             } catch (e: Exception) {

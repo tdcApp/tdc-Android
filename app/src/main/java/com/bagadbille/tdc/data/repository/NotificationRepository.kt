@@ -39,10 +39,15 @@ class NotificationRepositoryImpl @Inject constructor(
 
     private val _hasUnread = MutableStateFlow(false)
     private val cachedNotifIds = mutableSetOf<String>()
+    private var lastFetchTime = 0L
+    private var cachedNotifications = emptyList<AppNotification>()
 
     override fun hasUnread(): Flow<Boolean> = _hasUnread.asStateFlow()
 
     override suspend fun getNotifications(): Result<List<AppNotification>> = runCatching {
+        if (System.currentTimeMillis() - lastFetchTime < 15_000L && cachedNotifications.isNotEmpty()) {
+            return@runCatching cachedNotifications
+        }
         val readIds = dataStoreManager.readNotifIds.first()
         val notifications = mutableListOf<AppNotification>()
 
@@ -144,7 +149,10 @@ class NotificationRepositoryImpl @Inject constructor(
         val hasAnyUnread = notifications.any { !it.isRead }
         _hasUnread.value = hasAnyUnread
 
-        notifications.sortedByDescending { it.createdAt }
+        val sorted = notifications.sortedByDescending { it.createdAt }
+        cachedNotifications = sorted
+        lastFetchTime = System.currentTimeMillis()
+        sorted
     }
 
     override suspend fun markAsRead(id: String): Result<Unit> = runCatching {
