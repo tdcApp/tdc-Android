@@ -14,6 +14,7 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 object CsvExporter {
 
@@ -38,7 +39,7 @@ object CsvExporter {
             val csvContent = buildString {
                 // UTF-8 BOM so Excel opens with proper character encoding
                 append("\uFEFF")
-                append("Rank,Student Name,Email,Enrollment,Score,Total Questions,Percentage,Status,Submission Time\n")
+                append("Rank,Student Name,Email,Enrollment,Score,Total Questions,Percentage,Status,Entering Time,Exit Time,Total Time Taken\n")
                 submissions.forEachIndexed { index, item ->
                     val rank = index + 1
                     val name = escapeCsv(item.studentName.ifBlank { "N/A" })
@@ -51,9 +52,11 @@ object CsvExporter {
                         String.format(Locale.US, "%.1f%%", (item.submission.score.toDouble() / totalQuestions) * 100)
                     } else "0.0%"
                     val status = if (isDisqualified) "Disqualified" else "Qualified"
-                    val submissionTime = escapeCsv(item.submission.submittedAt.ifBlank { "N/A" })
+                    val enteringTime = escapeCsv(formatTimestamp(item.submission.startedAt))
+                    val exitTime = escapeCsv(formatTimestamp(item.submission.submittedAt))
+                    val totalTimeTaken = escapeCsv(formatDuration(item.submission.timeTakenSeconds, item.submission.startedAt, item.submission.submittedAt))
 
-                    append("$rank,$name,$email,$enrollment,$score,$total,$percentage,$status,$submissionTime\n")
+                    append("$rank,$name,$email,$enrollment,$score,$total,$percentage,$status,$enteringTime,$exitTime,$totalTimeTaken\n")
                 }
             }
 
@@ -123,5 +126,61 @@ object CsvExporter {
         } else {
             value
         }
+    }
+
+    private fun formatTimestamp(isoString: String?): String {
+        if (isoString.isNullOrBlank()) return "N/A"
+        return try {
+            val parseFormats = listOf(
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") },
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") },
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.US),
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
+            )
+            val outFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            for (pf in parseFormats) {
+                try {
+                    val d = pf.parse(isoString)
+                    if (d != null) return outFormat.format(d)
+                } catch (_: Exception) {}
+            }
+            isoString
+        } catch (_: Exception) {
+            isoString
+        }
+    }
+
+    private fun parseDateMillis(isoString: String?): Long? {
+        if (isoString.isNullOrBlank()) return null
+        val parseFormats = listOf(
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") },
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") },
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.US),
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
+        )
+        for (pf in parseFormats) {
+            try {
+                val d = pf.parse(isoString)
+                if (d != null) return d.time
+            } catch (_: Exception) {}
+        }
+        return null
+    }
+
+    private fun formatDuration(seconds: Int?, startedAt: String?, submittedAt: String?): String {
+        val totalSec = if (seconds != null && seconds > 0) {
+            seconds
+        } else {
+            val startMs = parseDateMillis(startedAt)
+            val subMs = parseDateMillis(submittedAt)
+            if (startMs != null && subMs != null && subMs >= startMs) {
+                ((subMs - startMs) / 1000).toInt()
+            } else null
+        }
+
+        if (totalSec == null || totalSec <= 0) return "N/A"
+        val m = totalSec / 60
+        val s = totalSec % 60
+        return if (m > 0) "${m}m ${s}s" else "${s}s"
     }
 }

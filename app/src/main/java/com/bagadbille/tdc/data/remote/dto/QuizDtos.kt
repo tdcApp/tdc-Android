@@ -32,7 +32,15 @@ data class QuizDto(
     val submissionCount: Int = 0,
     @SerialName("submission_count") val submissionCountSnake: Int = 0,
     val avgScore: Double = 0.0,
-    @SerialName("avg_score") val avgScoreSnake: Double = 0.0
+    @SerialName("avg_score") val avgScoreSnake: Double = 0.0,
+    val startTime: String? = null,
+    @SerialName("start_time") val startTimeSnake: String? = null,
+    val enteringWindow: Int? = null,
+    @SerialName("entering_window") val enteringWindowSnake: Int? = null,
+    val totalTime: Int = 30,
+    @SerialName("total_time") val totalTimeSnake: Int? = null,
+    val hasActiveAttempt: Boolean = false,
+    @SerialName("has_active_attempt") val hasActiveAttemptSnake: Boolean? = null
 ) {
     fun toDomain(): Quiz = Quiz(
         id = id,
@@ -48,7 +56,11 @@ data class QuizDto(
         creatorRole = creatorRole ?: creatorRoleSnake,
         questionCount = if (questionCount > 0) questionCount else questionCountSnake,
         submissionCount = if (submissionCount > 0) submissionCount else submissionCountSnake,
-        avgScore = if (avgScore > 0.0) avgScore else avgScoreSnake
+        avgScore = if (avgScore > 0.0) avgScore else avgScoreSnake,
+        startTime = startTime ?: startTimeSnake,
+        enteringWindow = enteringWindow ?: enteringWindowSnake,
+        totalTime = totalTimeSnake ?: totalTime,
+        hasActiveAttempt = hasActiveAttempt || (hasActiveAttemptSnake == true)
     )
 }
 
@@ -85,6 +97,25 @@ data class QuizQuestionDto(
 }
 
 @Serializable
+data class ActiveQuizAttemptDto(
+    val startedAt: String,
+    @SerialName("started_at") val startedAtSnake: String? = null,
+    val warningCount: Int = 0,
+    @SerialName("warning_count") val warningCountSnake: Int = 0,
+    val remainingSeconds: Int = 0,
+    @SerialName("remaining_seconds") val remainingSecondsSnake: Int = 0,
+    val isDisqualified: Boolean = false,
+    @SerialName("is_disqualified") val isDisqualifiedSnake: Boolean = false
+) {
+    fun toDomain(): com.bagadbille.tdc.data.model.ActiveQuizAttempt = com.bagadbille.tdc.data.model.ActiveQuizAttempt(
+        startedAt = startedAt.ifBlank { startedAtSnake ?: "" },
+        warningCount = if (warningCount > 0) warningCount else warningCountSnake,
+        remainingSeconds = if (remainingSeconds > 0) remainingSeconds else remainingSecondsSnake,
+        isDisqualified = isDisqualified || isDisqualifiedSnake
+    )
+}
+
+@Serializable
 data class QuizDetailDto(
     val id: String,
     val title: String,
@@ -101,20 +132,61 @@ data class QuizDetailDto(
     @SerialName("updated_at") val updatedAtSnake: String? = null,
     val isSubmitted: Boolean = false,
     @SerialName("is_submitted") val isSubmittedSnake: Boolean? = null,
+    val startTime: String? = null,
+    @SerialName("start_time") val startTimeSnake: String? = null,
+    val enteringWindow: Int? = null,
+    @SerialName("entering_window") val enteringWindowSnake: Int? = null,
+    val totalTime: Int = 30,
+    @SerialName("total_time") val totalTimeSnake: Int? = null,
+    val activeAttempt: ActiveQuizAttemptDto? = null,
+    @SerialName("active_attempt") val activeAttemptSnake: ActiveQuizAttemptDto? = null,
     val questions: List<QuizQuestionDto> = emptyList()
 ) {
-    fun toDomain(): Quiz = Quiz(
-        id = id,
-        title = title,
-        audience = audience.lowercase(),
-        targetYears = targetYears ?: targetYearsSnake,
-        createdBy = createdBy ?: createdBySnake,
-        classId = classId ?: classIdSnake,
-        createdAt = createdAt ?: createdAtSnake,
-        updatedAt = updatedAt ?: updatedAtSnake,
-        isSubmitted = isSubmitted || (isSubmittedSnake == true)
-    )
+    fun toDomain(): Quiz {
+        val attempt = (activeAttempt ?: activeAttemptSnake)?.toDomain()
+        return Quiz(
+            id = id,
+            title = title,
+            audience = audience.lowercase(),
+            targetYears = targetYears ?: targetYearsSnake,
+            createdBy = createdBy ?: createdBySnake,
+            classId = classId ?: classIdSnake,
+            createdAt = createdAt ?: createdAtSnake,
+            updatedAt = updatedAt ?: updatedAtSnake,
+            isSubmitted = isSubmitted || (isSubmittedSnake == true),
+            startTime = startTime ?: startTimeSnake,
+            enteringWindow = enteringWindow ?: enteringWindowSnake,
+            totalTime = totalTimeSnake ?: totalTime,
+            activeAttempt = attempt,
+            hasActiveAttempt = attempt != null
+        )
+    }
 }
+
+@Serializable
+data class QuizStartResponse(
+    val status: String,
+    val isResume: Boolean = false,
+    @SerialName("is_resume") val isResumeSnake: Boolean? = null,
+    val startedAt: String? = null,
+    @SerialName("started_at") val startedAtSnake: String? = null,
+    val warningCount: Int = 0,
+    @SerialName("warning_count") val warningCountSnake: Int? = null,
+    val remainingSeconds: Int = 0,
+    @SerialName("remaining_seconds") val remainingSecondsSnake: Int? = null,
+    val isDisqualified: Boolean = false,
+    @SerialName("is_disqualified") val isDisqualifiedSnake: Boolean? = null,
+    val isExpired: Boolean = false,
+    @SerialName("is_expired") val isExpiredSnake: Boolean? = null
+)
+
+@Serializable
+data class QuizStrikeResponse(
+    val warningCount: Int = 0,
+    @SerialName("warning_count") val warningCountSnake: Int? = null,
+    val isDisqualified: Boolean = false,
+    @SerialName("is_disqualified") val isDisqualifiedSnake: Boolean? = null
+)
 
 @Serializable
 data class CreateQuizRequest(
@@ -122,6 +194,9 @@ data class CreateQuizRequest(
     val audience: String,
     val targetYears: String? = null,
     val classId: String? = null,
+    val startTime: String? = null,
+    val enteringWindow: Int? = null,
+    val totalTime: Int = 30,
     val questions: List<CreateQuizQuestionRequest>
 )
 
@@ -138,7 +213,10 @@ data class CreateQuizQuestionRequest(
 @Serializable
 data class QuizSubmitRequest(
     val clientSubmissionId: String,
-    val answers: List<QuizAnswerDto>
+    val answers: List<QuizAnswerDto>,
+    val startedAt: String? = null,
+    val timeTakenSeconds: Int? = null,
+    val isDisqualified: Boolean = false
 )
 
 @Serializable
@@ -165,7 +243,12 @@ data class QuizSubmissionDto(
     val studentEmail: String? = null,
     @SerialName("student_email") val studentEmailSnake: String? = null,
     val studentEnrollment: String? = null,
-    @SerialName("student_enrollment") val studentEnrollmentSnake: String? = null
+    @SerialName("student_enrollment") val studentEnrollmentSnake: String? = null,
+    @SerialName("enrollment_number") val enrollmentNumberSnake: String? = null,
+    val startedAt: String? = null,
+    @SerialName("started_at") val startedAtSnake: String? = null,
+    val timeTakenSeconds: Int? = null,
+    @SerialName("time_taken_seconds") val timeTakenSecondsSnake: Int? = null
 ) {
     fun toDomain(): QuizSubmission = QuizSubmission(
         quizId = quizId ?: quizIdSnake ?: "",
@@ -173,6 +256,8 @@ data class QuizSubmissionDto(
         score = score,
         totalQuestions = if (totalQuestions > 0) totalQuestions else (totalQuestionsSnake ?: 0),
         clientSubmissionId = clientSubmissionId ?: clientSubmissionIdSnake,
-        submittedAt = submittedAt ?: submittedAtSnake ?: ""
+        submittedAt = submittedAt ?: submittedAtSnake ?: "",
+        startedAt = startedAt ?: startedAtSnake,
+        timeTakenSeconds = timeTakenSeconds ?: timeTakenSecondsSnake
     )
 }

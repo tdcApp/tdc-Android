@@ -14,7 +14,19 @@ data class Quiz(
     val creatorRole: String? = null,
     val questionCount: Int = 0,
     val submissionCount: Int = 0,
-    val avgScore: Double = 0.0
+    val avgScore: Double = 0.0,
+    val startTime: String? = null,
+    val enteringWindow: Int? = null,
+    val totalTime: Int = 30,
+    val activeAttempt: ActiveQuizAttempt? = null,
+    val hasActiveAttempt: Boolean = false
+)
+
+data class ActiveQuizAttempt(
+    val startedAt: String,
+    val warningCount: Int = 0,
+    val remainingSeconds: Int = 0,
+    val isDisqualified: Boolean = false
 )
 
 data class QuizQuestion(

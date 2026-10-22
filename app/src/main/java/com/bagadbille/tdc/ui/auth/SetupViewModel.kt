@@ -36,6 +36,16 @@ class SetupViewModel @Inject constructor(
 
     init {
         loadClasses()
+        checkExistingProfile()
+    }
+
+    private fun checkExistingProfile() {
+        viewModelScope.launch {
+            profileRepository.getProfile()
+                .onSuccess { user ->
+                    _uiState.value = SetupUiState.Success(user)
+                }
+        }
     }
 
     private fun loadClasses() {

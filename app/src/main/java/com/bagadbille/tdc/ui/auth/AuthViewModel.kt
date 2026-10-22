@@ -21,7 +21,8 @@ sealed class AuthUiState {
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val profileRepository: com.bagadbille.tdc.data.repository.ProfileRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
@@ -69,4 +70,23 @@ class AuthViewModel @Inject constructor(
     }
 
     fun resetState() { _uiState.value = AuthUiState.Idle }
+
+    suspend fun verifyProfile(): Boolean {
+        return try {
+            val result = profileRepository.getProfile()
+            if (result.isSuccess) {
+                true
+            } else {
+                val error = result.exceptionOrNull()
+                if (error is retrofit2.HttpException && error.code() == 404) {
+                    false
+                } else {
+                    // Offline or temporary network glitch: don't lock out an already-authenticated user
+                    true
+                }
+            }
+        } catch (_: Exception) {
+            true
+        }
+    }
 }

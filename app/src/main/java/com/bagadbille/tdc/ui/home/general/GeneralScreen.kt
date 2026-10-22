@@ -67,6 +67,7 @@ private val dayFullNames = listOf("Sunday", "Monday", "Tuesday", "Wednesday", "T
 @Composable
 fun GeneralScreen(
     onQuizClick: (String) -> Unit = {},
+    onQuizResultClick: (String) -> Unit = {},
     onNavigateToClasses: () -> Unit = {},
     onNavigateToQuizzes: () -> Unit = {},
     onNavigateToAssignments: () -> Unit = {},
@@ -84,6 +85,7 @@ fun GeneralScreen(
             DashboardContent(
                 data = s.data,
                 onQuizClick = onQuizClick,
+                onQuizResultClick = onQuizResultClick,
                 onNavigateToClasses = onNavigateToClasses,
                 onNavigateToQuizzes = onNavigateToQuizzes,
                 onNavigateToAssignments = onNavigateToAssignments,
@@ -97,6 +99,7 @@ fun GeneralScreen(
 private fun DashboardContent(
     data: DashboardData,
     onQuizClick: (String) -> Unit,
+    onQuizResultClick: (String) -> Unit,
     onNavigateToClasses: () -> Unit,
     onNavigateToQuizzes: () -> Unit,
     onNavigateToAssignments: () -> Unit,
@@ -143,9 +146,17 @@ private fun DashboardContent(
             }
         }
 
-        // ─── 2. TDC CODING QUEST 2026 HERO BANNER ───
+        // ─── 2. TDC CODING QUEST HERO BANNER ───
         item {
             val isDark = MaterialTheme.colorScheme.background == DarkBackground
+            val specialQuiz = data.specialQuiz
+            val isComingSoon = specialQuiz == null || 
+                               specialQuiz.title.contains("Coming Soon", ignoreCase = true) ||
+                               specialQuiz.questionCount == 0
+            val isCompleted = specialQuiz?.isSubmitted == true
+            val isQuizReady = specialQuiz != null && !isComingSoon && !isCompleted
+            val formUrl = "https://forms.gle/nkSmmE9EU31os5UU8"
+
             CyberCard(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(22.dp),
@@ -160,33 +171,80 @@ private fun DashboardContent(
                 },
                 borderBrush = Brush.horizontalGradient(
                     listOf(
-                        BrandCyan.copy(alpha = if (isDark) 0.6f else 0.45f),
-                        BrandOrange.copy(alpha = if (isDark) 0.6f else 0.45f)
+                        BrandCyan.copy(alpha = if (isDark) 0.8f else 0.5f),
+                        BrandOrange.copy(alpha = if (isDark) 0.8f else 0.5f)
                     )
                 )
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isDark) BrandOrange.copy(alpha = 0.2f) else Color(0xFFFFEDD5))
-                            .border(1.dp, if (isDark) BrandOrange.copy(alpha = 0.4f) else Color(0xFFFDBA74), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "CODING QUEST",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = 1.sp
-                            ),
-                            color = if (isDark) BrandOrange else Color(0xFFC2410C)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    when {
+                                        isCompleted -> BrandCyan.copy(alpha = 0.2f)
+                                        specialQuiz?.hasActiveAttempt == true -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.25f)
+                                        isQuizReady -> BrandOrange.copy(alpha = 0.25f)
+                                        else -> if (isDark) BrandOrange.copy(alpha = 0.2f) else Color(0xFFFFEDD5)
+                                    }
+                                )
+                                .border(
+                                    1.dp,
+                                    when {
+                                        isCompleted -> BrandCyan.copy(alpha = 0.5f)
+                                        specialQuiz?.hasActiveAttempt == true -> MaterialTheme.colorScheme.tertiary
+                                        isQuizReady -> BrandOrange
+                                        else -> if (isDark) BrandOrange.copy(alpha = 0.4f) else Color(0xFFFDBA74)
+                                    },
+                                    RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = when {
+                                    isCompleted -> "QUEST COMPLETED"
+                                    specialQuiz?.hasActiveAttempt == true -> "⚡ IN PROGRESS"
+                                    isQuizReady -> "⚡ LIVE CHALLENGE"
+                                    else -> "COMING SOON"
+                                },
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = 1.sp
+                                ),
+                                color = when {
+                                    isCompleted -> BrandCyan
+                                    specialQuiz?.hasActiveAttempt == true -> MaterialTheme.colorScheme.tertiary
+                                    isQuizReady -> if (isDark) BrandOrange else Color(0xFFC2410C)
+                                    else -> if (isDark) BrandOrange else Color(0xFFC2410C)
+                                }
+                            )
+                        }
+
+                        if (specialQuiz != null && specialQuiz.questionCount > 0) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = BrandCyan.copy(alpha = 0.15f),
+                                border = BorderStroke(1.dp, BrandCyan.copy(alpha = 0.35f))
+                            ) {
+                                Text(
+                                    text = "${specialQuiz.questionCount} Questions",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = BrandCyan,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
                     }
 
                     Spacer(Modifier.height(14.dp))
 
                     Text(
-                        text = "TDC Coding Quest 2026",
+                        text = specialQuiz?.title?.ifBlank { null } ?: "TDC Coding Quest Season 3",
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 22.sp
@@ -195,22 +253,46 @@ private fun DashboardContent(
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "Innovate • Build • Collaborate",
+                        text = when {
+                            isCompleted -> "Your responses have been securely submitted • Evaluation in progress"
+                            isQuizReady -> "The official contest is live! Tap below to start your proctored challenge."
+                            else -> "Innovate • Build • Collaborate"
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (isDark) Color.White.copy(alpha = 0.8f) else Color(0xFF475569)
                     )
 
                     Spacer(Modifier.height(18.dp))
 
-                    TdcButton(
-                        text = "Register Now",
-                        trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://forms.gle/placeholder"))
-                            context.startActivity(intent)
-                        },
-                        modifier = Modifier.wrapContentWidth()
-                    )
+                    when {
+                        isCompleted -> {
+                            TdcButton(
+                                text = "View Result",
+                                trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
+                                onClick = { onQuizResultClick(specialQuiz.id) },
+                                modifier = Modifier.wrapContentWidth()
+                            )
+                        }
+                        isQuizReady -> {
+                            TdcButton(
+                                text = if (specialQuiz.hasActiveAttempt) "Resume Quiz" else "Join Now",
+                                trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
+                                onClick = { onQuizClick(specialQuiz.id) },
+                                modifier = Modifier.wrapContentWidth()
+                            )
+                        }
+                        else -> {
+                            TdcButton(
+                                text = "Register Now",
+                                trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
+                                onClick = {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(formUrl))
+                                    context.startActivity(intent)
+                                },
+                                modifier = Modifier.wrapContentWidth()
+                            )
+                        }
+                    }
                 }
             }
         }

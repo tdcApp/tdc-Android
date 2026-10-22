@@ -2,6 +2,30 @@
 
 ---
 
+## 🚀 Version 2.7.0 (Build 8)
+**Release Date:** October 22, 2026  
+**Target SDK:** Android 14 (API 36) | **Min SDK:** Android 9.0 (API 28)
+
+---
+
+### 📱 Google Play Store — "What's New" (Ready to Copy)
+```
+What's new in v2.7.0:
+• TDC Coding Quest Season 3: Brand-new dynamic hero banner with direct registration and live contest entry.
+• Strict 3-Strike Exam Security: Monitored test environment with automated warning strikes on window focus loss, home press, or app exit.
+• Quiz Resumption Lock: Exiting or minimizing an active test resumes from original remaining time with strike penalty — no restarting allowed.
+• Automated 3-Strike Disqualification: 3rd strike immediately terminates, scores 0, and permanently locks the test.
+• Quiz Timing & Scheduling: Configure quiz start time, entry window, and custom durations for Teacher & Admin roles.
+• Detailed Student Timings: Track student entry time, exit time, and duration taken to identify fastest completions.
+• Enhanced CSV Export: Export ranked results with entry time, exit time, and duration taken directly to Excel.
+• Admin Special Quizzes: Flagship CyberCard styling with radiant gradient accents and official contest proctoring.
+• Enhanced Quiz Interface: Modern option cards with circular letter badges and smooth selection states.
+• Ultra-fast Quiz & Assignment loading: Optimized backend queries and eliminated redundant requests.
+• Performance optimizations and security enhancements.
+```
+
+---
+
 ## 🚀 Version 2.6.0 (Build 7)
 **Release Date:** October 21, 2026  
 **Target SDK:** Android 14 (API 36) | **Min SDK:** Android 9.0 (API 28)

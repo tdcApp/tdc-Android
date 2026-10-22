@@ -24,6 +24,11 @@ data class CreateQuizUiState(
     val questions: List<QuizQuestionDraft> = listOf(
         QuizQuestionDraft(question = "", optionA = "", optionB = "", optionC = "", optionD = "", correctOption = "a")
     ),
+    val startImmediately: Boolean = true,
+    val startTimeIso: String? = null,
+    val startTimeDisplay: String = "",
+    val enteringWindowMinutes: Int = 15,
+    val totalTimeMinutes: Int = 30,
     val isSaving: Boolean = false,
     val errorMessage: String? = null
 )
@@ -110,6 +115,32 @@ class CreateQuizViewModel @Inject constructor(
         }
     }
 
+    fun updateStartImmediately(immediate: Boolean) {
+        _uiState.value = _uiState.value.copy(startImmediately = immediate, errorMessage = null)
+    }
+
+    fun updateStartTime(isoString: String?, displayString: String) {
+        _uiState.value = _uiState.value.copy(
+            startTimeIso = isoString,
+            startTimeDisplay = displayString,
+            errorMessage = null
+        )
+    }
+
+    fun updateEnteringWindow(minutes: Int) {
+        _uiState.value = _uiState.value.copy(
+            enteringWindowMinutes = minutes.coerceAtLeast(1),
+            errorMessage = null
+        )
+    }
+
+    fun updateTotalTime(minutes: Int) {
+        _uiState.value = _uiState.value.copy(
+            totalTimeMinutes = minutes.coerceAtLeast(1),
+            errorMessage = null
+        )
+    }
+
     fun saveQuiz() {
         val state = _uiState.value
         val title = state.title.trim()
@@ -145,6 +176,10 @@ class CreateQuizViewModel @Inject constructor(
             state.targetYears.sorted().joinToString(",")
         }
 
+        val finalStartTime = if (state.startImmediately) null else state.startTimeIso
+        val finalEnteringWindow = state.enteringWindowMinutes.coerceAtLeast(1)
+        val finalTotalTime = state.totalTimeMinutes.coerceAtLeast(1)
+
         viewModelScope.launch {
             _uiState.value = state.copy(isSaving = true, errorMessage = null)
             quizRepository.createQuiz(
@@ -152,6 +187,9 @@ class CreateQuizViewModel @Inject constructor(
                 audience = state.audience,
                 classId = state.classId,
                 targetYears = targetYearsString,
+                startTime = finalStartTime,
+                enteringWindow = finalEnteringWindow,
+                totalTime = finalTotalTime,
                 questions = state.questions
             ).onSuccess {
                 _events.emit(CreateQuizEvent.ShowMessage("Quiz created successfully!"))

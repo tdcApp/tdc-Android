@@ -24,7 +24,8 @@ data class DashboardData(
     val userName: String = "",
     val schedules: List<Schedule> = emptyList(),
     val upcomingQuizzes: List<Quiz> = emptyList(),
-    val recentAnnouncements: List<Announcement> = emptyList()
+    val recentAnnouncements: List<Announcement> = emptyList(),
+    val specialQuiz: Quiz? = null
 )
 
 sealed class GeneralUiState {
@@ -64,12 +65,20 @@ class GeneralViewModel @Inject constructor(
                     val userName = cachedName ?: pDef?.await() ?: ""
                     val announcements = aDef.await()
 
+                    // Find special quest quiz created by ADMIN or with 'Quest' title
+                    val specialQuiz = quizzes.firstOrNull {
+                        it.creatorRole.equals("ADMIN", ignoreCase = true) ||
+                        it.title.contains("Coding Quest", ignoreCase = true) ||
+                        it.title.contains("Quest", ignoreCase = true)
+                    }
+
                     _uiState.value = GeneralUiState.Success(
                         DashboardData(
                             userName = userName,
                             schedules = schedules,
                             upcomingQuizzes = quizzes.take(3),
-                            recentAnnouncements = announcements.take(3)
+                            recentAnnouncements = announcements.take(3),
+                            specialQuiz = specialQuiz
                         )
                     )
                 }

@@ -48,36 +48,72 @@ class ProfileRepositoryImpl @Inject constructor(
             val profileDto = profileApi.getProfile()
             val role = profileDto.role.lowercase()
             val isMentor = isMentorRole(role)
-            val isComplete = isMentor || (!profileDto.name.isNullOrBlank() && !profileDto.effectiveLanguageClassId.isNullOrBlank())
+            val isComplete = true
 
-            dataStoreManager.saveProfileComplete(isComplete)
+            dataStoreManager.saveProfileComplete(true)
             dataStoreManager.saveUserRole(role)
-            profileDto.name?.let { dataStoreManager.saveUserName(it) }
-            dataStoreManager.saveMobileNumber(profileDto.effectiveMobile)
+            profileDto.name?.takeIf { it.isNotBlank() }?.let { dataStoreManager.saveUserName(it) }
+            if (profileDto.effectiveMobile.isNotBlank()) {
+                dataStoreManager.saveMobileNumber(profileDto.effectiveMobile)
+            }
             profileDto.effectiveLanguageClassId?.let { dataStoreManager.saveLanguageClassId(it) }
             profileDto.effectiveTechnologyClassId?.let { dataStoreManager.saveTechnologyClassId(it) }
 
-            profileDto.toDomain(fallbackUid = uid, fallbackEmail = email, fallbackComplete = isComplete)
+            val cachedName = dataStoreManager.userName.first()
+            val effectiveName = profileDto.name?.takeIf { it.isNotBlank() } ?: cachedName ?: email.substringBefore("@")
+            profileDto.toDomain(fallbackUid = uid, fallbackEmail = email, fallbackComplete = true).copy(name = effectiveName, isProfileComplete = true)
         } catch (e: Exception) {
             if (e is HttpException && e.code() == 404) {
-                // Profile not created yet in Neon DB
+                // Profile genuinely does not exist in Neon DB yet
                 dataStoreManager.saveProfileComplete(false)
                 UserProfile(id = uid, email = email, role = "student", isProfileComplete = false)
             } else {
-                // Try auth bootstrap
-                val bootstrap = authApi.getAuthBootstrap()
-                if (bootstrap.profileExists && bootstrap.profile != null) {
-                    val p = bootstrap.profile
-                    val role = p.role.lowercase()
-                    val isMentor = isMentorRole(role)
-                    val isComplete = isMentor || (!p.name.isNullOrBlank() && !p.effectiveLanguageClassId.isNullOrBlank())
+                // Network error, 5xx, or temporary issue: do NOT wipe isProfileComplete to false!
+                try {
+                    val bootstrap = authApi.getAuthBootstrap()
+                    if (bootstrap.profileExists && bootstrap.profile != null) {
+                        val p = bootstrap.profile
+                        val role = p.role.lowercase()
+                        val isMentor = isMentorRole(role)
+                        val isComplete = isMentor || !p.name.isNullOrBlank()
 
-                    dataStoreManager.saveProfileComplete(isComplete)
-                    dataStoreManager.saveUserRole(role)
-                    p.toDomain(fallbackUid = uid, fallbackEmail = email, fallbackComplete = isComplete)
-                } else {
-                    dataStoreManager.saveProfileComplete(false)
-                    UserProfile(id = uid, email = email, role = "student", isProfileComplete = false)
+                        dataStoreManager.saveProfileComplete(isComplete)
+                        dataStoreManager.saveUserRole(role)
+                        p.name?.let { dataStoreManager.saveUserName(it) }
+                        dataStoreManager.saveMobileNumber(p.effectiveMobile)
+                        p.effectiveLanguageClassId?.let { dataStoreManager.saveLanguageClassId(it) }
+                        p.effectiveTechnologyClassId?.let { dataStoreManager.saveTechnologyClassId(it) }
+
+                        p.toDomain(fallbackUid = uid, fallbackEmail = email, fallbackComplete = isComplete)
+                    } else if (bootstrap.profileExists == false) {
+                        // Backend explicitly confirmed user profile doesn't exist in DB
+                        dataStoreManager.saveProfileComplete(false)
+                        UserProfile(id = uid, email = email, role = "student", isProfileComplete = false)
+                    } else {
+                        // Retain cached values from DataStore
+                        val cachedName = dataStoreManager.userName.first()
+                        val cachedRole = dataStoreManager.userRole.first() ?: "student"
+                        val cachedComplete = dataStoreManager.isProfileComplete.first()
+                        UserProfile(
+                            id = uid,
+                            email = email,
+                            name = cachedName,
+                            role = cachedRole,
+                            isProfileComplete = cachedComplete || !cachedName.isNullOrBlank()
+                        )
+                    }
+                } catch (_: Exception) {
+                    // Retain cached values from DataStore on network failure
+                    val cachedName = dataStoreManager.userName.first()
+                    val cachedRole = dataStoreManager.userRole.first() ?: "student"
+                    val cachedComplete = dataStoreManager.isProfileComplete.first()
+                    UserProfile(
+                        id = uid,
+                        email = email,
+                        name = cachedName,
+                        role = cachedRole,
+                        isProfileComplete = cachedComplete || !cachedName.isNullOrBlank()
+                    )
                 }
             }
         }

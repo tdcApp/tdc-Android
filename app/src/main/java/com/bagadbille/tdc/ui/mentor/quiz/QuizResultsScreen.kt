@@ -25,6 +25,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bagadbille.tdc.data.model.QuizSubmissionDetail
@@ -638,6 +639,42 @@ private fun StudentSubmissionCard(
                         )
                     }
                 }
+
+                // Timing details: Total time taken and submission time
+                val enteringTimeStr = formatDisplayTime(detail.submission.startedAt)
+                val exitTimeStr = formatDisplayTime(detail.submission.submittedAt)
+                val durationStr = formatDurationDisplay(detail.submission.timeTakenSeconds, detail.submission.startedAt, detail.submission.submittedAt)
+
+                if (enteringTimeStr != null || exitTimeStr != null || durationStr != null) {
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (durationStr != null) {
+                            Surface(
+                                shape = MaterialTheme.shapes.extraSmall,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                            ) {
+                                Text(
+                                    "⏱️ $durationStr",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                )
+                            }
+                        }
+                        if (exitTimeStr != null) {
+                            Text(
+                                "Exit: $exitTimeStr",
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(Modifier.width(8.dp))
@@ -680,4 +717,60 @@ private fun StudentSubmissionCard(
             }
         }
     }
+}
+
+private fun formatDisplayTime(isoString: String?): String? {
+    if (isoString.isNullOrBlank()) return null
+    return try {
+        val parseFormats = listOf(
+            java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") },
+            java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") },
+            java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", java.util.Locale.US),
+            java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+        )
+        val outFormat = java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault())
+        for (pf in parseFormats) {
+            try {
+                val d = pf.parse(isoString)
+                if (d != null) return outFormat.format(d)
+            } catch (_: Exception) {}
+        }
+        null
+    } catch (_: Exception) {
+        null
+    }
+}
+
+private fun formatDurationDisplay(seconds: Int?, startedAt: String?, submittedAt: String?): String? {
+    val totalSec = if (seconds != null && seconds > 0) {
+        seconds
+    } else {
+        val startMs = parseIsoDateMillis(startedAt)
+        val subMs = parseIsoDateMillis(submittedAt)
+        if (startMs != null && subMs != null && subMs >= startMs) {
+            ((subMs - startMs) / 1000).toInt()
+        } else null
+    }
+
+    if (totalSec == null || totalSec <= 0) return null
+    val m = totalSec / 60
+    val s = totalSec % 60
+    return if (m > 0) "${m}m ${s}s" else "${s}s"
+}
+
+private fun parseIsoDateMillis(isoString: String?): Long? {
+    if (isoString.isNullOrBlank()) return null
+    val parseFormats = listOf(
+        java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") },
+        java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") },
+        java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", java.util.Locale.US),
+        java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+    )
+    for (pf in parseFormats) {
+        try {
+            val d = pf.parse(isoString)
+            if (d != null) return d.time
+        } catch (_: Exception) {}
+    }
+    return null
 }

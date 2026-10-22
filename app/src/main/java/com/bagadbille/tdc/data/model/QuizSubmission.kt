@@ -6,5 +6,7 @@ data class QuizSubmission(
     val score: Int,
     val totalQuestions: Int,
     val clientSubmissionId: String? = null,
-    val submittedAt: String
+    val submittedAt: String,
+    val startedAt: String? = null,
+    val timeTakenSeconds: Int? = null
 )

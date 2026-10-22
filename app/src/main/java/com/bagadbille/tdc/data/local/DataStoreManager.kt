@@ -5,11 +5,14 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -126,6 +129,13 @@ class DataStoreManager @Inject constructor(
         }
     }
 
+    suspend fun unmarkQuizSubmitted(quizId: String) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[SUBMITTED_QUIZ_IDS_KEY] ?: emptySet()
+            prefs[SUBMITTED_QUIZ_IDS_KEY] = current - quizId
+        }
+    }
+
     suspend fun clearSession() {
         context.dataStore.edit {
             it.remove(AUTH_TOKEN_KEY)
@@ -149,5 +159,102 @@ class DataStoreManager @Inject constructor(
 
     suspend fun setCompletedOnboarding(completed: Boolean = true) {
         context.dataStore.edit { it[HAS_COMPLETED_ONBOARDING_KEY] = completed }
+    }
+
+    suspend fun saveActiveQuiz(quizId: String, startedAtMillis: Long, totalDurationSeconds: Int, initialStrikes: Int = 0) {
+        context.dataStore.edit { prefs ->
+            prefs[longPreferencesKey("quiz_started_at_$quizId")] = startedAtMillis
+            prefs[intPreferencesKey("quiz_duration_$quizId")] = totalDurationSeconds
+            prefs[intPreferencesKey("quiz_strikes_$quizId")] = initialStrikes
+        }
+    }
+
+    suspend fun getActiveQuizStartedAt(quizId: String): Long? {
+        val prefs = context.dataStore.data.firstOrNull() ?: return null
+        return prefs[longPreferencesKey("quiz_started_at_$quizId")]
+    }
+
+    suspend fun getActiveQuizStrikes(quizId: String): Int {
+        val prefs = context.dataStore.data.firstOrNull() ?: return 0
+        return prefs[intPreferencesKey("quiz_strikes_$quizId")] ?: 0
+    }
+
+    suspend fun getActiveQuizDuration(quizId: String): Int {
+        val prefs = context.dataStore.data.firstOrNull() ?: return 1800
+        return prefs[intPreferencesKey("quiz_duration_$quizId")] ?: 1800
+    }
+
+    suspend fun incrementQuizStrikes(quizId: String): Int {
+        var newStrikes = 0
+        context.dataStore.edit { prefs ->
+            val key = intPreferencesKey("quiz_strikes_$quizId")
+            val current = prefs[key] ?: 0
+            newStrikes = current + 1
+            prefs[key] = newStrikes
+        }
+        return newStrikes
+    }
+
+    suspend fun setQuizStrikes(quizId: String, strikes: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[intPreferencesKey("quiz_strikes_$quizId")] = strikes
+        }
+    }
+
+    suspend fun saveQuizAnswer(quizId: String, questionId: String, answer: String) {
+        context.dataStore.edit { prefs ->
+            val key = stringPreferencesKey("quiz_ans_${quizId}_$questionId")
+            if (answer.isBlank()) {
+                prefs.remove(key)
+            } else {
+                prefs[key] = answer
+            }
+        }
+    }
+
+    suspend fun getSavedQuizAnswers(quizId: String, questionIds: List<String>): Map<String, String> {
+        val prefs = context.dataStore.data.firstOrNull() ?: return emptyMap()
+        val map = mutableMapOf<String, String>()
+        for (qId in questionIds) {
+            val ans = prefs[stringPreferencesKey("quiz_ans_${quizId}_$qId")]
+            if (!ans.isNullOrBlank()) {
+                map[qId] = ans
+            }
+        }
+        return map
+    }
+
+    suspend fun saveQuizReviewStatus(quizId: String, questionId: String, isReviewed: Boolean) {
+        context.dataStore.edit { prefs ->
+            val key = booleanPreferencesKey("quiz_rev_${quizId}_$questionId")
+            if (isReviewed) {
+                prefs[key] = true
+            } else {
+                prefs.remove(key)
+            }
+        }
+    }
+
+    suspend fun getSavedQuizReviews(quizId: String, questionIds: List<String>): Set<String> {
+        val prefs = context.dataStore.data.firstOrNull() ?: return emptySet()
+        val set = mutableSetOf<String>()
+        for (qId in questionIds) {
+            if (prefs[booleanPreferencesKey("quiz_rev_${quizId}_$qId")] == true) {
+                set.add(qId)
+            }
+        }
+        return set
+    }
+
+    suspend fun clearActiveQuiz(quizId: String) {
+        context.dataStore.edit { prefs ->
+            prefs.remove(longPreferencesKey("quiz_started_at_$quizId"))
+            prefs.remove(intPreferencesKey("quiz_duration_$quizId"))
+            prefs.remove(intPreferencesKey("quiz_strikes_$quizId"))
+            val keysToRemove = prefs.asMap().keys.filter {
+                it.name.startsWith("quiz_ans_${quizId}_") || it.name.startsWith("quiz_rev_${quizId}_")
+            }
+            keysToRemove.forEach { key -> prefs.remove(key) }
+        }
     }
 }

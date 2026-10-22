@@ -37,7 +37,7 @@ fun com.bagadbille.tdc.data.remote.dto.UserProfileDto.toDomain(
 ): UserProfile {
     val cleanRole = role.lowercase()
     val isMentor = isMentorRole(cleanRole)
-    val complete = if (isMentor) true else if (isProfileComplete) true else (!name.isNullOrBlank() && fallbackComplete)
+    val complete = isMentor || isProfileComplete || !name.isNullOrBlank()
     return UserProfile(
         id = effectiveUid.ifBlank { fallbackUid },
         email = email.ifBlank { fallbackEmail },

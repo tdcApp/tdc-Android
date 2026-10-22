@@ -17,6 +17,12 @@ interface QuizApi {
     @POST("quizzes")
     suspend fun createQuiz(@Body request: CreateQuizRequest): QuizDetailDto
 
+    @POST("quizzes/{id}/start")
+    suspend fun startQuiz(@Path("id") id: String): QuizStartResponse
+
+    @POST("quizzes/{id}/strike")
+    suspend fun recordStrike(@Path("id") id: String): QuizStrikeResponse
+
     @POST("quizzes/{id}/submit")
     suspend fun submitQuiz(
         @Path("id") id: String,

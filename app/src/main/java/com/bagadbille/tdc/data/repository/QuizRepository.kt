@@ -7,6 +7,8 @@ import com.bagadbille.tdc.data.remote.api.QuizApi
 import com.bagadbille.tdc.data.remote.dto.CreateQuizQuestionRequest
 import com.bagadbille.tdc.data.remote.dto.CreateQuizRequest
 import com.bagadbille.tdc.data.remote.dto.QuizAnswerDto
+import com.bagadbille.tdc.data.remote.dto.QuizStartResponse
+import com.bagadbille.tdc.data.remote.dto.QuizStrikeResponse
 import com.bagadbille.tdc.data.remote.dto.QuizSubmitRequest
 import com.bagadbille.tdc.data.remote.dto.UserProfileDto
 import kotlinx.coroutines.flow.firstOrNull
@@ -19,7 +21,16 @@ interface QuizRepository {
     suspend fun getQuiz(quizId: String): Result<Quiz>
     suspend fun getQuizQuestions(quizId: String): Result<List<QuizQuestion>>
     suspend fun getQuizWithQuestions(quizId: String): Result<Pair<Quiz, List<QuizQuestion>>>
-    suspend fun submitQuiz(quizId: String, answers: List<QuizAnswer>, clientSubmissionId: String, isDisqualified: Boolean = false): Result<QuizSubmission>
+    suspend fun startQuiz(quizId: String): Result<QuizStartResponse>
+    suspend fun recordStrike(quizId: String): Result<QuizStrikeResponse>
+    suspend fun submitQuiz(
+        quizId: String,
+        answers: List<QuizAnswer>,
+        clientSubmissionId: String,
+        isDisqualified: Boolean = false,
+        startedAt: String? = null,
+        timeTakenSeconds: Int? = null
+    ): Result<QuizSubmission>
     suspend fun getQuizResult(quizId: String): Result<QuizResult>
     suspend fun isQuizSubmitted(quizId: String): Boolean
     suspend fun isQuizSubmittedLocally(quizId: String): Boolean
@@ -31,6 +42,9 @@ interface QuizRepository {
         audience: String,
         classId: String?,
         targetYears: String? = null,
+        startTime: String? = null,
+        enteringWindow: Int? = 15,
+        totalTime: Int = 30,
         questions: List<QuizQuestionDraft>
     ): Result<Quiz>
     suspend fun deleteQuiz(quizId: String): Result<Unit>
@@ -50,32 +64,49 @@ class QuizRepositoryImpl @Inject constructor(
 
     override suspend fun getQuizzes(): Result<List<Quiz>> = runCatching {
         val currentUid = dataStoreManager.firebaseUid.firstOrNull().orEmpty()
-        val localSubmitted = dataStoreManager.submittedQuizIds.firstOrNull() ?: emptySet()
         val dtos = quizApi.getQuizzes()
         dtos.map { dto ->
             val quiz = dto.toDomain()
             val userScopedQuizKey = if (currentUid.isNotBlank()) "${currentUid}_${quiz.id}" else quiz.id
             if (quiz.isSubmitted) {
                 if (currentUid.isNotBlank()) dataStoreManager.markQuizSubmitted(userScopedQuizKey)
-                quiz
-            } else if (userScopedQuizKey in localSubmitted) {
-                quiz.copy(isSubmitted = true)
             } else {
-                quiz
+                if (currentUid.isNotBlank()) dataStoreManager.unmarkQuizSubmitted(userScopedQuizKey)
             }
+            quiz
         }
     }
 
     override suspend fun getQuiz(quizId: String): Result<Quiz> = runCatching {
         val currentUid = dataStoreManager.firebaseUid.firstOrNull().orEmpty()
         val userScopedQuizKey = if (currentUid.isNotBlank()) "${currentUid}_${quizId}" else quizId
-        val localSubmitted = dataStoreManager.submittedQuizIds.firstOrNull() ?: emptySet()
         val detail = quizApi.getQuizDetail(quizId)
         val quiz = detail.toDomain()
-        if (quiz.isSubmitted || userScopedQuizKey in localSubmitted) {
+        if (quiz.isSubmitted) {
             if (currentUid.isNotBlank()) dataStoreManager.markQuizSubmitted(userScopedQuizKey)
-            quiz.copy(isSubmitted = true)
+            dataStoreManager.clearActiveQuiz(quizId)
+            recentSubmissions.remove(quizId)
+            quiz
         } else {
+            if (currentUid.isNotBlank()) dataStoreManager.unmarkQuizSubmitted(userScopedQuizKey)
+            recentSubmissions.remove(quizId)
+            quiz.activeAttempt?.let { active ->
+                if (!active.isDisqualified && active.remainingSeconds > 0) {
+                    val startedMillis = try {
+                        java.time.Instant.parse(active.startedAt).toEpochMilli()
+                    } catch (_: Exception) {
+                        System.currentTimeMillis()
+                    }
+                    dataStoreManager.saveActiveQuiz(
+                        quizId = quizId,
+                        startedAtMillis = startedMillis,
+                        totalDurationSeconds = (detail.totalTimeSnake ?: detail.totalTime) * 60,
+                        initialStrikes = active.warningCount
+                    )
+                } else {
+                    dataStoreManager.clearActiveQuiz(quizId)
+                }
+            } ?: dataStoreManager.clearActiveQuiz(quizId)
             quiz
         }
     }
@@ -88,17 +119,88 @@ class QuizRepositoryImpl @Inject constructor(
     override suspend fun getQuizWithQuestions(quizId: String): Result<Pair<Quiz, List<QuizQuestion>>> = runCatching {
         val currentUid = dataStoreManager.firebaseUid.firstOrNull().orEmpty()
         val userScopedQuizKey = if (currentUid.isNotBlank()) "${currentUid}_${quizId}" else quizId
-        val localSubmitted = dataStoreManager.submittedQuizIds.firstOrNull() ?: emptySet()
         val detail = quizApi.getQuizDetail(quizId)
         val quiz = detail.toDomain()
-        val finalQuiz = if (quiz.isSubmitted || userScopedQuizKey in localSubmitted) {
+        val finalQuiz = if (quiz.isSubmitted) {
             if (currentUid.isNotBlank()) dataStoreManager.markQuizSubmitted(userScopedQuizKey)
-            quiz.copy(isSubmitted = true)
+            dataStoreManager.clearActiveQuiz(quizId)
+            recentSubmissions.remove(quizId)
+            quiz
         } else {
+            if (currentUid.isNotBlank()) dataStoreManager.unmarkQuizSubmitted(userScopedQuizKey)
+            recentSubmissions.remove(quizId)
+            quiz.activeAttempt?.let { active ->
+                if (!active.isDisqualified && active.remainingSeconds > 0) {
+                    val startedMillis = try {
+                        java.time.Instant.parse(active.startedAt).toEpochMilli()
+                    } catch (_: Exception) {
+                        System.currentTimeMillis()
+                    }
+                    dataStoreManager.saveActiveQuiz(
+                        quizId = quizId,
+                        startedAtMillis = startedMillis,
+                        totalDurationSeconds = (detail.totalTimeSnake ?: detail.totalTime) * 60,
+                        initialStrikes = active.warningCount
+                    )
+                } else {
+                    dataStoreManager.clearActiveQuiz(quizId)
+                }
+            } ?: dataStoreManager.clearActiveQuiz(quizId)
             quiz
         }
         val questions = detail.questions.map { it.toDomain(fallbackQuizId = quizId) }
         Pair(finalQuiz, questions)
+    }
+
+    override suspend fun startQuiz(quizId: String): Result<QuizStartResponse> = runCatching {
+        val response = quizApi.startQuiz(quizId)
+        val startedAtMillis = if (response.startedAt != null) {
+            try {
+                java.time.Instant.parse(response.startedAt).toEpochMilli()
+            } catch (_: Exception) {
+                System.currentTimeMillis()
+            }
+        } else System.currentTimeMillis()
+
+        dataStoreManager.saveActiveQuiz(
+            quizId = quizId,
+            startedAtMillis = startedAtMillis,
+            totalDurationSeconds = response.remainingSeconds,
+            initialStrikes = response.warningCount
+        )
+
+        if (response.isDisqualified || response.warningCount >= 3) {
+            val currentUid = dataStoreManager.firebaseUid.firstOrNull().orEmpty()
+            val userScopedQuizKey = if (currentUid.isNotBlank()) "${currentUid}_${quizId}" else quizId
+            dataStoreManager.markQuizSubmitted(userScopedQuizKey)
+            dataStoreManager.clearActiveQuiz(quizId)
+        }
+
+        response
+    }
+
+    override suspend fun recordStrike(quizId: String): Result<QuizStrikeResponse> = runCatching {
+        val localStrikes = dataStoreManager.incrementQuizStrikes(quizId)
+        try {
+            val response = quizApi.recordStrike(quizId)
+            dataStoreManager.setQuizStrikes(quizId, maxOf(localStrikes, response.warningCount))
+            if (response.isDisqualified || response.warningCount >= 3) {
+                val currentUid = dataStoreManager.firebaseUid.firstOrNull().orEmpty()
+                val userScopedQuizKey = if (currentUid.isNotBlank()) "${currentUid}_${quizId}" else quizId
+                dataStoreManager.markQuizSubmitted(userScopedQuizKey)
+                dataStoreManager.clearActiveQuiz(quizId)
+            }
+            response
+        } catch (_: Exception) {
+            val isDisq = localStrikes >= 3
+            if (isDisq) {
+                val currentUid = dataStoreManager.firebaseUid.firstOrNull().orEmpty()
+                val userScopedQuizKey = if (currentUid.isNotBlank()) "${currentUid}_${quizId}" else quizId
+                dataStoreManager.markQuizSubmitted(userScopedQuizKey)
+                dataStoreManager.clearActiveQuiz(quizId)
+            }
+            QuizStrikeResponse(warningCount = localStrikes, isDisqualified = isDisq)
+        }
     }
 
     override suspend fun isQuizSubmitted(quizId: String): Boolean {
@@ -127,13 +229,16 @@ class QuizRepositoryImpl @Inject constructor(
         val currentUid = dataStoreManager.firebaseUid.firstOrNull().orEmpty()
         val userScopedQuizKey = if (currentUid.isNotBlank()) "${currentUid}_${quizId}" else quizId
         dataStoreManager.markQuizSubmitted(userScopedQuizKey)
+        dataStoreManager.clearActiveQuiz(quizId)
     }
 
     override suspend fun submitQuiz(
         quizId: String,
         answers: List<QuizAnswer>,
         clientSubmissionId: String,
-        isDisqualified: Boolean
+        isDisqualified: Boolean,
+        startedAt: String?,
+        timeTakenSeconds: Int?
     ): Result<QuizSubmission> = runCatching {
         val currentUid = dataStoreManager.firebaseUid.firstOrNull().orEmpty()
         val userScopedQuizKey = if (currentUid.isNotBlank()) "${currentUid}_${quizId}" else quizId
@@ -145,11 +250,15 @@ class QuizRepositoryImpl @Inject constructor(
         }
         val request = QuizSubmitRequest(
             clientSubmissionId = clientSubmissionId,
-            answers = mappedAnswers
+            answers = mappedAnswers,
+            startedAt = startedAt,
+            timeTakenSeconds = timeTakenSeconds,
+            isDisqualified = isDisqualified
         )
         val submission = quizApi.submitQuiz(quizId, request).toDomain()
         recentSubmissions[quizId] = submission
         dataStoreManager.markQuizSubmitted(userScopedQuizKey)
+        dataStoreManager.clearActiveQuiz(quizId)
         submission
     }
 
@@ -180,6 +289,9 @@ class QuizRepositoryImpl @Inject constructor(
         audience: String,
         classId: String?,
         targetYears: String?,
+        startTime: String?,
+        enteringWindow: Int?,
+        totalTime: Int,
         questions: List<QuizQuestionDraft>
     ): Result<Quiz> = runCatching {
         val finalAudience = if (!classId.isNullOrBlank()) "CLASS" else audience.trim().uppercase()
@@ -191,6 +303,9 @@ class QuizRepositoryImpl @Inject constructor(
             audience = finalAudience,
             targetYears = cleanTargetYears,
             classId = finalClassId,
+            startTime = startTime?.trim()?.ifBlank { null },
+            enteringWindow = enteringWindow,
+            totalTime = totalTime,
             questions = questions.map {
                 CreateQuizQuestionRequest(
                     question = it.question.trim(),
@@ -240,7 +355,6 @@ class QuizRepositoryImpl @Inject constructor(
             emptyList()
         }
 
-
         submissions.map { subDto ->
             val sub = subDto.toDomain()
             val cachedStudent = studentCache[sub.studentUid]
@@ -262,6 +376,7 @@ class QuizRepositoryImpl @Inject constructor(
 
             val studentEnrollment = subDto.studentEnrollment
                 ?: subDto.studentEnrollmentSnake
+                ?: subDto.enrollmentNumberSnake
 
             QuizSubmissionDetail(
                 submission = sub,

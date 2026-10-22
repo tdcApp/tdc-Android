@@ -103,6 +103,7 @@ fun HomeScreen(
                 0 -> GeneralScreen(
                     viewModel = generalViewModel,
                     onQuizClick = onNavigateToQuizTaking,
+                    onQuizResultClick = onNavigateToQuizResult,
                     onNavigateToClasses = { scope.launch { pagerState.animateScrollToPage(1) } },
                     onNavigateToQuizzes = { scope.launch { pagerState.animateScrollToPage(2) } },
                     onNavigateToAssignments = onNavigateToAssignments,

@@ -61,7 +61,10 @@ class AuthRepositoryImpl @Inject constructor(
             !token.isNullOrBlank() && !email.isNullOrBlank()
         }
 
-    override fun isProfileComplete(): Flow<Boolean> = dataStoreManager.isProfileComplete
+    override fun isProfileComplete(): Flow<Boolean> =
+        combine(dataStoreManager.isProfileComplete, dataStoreManager.userName) { isComplete, name ->
+            isComplete || !name.isNullOrBlank()
+        }
 
     override fun getUserRole(): Flow<String?> = dataStoreManager.userRole
 
@@ -150,7 +153,7 @@ class AuthRepositoryImpl @Inject constructor(
             val role = profileDto.role.lowercase()
             val isMentor = isMentorRole(role)
             // Mentors/Teachers/Admins NEVER enroll in student class tracks; their profile is always complete
-            val isComplete = isMentor || (!profileDto.name.isNullOrBlank() && !profileDto.effectiveLanguageClassId.isNullOrBlank())
+            val isComplete = isMentor || !profileDto.name.isNullOrBlank()
 
             dataStoreManager.saveProfileComplete(isComplete)
             dataStoreManager.saveUserRole(role)

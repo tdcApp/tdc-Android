@@ -54,7 +54,14 @@ fun SplashScreen(
                 !hasCompletedOnboarding!! -> onNavigateToOnboarding()
                 !authState!! -> onNavigateToLogin()
                 com.bagadbille.tdc.data.model.isMentorRole(userRole) || profileComplete == true -> onNavigateToMain()
-                else -> onNavigateToSetup()
+                else -> {
+                    val verified = viewModel.verifyProfile()
+                    if (verified) {
+                        onNavigateToMain()
+                    } else {
+                        onNavigateToSetup()
+                    }
+                }
             }
         }
     }
