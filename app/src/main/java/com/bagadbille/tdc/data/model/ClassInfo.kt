@@ -5,5 +5,6 @@ data class ClassInfo(
     val name: String,
     val type: String,
     val createdAt: String? = null,
-    val updatedAt: String? = null
+    val updatedAt: String? = null,
+    val studentCount: Int = 0
 )

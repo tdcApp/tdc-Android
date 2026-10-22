@@ -17,7 +17,8 @@ interface RosterRepository {
 
 @Singleton
 class RosterRepositoryImpl @Inject constructor(
-    private val classApi: ClassApi
+    private val classApi: ClassApi,
+    private val classRepo: dagger.Lazy<ClassRepository>
 ) : RosterRepository {
 
     override suspend fun getStudentsByClass(classId: String): Result<List<UserProfile>> = runCatching {
@@ -29,17 +30,23 @@ class RosterRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getClassStudentCounts(classIds: Collection<String>): Result<Map<String, Int>> = runCatching {
-        coroutineScope {
-            classIds.distinct().map { id ->
-                async {
-                    val count = try {
-                        classApi.getStudentsByClass(id).size
-                    } catch (_: Exception) {
-                        0
+        val allClasses = classRepo.get().getClasses().getOrDefault(emptyList())
+        if (allClasses.isNotEmpty()) {
+            val countMap = allClasses.associate { it.id to it.studentCount }
+            classIds.distinct().associateWith { countMap[it] ?: 0 }
+        } else {
+            coroutineScope {
+                classIds.distinct().map { id ->
+                    async {
+                        val count = try {
+                            classApi.getStudentsByClass(id).size
+                        } catch (_: Exception) {
+                            0
+                        }
+                        id to count
                     }
-                    id to count
-                }
-            }.awaitAll().toMap()
+                }.awaitAll().toMap()
+            }
         }
     }
 }

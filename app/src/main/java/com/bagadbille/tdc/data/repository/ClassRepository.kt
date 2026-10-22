@@ -40,7 +40,8 @@ class ClassRepositoryImpl @Inject constructor(
                         id = dto.id,
                         name = dto.name,
                         type = dto.type.lowercase(),
-                        createdAt = dto.createdAt ?: dto.createdAtSnake ?: ""
+                        createdAt = dto.createdAt ?: dto.createdAtSnake ?: "",
+                        studentCount = if (dto.studentCount > 0) dto.studentCount else dto.studentCountSnake
                     )
                 }
                 classDao.replaceClasses(mapped.map { ClassEntity.fromDomain(it) })
@@ -66,7 +67,8 @@ class ClassRepositoryImpl @Inject constructor(
                     id = dto.id,
                     name = dto.name,
                     type = dto.type.lowercase(),
-                    createdAt = dto.createdAt ?: dto.createdAtSnake ?: ""
+                    createdAt = dto.createdAt ?: dto.createdAtSnake ?: "",
+                    studentCount = if (dto.studentCount > 0) dto.studentCount else dto.studentCountSnake
                 )
             }
             if (remote.isNotEmpty()) {

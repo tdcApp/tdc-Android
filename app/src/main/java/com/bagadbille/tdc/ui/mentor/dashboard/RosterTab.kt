@@ -43,6 +43,7 @@ fun RosterTab(viewModel: RosterViewModel = hiltViewModel()) {
         is RosterUiState.Error -> ErrorScreen(s.message, onRetry = { viewModel.load() })
         is RosterUiState.Success -> RosterNavigationContainer(
             batches = s.batches,
+            onLoadStudents = { viewModel.loadStudentsForBatch(it) },
             onRefresh = { viewModel.load() }
         )
     }
@@ -51,6 +52,7 @@ fun RosterTab(viewModel: RosterViewModel = hiltViewModel()) {
 @Composable
 private fun RosterNavigationContainer(
     batches: List<BatchItem>,
+    onLoadStudents: (String) -> Unit,
     onRefresh: () -> Unit
 ) {
     var selectedBatchId by remember { mutableStateOf<String?>(null) }
@@ -58,6 +60,10 @@ private fun RosterNavigationContainer(
     // Find the currently selected batch if any
     val currentBatch = remember(selectedBatchId, batches) {
         batches.find { it.classInfo.id == selectedBatchId }
+    }
+
+    LaunchedEffect(selectedBatchId) {
+        selectedBatchId?.let { onLoadStudents(it) }
     }
 
     // Intercept back button press when viewing class roster
@@ -75,6 +81,7 @@ private fun RosterNavigationContainer(
             batches = batches,
             onBatchClick = { batch ->
                 selectedBatchId = batch.classInfo.id
+                onLoadStudents(batch.classInfo.id)
             }
         )
     }
@@ -241,8 +248,9 @@ private fun ClassOverviewCard(
                             modifier = Modifier.size(13.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        val count = if (batch.students.isNotEmpty()) batch.students.size else batch.classInfo.studentCount
                         Text(
-                            text = "${batch.students.size} students",
+                            text = "$count students",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -338,8 +346,9 @@ private fun ClassRosterDetailScreen(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
+                        val enrolledCount = if (batch.students.isNotEmpty()) batch.students.size else batch.classInfo.studentCount
                         Text(
-                            text = "${batch.students.size} Enrolled • ${batch.classInfo.type.replaceFirstChar { it.uppercase() }} Track",
+                            text = "$enrolledCount Enrolled • ${batch.classInfo.type.replaceFirstChar { it.uppercase() }} Track",
                             style = MaterialTheme.typography.labelSmall,
                             color = accentColor,
                             fontWeight = FontWeight.Medium
@@ -409,8 +418,9 @@ private fun ClassRosterDetailScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val totalDisplayCount = if (batch.students.isNotEmpty()) batch.students.size else batch.classInfo.studentCount
                     Text(
-                        text = if (query.isBlank()) "All Students (${batch.students.size})"
+                        text = if (query.isBlank()) "All Students ($totalDisplayCount)"
                         else "Matching Students (${filteredStudents.size})",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -418,7 +428,21 @@ private fun ClassRosterDetailScreen(
                 }
             }
 
-            if (batch.students.isEmpty()) {
+            if (batch.isLoadingStudents) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 60.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(36.dp),
+                            color = accentColor
+                        )
+                    }
+                }
+            } else if (batch.students.isEmpty()) {
                 item {
                     Box(
                         modifier = Modifier

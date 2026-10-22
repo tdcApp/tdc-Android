@@ -52,7 +52,9 @@ data class ClassInfoDto(
     @SerialName("createdAt") val createdAt: String? = null,
     @SerialName("created_at") val createdAtSnake: String? = null,
     @SerialName("updatedAt") val updatedAt: String? = null,
-    @SerialName("updated_at") val updatedAtSnake: String? = null
+    @SerialName("updated_at") val updatedAtSnake: String? = null,
+    @SerialName("studentCount") val studentCount: Int = 0,
+    @SerialName("student_count") val studentCountSnake: Int = 0
 )
 
 @Serializable
