@@ -62,9 +62,7 @@ class AuthRepositoryImpl @Inject constructor(
         }
 
     override fun isProfileComplete(): Flow<Boolean> =
-        combine(dataStoreManager.isProfileComplete, dataStoreManager.userName) { isComplete, name ->
-            isComplete || !name.isNullOrBlank()
-        }
+        dataStoreManager.isProfileComplete
 
     override fun getUserRole(): Flow<String?> = dataStoreManager.userRole
 
@@ -174,6 +172,7 @@ class AuthRepositoryImpl @Inject constructor(
         } else {
             // New user in Firebase, but does not exist in Neon DB yet -> needs student onboarding
             dataStoreManager.saveProfileComplete(false)
+            dataStoreManager.saveUserName("")
             dataStoreManager.saveUserRole("student")
             return Result.success(
                 UserProfile(
@@ -229,6 +228,7 @@ class AuthRepositoryImpl @Inject constructor(
         dataStoreManager.saveUserEmail(cleanEmail)
         refreshToken?.let { dataStoreManager.saveRefreshToken(it) }
         dataStoreManager.saveUserRole("student")
+        dataStoreManager.saveUserName("")
         dataStoreManager.saveProfileComplete(false)
 
         return Result.success(

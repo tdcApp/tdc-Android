@@ -43,7 +43,9 @@ class SetupViewModel @Inject constructor(
         viewModelScope.launch {
             profileRepository.getProfile()
                 .onSuccess { user ->
-                    _uiState.value = SetupUiState.Success(user)
+                    if (com.bagadbille.tdc.data.model.isMentorRole(user.role) || user.isProfileComplete) {
+                        _uiState.value = SetupUiState.Success(user)
+                    }
                 }
         }
     }

@@ -75,18 +75,13 @@ class AuthViewModel @Inject constructor(
         return try {
             val result = profileRepository.getProfile()
             if (result.isSuccess) {
-                true
+                val user = result.getOrNull()
+                user != null && (com.bagadbille.tdc.data.model.isMentorRole(user.role) || user.isProfileComplete)
             } else {
-                val error = result.exceptionOrNull()
-                if (error is retrofit2.HttpException && error.code() == 404) {
-                    false
-                } else {
-                    // Offline or temporary network glitch: don't lock out an already-authenticated user
-                    true
-                }
+                false
             }
         } catch (_: Exception) {
-            true
+            false
         }
     }
 }

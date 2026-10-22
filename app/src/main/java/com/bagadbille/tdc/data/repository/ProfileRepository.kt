@@ -66,6 +66,7 @@ class ProfileRepositoryImpl @Inject constructor(
             if (e is HttpException && e.code() == 404) {
                 // Profile genuinely does not exist in Neon DB yet
                 dataStoreManager.saveProfileComplete(false)
+                dataStoreManager.saveUserName("")
                 UserProfile(id = uid, email = email, role = "student", isProfileComplete = false)
             } else {
                 // Network error, 5xx, or temporary issue: do NOT wipe isProfileComplete to false!
@@ -88,6 +89,7 @@ class ProfileRepositoryImpl @Inject constructor(
                     } else if (bootstrap.profileExists == false) {
                         // Backend explicitly confirmed user profile doesn't exist in DB
                         dataStoreManager.saveProfileComplete(false)
+                        dataStoreManager.saveUserName("")
                         UserProfile(id = uid, email = email, role = "student", isProfileComplete = false)
                     } else {
                         // Retain cached values from DataStore
@@ -99,7 +101,7 @@ class ProfileRepositoryImpl @Inject constructor(
                             email = email,
                             name = cachedName,
                             role = cachedRole,
-                            isProfileComplete = cachedComplete || !cachedName.isNullOrBlank()
+                            isProfileComplete = cachedComplete
                         )
                     }
                 } catch (_: Exception) {
@@ -112,7 +114,7 @@ class ProfileRepositoryImpl @Inject constructor(
                         email = email,
                         name = cachedName,
                         role = cachedRole,
-                        isProfileComplete = cachedComplete || !cachedName.isNullOrBlank()
+                        isProfileComplete = cachedComplete
                     )
                 }
             }
