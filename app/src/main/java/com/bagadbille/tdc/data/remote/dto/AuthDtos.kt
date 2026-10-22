@@ -88,7 +88,7 @@ data class CreateProfileRequest(
     val languageClassId: String,
     val technologyClassId: String,
     val year: String? = null,
-    @SerialName("enrollment_number") val enrollmentNumber: String? = null
+    val enrollmentNumber: String? = null
 )
 
 @Serializable

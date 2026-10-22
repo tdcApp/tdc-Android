@@ -138,15 +138,27 @@ class ProfileRepositoryImpl @Inject constructor(
                 // Profile already exists in Neon DB -> refresh and return existing profile
                 return getProfile()
             }
-            throw Exception(parseHttpError(e), e)
+            val parsedMsg = parseHttpError(e)
+            android.util.Log.e("TDC_PROFILE", "setupProfile HTTP ${e.code()}: $parsedMsg", e)
+            throw Exception(parsedMsg, e)
         }
     }
 
     private fun parseHttpError(e: HttpException): String {
         return try {
             val raw = e.response()?.errorBody()?.string() ?: return "Server error (${e.code()})"
-            val match = Regex("\"message\"\\s*:\\s*\"([^\"]+)\"").find(raw)
-            match?.groupValues?.get(1) ?: "Server error (${e.code()})"
+            android.util.Log.e("TDC_PROFILE", "HTTP ${e.code()} raw body: $raw")
+            // Check if message is a single string: "message": "..."
+            val singleMatch = Regex("\"message\"\\s*:\\s*\"([^\"]+)\"").find(raw)
+            if (singleMatch != null) return singleMatch.groupValues[1]
+
+            // Check if message is an array: "message": ["...", "..."]
+            val arrayMatch = Regex("\"message\"\\s*:\\s*\\[([^\\]]+)\\]").find(raw)
+            if (arrayMatch != null) {
+                val items = Regex("\"([^\"]+)\"").findAll(arrayMatch.groupValues[1]).map { it.groupValues[1] }.toList()
+                if (items.isNotEmpty()) return items.joinToString(", ")
+            }
+            "Server error (${e.code()})"
         } catch (_: Exception) {
             "Server error (${e.code()})"
         }

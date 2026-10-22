@@ -70,30 +70,32 @@ class MainActivity : ComponentActivity() {
     }
 
 
+    private var fcmSyncJob: kotlinx.coroutines.Job? = null
+
     private fun syncFcmToken() {
-        lifecycleScope.launch {
-            dataStoreManager.authToken.collect { token ->
-                if (!token.isNullOrBlank()) {
-                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                        if (task.isSuccessful && !task.result.isNullOrBlank()) {
-                            val fcmToken = task.result
-                            lifecycleScope.launch {
-                                notificationRepository.registerFcmToken(fcmToken).fold(
-                                    onSuccess = {
-                                        Log.i("TDC_FCM", "Successfully registered FCM token with backend: $fcmToken")
-                                    },
-                                    onFailure = { e ->
-                                        Log.e("TDC_FCM", "Failed to register FCM token with backend", e)
-                                    }
-                                )
-                            }
-                        } else {
-                            Log.w("TDC_FCM", "Failed to retrieve FCM token from Firebase", task.exception)
+        if (fcmSyncJob?.isActive == true) return
+        fcmSyncJob = lifecycleScope.launch {
+            val token = dataStoreManager.authToken.firstOrNull()
+            if (!token.isNullOrBlank()) {
+                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                    if (task.isSuccessful && !task.result.isNullOrBlank()) {
+                        val fcmToken = task.result
+                        lifecycleScope.launch {
+                            notificationRepository.registerFcmToken(fcmToken).fold(
+                                onSuccess = {
+                                    Log.i("TDC_FCM", "Successfully registered FCM token with backend: $fcmToken")
+                                },
+                                onFailure = { e ->
+                                    Log.e("TDC_FCM", "Failed to register FCM token with backend", e)
+                                }
+                            )
                         }
+                    } else {
+                        Log.w("TDC_FCM", "Failed to retrieve FCM token from Firebase", task.exception)
                     }
-                } else {
-                    Log.d("TDC_FCM", "No authToken found in DataStore; skipping FCM sync")
                 }
+            } else {
+                Log.d("TDC_FCM", "No authToken found in DataStore; skipping FCM sync")
             }
         }
     }
