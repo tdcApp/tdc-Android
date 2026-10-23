@@ -65,18 +65,17 @@ class GeneralViewModel @Inject constructor(
                     val userName = cachedName ?: pDef?.await() ?: ""
                     val announcements = aDef.await()
 
-                    // Find special quest quiz created by ADMIN or with 'Quest' title
-                    val specialQuiz = quizzes.firstOrNull {
-                        it.creatorRole.equals("ADMIN", ignoreCase = true) ||
-                        it.title.contains("Coding Quest", ignoreCase = true) ||
-                        it.title.contains("Quest", ignoreCase = true)
-                    }
+                    // Prioritize new/latest quizzes: active attempt first, then newest unsubmitted, then newest overall
+                    val sortedQuizzes = quizzes.sortedByDescending { it.createdAt ?: it.startTime ?: it.id }
+                    val specialQuiz = sortedQuizzes.firstOrNull { it.hasActiveAttempt }
+                        ?: sortedQuizzes.firstOrNull { !it.isSubmitted }
+                        ?: sortedQuizzes.firstOrNull()
 
                     _uiState.value = GeneralUiState.Success(
                         DashboardData(
                             userName = userName,
                             schedules = schedules,
-                            upcomingQuizzes = quizzes.take(3),
+                            upcomingQuizzes = sortedQuizzes.filter { !it.isSubmitted }.take(3).ifEmpty { sortedQuizzes.take(3) },
                             recentAnnouncements = announcements.take(3),
                             specialQuiz = specialQuiz
                         )

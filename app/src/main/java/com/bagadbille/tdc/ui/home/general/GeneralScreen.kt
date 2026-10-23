@@ -207,9 +207,9 @@ private fun DashboardContent(
                         ) {
                             Text(
                                 text = when {
-                                    isCompleted -> "QUEST COMPLETED"
+                                    isCompleted -> "ASSESSMENT COMPLETED"
                                     specialQuiz?.hasActiveAttempt == true -> "⚡ IN PROGRESS"
-                                    isQuizReady -> "⚡ LIVE CHALLENGE"
+                                    isQuizReady -> "⚡ LATEST ASSESSMENT"
                                     else -> "COMING SOON"
                                 },
                                 style = MaterialTheme.typography.labelSmall.copy(
@@ -255,7 +255,7 @@ private fun DashboardContent(
                     Text(
                         text = when {
                             isCompleted -> "Your responses have been securely submitted • Evaluation in progress"
-                            isQuizReady -> "The official contest is live! Tap below to start your proctored challenge."
+                            isQuizReady -> "New test available! Tap below to start your proctored assessment."
                             else -> "Innovate • Build • Collaborate"
                         },
                         style = MaterialTheme.typography.bodyMedium,

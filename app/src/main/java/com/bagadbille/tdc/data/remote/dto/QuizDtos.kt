@@ -257,16 +257,24 @@ data class QuizSubmissionDto(
     val timeTakenSeconds: Int? = null,
     @SerialName("time_taken_seconds") val timeTakenSecondsSnake: Int? = null,
     val isPrivate: Boolean = false,
-    @SerialName("is_private") val isPrivateSnake: Boolean? = null
+    @SerialName("is_private") val isPrivateSnake: Boolean? = null,
+    val resultVisibility: String? = null,
+    @SerialName("result_visibility") val resultVisibilitySnake: String? = null
 ) {
-    fun toDomain(): QuizSubmission = QuizSubmission(
-        quizId = quizId ?: quizIdSnake ?: "",
-        studentUid = studentUid ?: studentUidSnake ?: "",
-        score = score ?: 0,
-        totalQuestions = if (totalQuestions > 0) totalQuestions else (totalQuestionsSnake ?: 0),
-        clientSubmissionId = clientSubmissionId ?: clientSubmissionIdSnake,
-        submittedAt = submittedAt ?: submittedAtSnake ?: "",
-        startedAt = startedAt ?: startedAtSnake,
-        timeTakenSeconds = timeTakenSeconds ?: timeTakenSecondsSnake
-    )
+    fun toDomain(): QuizSubmission {
+        val priv = isPrivate || (isPrivateSnake == true) ||
+                   resultVisibility.equals("PRIVATE", ignoreCase = true) ||
+                   resultVisibilitySnake.equals("PRIVATE", ignoreCase = true)
+        return QuizSubmission(
+            quizId = quizId ?: quizIdSnake ?: "",
+            studentUid = studentUid ?: studentUidSnake ?: "",
+            score = if (priv) 0 else (score ?: 0),
+            totalQuestions = if (totalQuestions > 0) totalQuestions else (totalQuestionsSnake ?: 0),
+            clientSubmissionId = clientSubmissionId ?: clientSubmissionIdSnake,
+            submittedAt = submittedAt ?: submittedAtSnake ?: "",
+            startedAt = startedAt ?: startedAtSnake,
+            timeTakenSeconds = timeTakenSeconds ?: timeTakenSecondsSnake,
+            isPrivate = priv
+        )
+    }
 }

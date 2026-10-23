@@ -40,9 +40,11 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -201,21 +203,27 @@ fun QuizListScreen(
                 if (s.quizzes.isEmpty()) {
                     EmptyStateScreen(Icons.Outlined.Quiz, "No Quizzes", "No quizzes available right now.")
                 } else {
-                    val activeQuizzes = remember(s.quizzes, submittedQuizIds, nowMillis) {
-                        s.quizzes.filter { quiz ->
+                    val sortedQuizzes = remember(s.quizzes) {
+                        s.quizzes.sortedByDescending { it.createdAt ?: it.startTime ?: it.id }
+                    }
+
+                    val activeQuizzes = remember(sortedQuizzes, submittedQuizIds, nowMillis) {
+                        sortedQuizzes.filter { quiz ->
                             val isCompleted = quiz.isSubmitted || quiz.id in submittedQuizIds
                             val schedule = getQuizScheduleInfo(quiz, nowMillis)
                             !isCompleted && (schedule.status != QuizScheduleStatus.ENTRY_CLOSED || quiz.hasActiveAttempt)
                         }
                     }
 
-                    val historyQuizzes = remember(s.quizzes, submittedQuizIds, nowMillis) {
-                        s.quizzes.filter { quiz ->
+                    val historyQuizzes = remember(sortedQuizzes, submittedQuizIds, nowMillis) {
+                        sortedQuizzes.filter { quiz ->
                             val isCompleted = quiz.isSubmitted || quiz.id in submittedQuizIds
                             val schedule = getQuizScheduleInfo(quiz, nowMillis)
                             isCompleted || (schedule.status == QuizScheduleStatus.ENTRY_CLOSED && !quiz.hasActiveAttempt)
                         }
                     }
+
+                    var isHistoryExpanded by rememberSaveable { mutableStateOf(false) }
 
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
@@ -323,81 +331,114 @@ fun QuizListScreen(
                             }
                         }
 
-                        // ─── Quiz History Section (Mid-Bottom) ───
+                        // ─── Quiz History Section (Mid-Bottom, Collapsible) ───
                         if (historyQuizzes.isNotEmpty()) {
                             item {
-                                Spacer(Modifier.height(8.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                Spacer(Modifier.height(10.dp))
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .clickable { isHistoryExpanded = !isHistoryExpanded },
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                                    ),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
                                 ) {
-                                    Icon(
-                                        Icons.Outlined.History,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(
-                                        "Quiz History",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Surface(
-                                        shape = MaterialTheme.shapes.small,
-                                        color = MaterialTheme.colorScheme.surfaceVariant
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(
-                                            "${historyQuizzes.size}",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                            modifier = Modifier.size(34.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    Icons.Outlined.History,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(18.dp),
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        }
+                                        Spacer(Modifier.width(12.dp))
+                                        Column(Modifier.weight(1f)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    "Quiz History",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Spacer(Modifier.width(8.dp))
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                                ) {
+                                                    Text(
+                                                        "${historyQuizzes.size}",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+                                            Text(
+                                                if (isHistoryExpanded) "Tap to collapse past assessments" else "Tap to view past and completed assessments",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                            )
+                                        }
+                                        Icon(
+                                            imageVector = if (isHistoryExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                                            contentDescription = if (isHistoryExpanded) "Collapse" else "Expand",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(24.dp)
                                         )
                                     }
                                 }
-                                Text(
-                                    "Past submissions and completed assessments",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                    modifier = Modifier.padding(bottom = 4.dp)
-                                )
                             }
 
-                            items(historyQuizzes, key = { "history_${it.id}" }) { quiz ->
-                                val isCompleted = quiz.isSubmitted || quiz.id in submittedQuizIds
-                                val isSpecialAdminQuiz = quiz.creatorRole?.equals("ADMIN", ignoreCase = true) == true ||
-                                                         quiz.title.contains("Coding Quest", ignoreCase = true) ||
-                                                         quiz.title.contains("Quest", ignoreCase = true)
+                            if (isHistoryExpanded) {
+                                items(historyQuizzes, key = { "history_${it.id}" }) { quiz ->
+                                    val isCompleted = quiz.isSubmitted || quiz.id in submittedQuizIds
+                                    val isSpecialAdminQuiz = quiz.creatorRole?.equals("ADMIN", ignoreCase = true) == true ||
+                                                             quiz.title.contains("Coding Quest", ignoreCase = true) ||
+                                                             quiz.title.contains("Quest", ignoreCase = true)
 
-                                if (isSpecialAdminQuiz) {
-                                    SpecialAdminQuizCard(
-                                        quiz = quiz,
-                                        isCompleted = isCompleted,
-                                        nowMillis = nowMillis,
-                                        onClick = {
-                                            if (isCompleted) {
-                                                onNavigateToQuizResult(quiz.id)
-                                            } else {
-                                                onNavigateToQuizTaking(quiz.id)
+                                    if (isSpecialAdminQuiz) {
+                                        SpecialAdminQuizCard(
+                                            quiz = quiz,
+                                            isCompleted = isCompleted,
+                                            nowMillis = nowMillis,
+                                            onClick = {
+                                                if (isCompleted) {
+                                                    onNavigateToQuizResult(quiz.id)
+                                                } else {
+                                                    onNavigateToQuizTaking(quiz.id)
+                                                }
                                             }
-                                        }
-                                    )
-                                } else {
-                                    QuizCard(
-                                        quiz = quiz,
-                                        isCompleted = isCompleted,
-                                        nowMillis = nowMillis,
-                                        onClick = {
-                                            if (isCompleted) {
-                                                onNavigateToQuizResult(quiz.id)
-                                            } else {
-                                                onNavigateToQuizTaking(quiz.id)
+                                        )
+                                    } else {
+                                        QuizCard(
+                                            quiz = quiz,
+                                            isCompleted = isCompleted,
+                                            nowMillis = nowMillis,
+                                            onClick = {
+                                                if (isCompleted) {
+                                                    onNavigateToQuizResult(quiz.id)
+                                                } else {
+                                                    onNavigateToQuizTaking(quiz.id)
+                                                }
                                             }
-                                        }
-                                    )
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -2812,6 +2853,7 @@ fun QuizResultScreen(
     onNavigateBack: () -> Unit,
     viewModel: QuizResultViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val studentName by viewModel.userName.collectAsStateWithLifecycle()
     val studentEmail by viewModel.userEmail.collectAsStateWithLifecycle()
     val resultState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -2823,128 +2865,382 @@ fun QuizResultScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Quiz Status", fontWeight = FontWeight.Bold) },
+                title = { Text("Submission Overview", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+                )
             )
         }
     ) { ip ->
-        Box(
-            Modifier
-                .fillMaxSize()
-                .padding(ip)
-                .padding(24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-                ),
-                border = BorderStroke(
-                    1.dp,
-                    if (isDisqualified) MaterialTheme.colorScheme.error.copy(alpha = 0.35f)
-                    else MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
-                )
-            ) {
+        when (val state = resultState) {
+            is QuizResultUiState.Loading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(ip),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
+            }
+            is QuizResultUiState.Error -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(ip)
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    ErrorScreen(
+                        message = state.message,
+                        onRetry = { viewModel.loadResults(quizId) }
+                    )
+                }
+            }
+            is QuizResultUiState.Success -> {
+                val res = state.result
+                val quiz = state.quiz
+                val isPrivate = res.isPrivate
+                val isEffectiveDisqualified = isDisqualified
+
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .fillMaxSize()
+                        .padding(ip)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    if (isDisqualified) {
-                        Surface(
-                            modifier = Modifier.size(68.dp),
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Outlined.Cancel,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(40.dp),
-                                    tint = MaterialTheme.colorScheme.error
-                                )
+                    // ── 1. Hero Status Emblem ──
+                    Surface(
+                        modifier = Modifier
+                            .size(76.dp)
+                            .shadow(8.dp, CircleShape),
+                        shape = CircleShape,
+                        color = when {
+                            isEffectiveDisqualified -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+                            isPrivate -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                            else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        },
+                        border = BorderStroke(
+                            2.dp,
+                            when {
+                                isEffectiveDisqualified -> MaterialTheme.colorScheme.error
+                                isPrivate -> MaterialTheme.colorScheme.tertiary
+                                else -> MaterialTheme.colorScheme.primary
                             }
+                        )
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = when {
+                                    isEffectiveDisqualified -> Icons.Outlined.Cancel
+                                    isPrivate -> Icons.Outlined.Lock
+                                    else -> Icons.Outlined.CheckCircle
+                                },
+                                contentDescription = null,
+                                modifier = Modifier.size(42.dp),
+                                tint = when {
+                                    isEffectiveDisqualified -> MaterialTheme.colorScheme.error
+                                    isPrivate -> MaterialTheme.colorScheme.tertiary
+                                    else -> MaterialTheme.colorScheme.primary
+                                }
+                            )
                         }
-
-                        Spacer(Modifier.height(18.dp))
-
-                        Text(
-                            "Quiz Terminated",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.error
-                        )
-
-                        Spacer(Modifier.height(4.dp))
-
-                        Text(
-                            "Disqualified (3 Warnings Exceeded)",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    } else {
-                        Surface(
-                            modifier = Modifier.size(68.dp),
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Outlined.CheckCircle,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(40.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.height(18.dp))
-
-                        Text(
-                            "Quiz Submitted",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-
-                        Spacer(Modifier.height(4.dp))
-
-                        Text(
-                            "Responses Recorded Successfully",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
-                        )
                     }
 
-                    Spacer(Modifier.height(16.dp))
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = when {
+                                isEffectiveDisqualified -> "Assessment Terminated"
+                                isPrivate -> "Responses Recorded"
+                                else -> "Assessment Completed"
+                            },
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = when {
+                                isEffectiveDisqualified -> MaterialTheme.colorScheme.error
+                                else -> MaterialTheme.colorScheme.onSurface
+                            }
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = when {
+                                isEffectiveDisqualified -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+                                isPrivate -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                                else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            }
+                        ) {
+                            Text(
+                                text = when {
+                                    isEffectiveDisqualified -> "DISQUALIFIED • 3 WARNINGS EXCEEDED"
+                                    isPrivate -> "CONFIDENTIAL ASSESSMENT • SECURED"
+                                    else -> "EVALUATION COMPLETED"
+                                },
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = when {
+                                    isEffectiveDisqualified -> MaterialTheme.colorScheme.error
+                                    isPrivate -> MaterialTheme.colorScheme.tertiary
+                                    else -> MaterialTheme.colorScheme.primary
+                                },
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
 
-                    // Candidate Identity Block
+                    // ── 2. Assessment Info & Score Card ──
+                    CyberCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        borderColor = when {
+                            isEffectiveDisqualified -> MaterialTheme.colorScheme.error.copy(alpha = 0.35f)
+                            isPrivate -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.35f)
+                            else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+                        }
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Quiz Title
+                            Text(
+                                text = quiz?.title ?: "Assessment Submission",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center
+                            )
+
+                            if (quiz?.creatorRole != null) {
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = "Conducted by ${quiz.createdByName ?: "Faculty"}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            Spacer(Modifier.height(18.dp))
+
+                            // Core Card Content by Mode
+                            when {
+                                isEffectiveDisqualified -> {
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.08f),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.2f))
+                                    ) {
+                                        Column(Modifier.padding(16.dp)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    Icons.Outlined.Warning,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.error,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Spacer(Modifier.width(8.dp))
+                                                Text(
+                                                    "Proctoring Threshold Triggered",
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.error
+                                                )
+                                            }
+                                            Spacer(Modifier.height(8.dp))
+                                            Text(
+                                                "Your test was automatically submitted because you navigated away from the proctored screen 3 times.\n\nYour responses and violation logs have been preserved and forwarded for administrative evaluation.",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                lineHeight = 18.sp
+                                            )
+                                        }
+                                    }
+                                }
+
+                                isPrivate -> {
+                                    // Premium Confidential Assessment Box
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(14.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(18.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Surface(
+                                                shape = CircleShape,
+                                                color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
+                                                modifier = Modifier.size(48.dp)
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Icon(
+                                                        Icons.Outlined.Security,
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.tertiary,
+                                                        modifier = Modifier.size(26.dp)
+                                                    )
+                                                }
+                                            }
+                                            Spacer(Modifier.height(12.dp))
+                                            Text(
+                                                "Confidential Evaluation",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Spacer(Modifier.height(6.dp))
+                                            Text(
+                                                "Scores and answer keys for this assessment are kept confidential by instructor policy.\n\nYour submitted answers have been securely logged and will be evaluated privately by your instructor.",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                textAlign = TextAlign.Center,
+                                                lineHeight = 18.sp
+                                            )
+                                            Spacer(Modifier.height(14.dp))
+                                            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                                            Spacer(Modifier.height(12.dp))
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceEvenly
+                                            ) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Icon(
+                                                        Icons.Outlined.Check,
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                    Spacer(Modifier.width(4.dp))
+                                                    Text(
+                                                        "${res.totalQuestions} Questions Submitted",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        fontWeight = FontWeight.Medium,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                }
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Icon(
+                                                        Icons.Outlined.Verified,
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                    Spacer(Modifier.width(4.dp))
+                                                    Text(
+                                                        "Integrity Verified",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        fontWeight = FontWeight.Medium,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                else -> {
+                                    // Public Score Visualizer
+                                    val total = if (res.totalQuestions > 0) res.totalQuestions else 1
+                                    val percent = (res.score * 100) / total
+
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(20.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Text(
+                                                "TOTAL SCORE",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                letterSpacing = 1.sp
+                                            )
+                                            Spacer(Modifier.height(6.dp))
+                                            Row(
+                                                verticalAlignment = Alignment.Bottom
+                                            ) {
+                                                Text(
+                                                    "${res.score}",
+                                                    style = MaterialTheme.typography.displayMedium,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                                Text(
+                                                    " / ${res.totalQuestions}",
+                                                    style = MaterialTheme.typography.titleLarge,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.padding(bottom = 6.dp, start = 2.dp)
+                                                )
+                                            }
+                                            Spacer(Modifier.height(4.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                            ) {
+                                                Text(
+                                                    "$percent% Accuracy",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                )
+                                            }
+                                            Spacer(Modifier.height(10.dp))
+                                            Text(
+                                                when {
+                                                    percent >= 80 -> "🌟 Outstanding Performance! Excellent mastery demonstrated."
+                                                    percent >= 60 -> "👍 Great effort! Good understanding of the concepts."
+                                                    else -> "📚 Review recommended. Keep practicing to build confidence!"
+                                                },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // ── 3. Candidate Identity Block ──
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.medium,
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                        ),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(14.dp),
+                                .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Surface(
                                 shape = CircleShape,
                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                modifier = Modifier.size(42.dp)
+                                modifier = Modifier.size(44.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
@@ -2959,7 +3255,7 @@ fun QuizResultScreen(
                             Column(Modifier.weight(1f)) {
                                 Text(
                                     studentName,
-                                    style = MaterialTheme.typography.titleMedium,
+                                    style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
@@ -2973,54 +3269,55 @@ fun QuizResultScreen(
                                 }
                             }
                             Surface(
-                                shape = MaterialTheme.shapes.extraSmall,
-                                color = if (isDisqualified) MaterialTheme.colorScheme.error.copy(alpha = 0.12f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (isEffectiveDisqualified) MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+                                       else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                             ) {
                                 Text(
                                     "Attempt 1/1",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = if (isDisqualified) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    color = if (isEffectiveDisqualified) MaterialTheme.colorScheme.error
+                                           else MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
                         }
                     }
 
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(8.dp))
 
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        shape = MaterialTheme.shapes.medium
-                    ) {
-                        val message = when {
-                            isDisqualified -> "Your test was automatically submitted because you navigated away or exited the application 3 times.\n\nYour responses have been recorded and flagged for administrative review."
-                            resultState is QuizResultUiState.Success -> {
-                                val res = (resultState as QuizResultUiState.Success).result
-                                if (res.isPrivate) {
-                                    "Your responses have been recorded successfully.\n\nNote: Individual scores are confidential for this quiz and only visible to the instructor/administration."
-                                } else {
-                                    "Score: ${res.score} / ${res.totalQuestions}\n\nGreat effort! Your test score and responses have been evaluated and recorded."
-                                }
-                            }
-                            else -> "Your quiz responses have been submitted for evaluation."
-                        }
-                        Text(
-                            message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
-
-                    Spacer(Modifier.height(24.dp))
-
+                    // ── 4. Action Buttons ──
                     TdcButton(
                         text = "Return to Home",
                         onClick = onNavigateBack,
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    if (!isPrivate && !isEffectiveDisqualified) {
+                        OutlinedButton(
+                            onClick = {
+                                val shareText = "I just scored ${res.score}/${res.totalQuestions} on ${quiz?.title ?: "my quiz"} on TDC!"
+                                val sendIntent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                    type = "text/plain"
+                                }
+                                context.startActivity(Intent.createChooser(sendIntent, "Share Assessment Result"))
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+                        ) {
+                            Icon(
+                                Icons.Outlined.Share,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Share Result", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
                 }
             }
         }

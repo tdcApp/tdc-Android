@@ -417,7 +417,7 @@ class QuizTakingViewModel @Inject constructor(
 // --- QuizResult ---
 sealed class QuizResultUiState {
     data object Loading : QuizResultUiState()
-    data class Success(val result: QuizResult) : QuizResultUiState()
+    data class Success(val result: QuizResult, val quiz: Quiz? = null) : QuizResultUiState()
     data class Error(val message: String) : QuizResultUiState()
 }
 
@@ -442,8 +442,10 @@ class QuizResultViewModel @Inject constructor(
     fun loadResults(quizId: String) {
         viewModelScope.launch {
             _uiState.value = QuizResultUiState.Loading
-            repo.getQuizResult(quizId)
-                .onSuccess { _uiState.value = QuizResultUiState.Success(it) }
+            val quizResultRes = repo.getQuizResult(quizId)
+            val quizRes = repo.getQuiz(quizId).getOrNull()
+            quizResultRes
+                .onSuccess { _uiState.value = QuizResultUiState.Success(it, quizRes) }
                 .onFailure { _uiState.value = QuizResultUiState.Error(it.message ?: "Failed to load") }
         }
     }

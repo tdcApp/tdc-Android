@@ -268,20 +268,22 @@ class QuizRepositoryImpl @Inject constructor(
         if (cached != null) {
             return@runCatching QuizResult(
                 quizId = cached.quizId ?: quizId,
-                score = cached.score,
+                score = if (cached.isPrivate) 0 else cached.score,
                 totalQuestions = cached.totalQuestions,
                 submittedAt = cached.submittedAt,
-                isPrivate = false
+                isPrivate = cached.isPrivate
             )
         }
         val currentUid = dataStoreManager.firebaseUid.firstOrNull().orEmpty()
         val userScopedQuizKey = if (currentUid.isNotBlank()) "${currentUid}_${quizId}" else quizId
         val sub = quizApi.getMySubmission(quizId)
         dataStoreManager.markQuizSubmitted(userScopedQuizKey)
-        val isPrivate = sub.isPrivate || (sub.isPrivateSnake == true)
+        val isPrivate = sub.isPrivate || (sub.isPrivateSnake == true) ||
+                        sub.resultVisibility.equals("PRIVATE", ignoreCase = true) ||
+                        sub.resultVisibilitySnake.equals("PRIVATE", ignoreCase = true)
         QuizResult(
             quizId = sub.quizId ?: quizId,
-            score = sub.score ?: 0,
+            score = if (isPrivate) 0 else (sub.score ?: 0),
             totalQuestions = if (sub.totalQuestions > 0) sub.totalQuestions else (sub.totalQuestionsSnake ?: 0),
             submittedAt = sub.submittedAt ?: sub.submittedAtSnake,
             isPrivate = isPrivate

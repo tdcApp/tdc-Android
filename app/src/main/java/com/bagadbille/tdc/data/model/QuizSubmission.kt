@@ -8,5 +8,6 @@ data class QuizSubmission(
     val clientSubmissionId: String? = null,
     val submittedAt: String,
     val startedAt: String? = null,
-    val timeTakenSeconds: Int? = null
+    val timeTakenSeconds: Int? = null,
+    val isPrivate: Boolean = false
 )
