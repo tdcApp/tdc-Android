@@ -203,8 +203,7 @@ data class CreateQuizRequest(
     val startTime: String? = null,
     val enteringWindow: Int? = null,
     val totalTime: Int = 30,
-    val resultVisibility: String? = null,
-    @SerialName("result_visibility") val resultVisibilitySnake: String? = null,
+    val resultVisibility: String = "PUBLIC",
     val questions: List<CreateQuizQuestionRequest>
 )
 
