@@ -31,6 +31,7 @@ data class CreateQuizUiState(
     val startTimeDisplay: String = "",
     val enteringWindowMinutes: Int = 15,
     val totalTimeMinutes: Int = 30,
+    val resultVisibility: String = "PUBLIC",
     val isSaving: Boolean = false,
     val errorMessage: String? = null
 )
@@ -73,6 +74,13 @@ class CreateQuizViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             audience = audience,
             classId = if (audience == "all") null else _uiState.value.classId,
+            errorMessage = null
+        )
+    }
+
+    fun updateResultVisibility(visibility: String) {
+        _uiState.value = _uiState.value.copy(
+            resultVisibility = visibility,
             errorMessage = null
         )
     }
@@ -229,7 +237,8 @@ class CreateQuizViewModel @Inject constructor(
                 startTime = finalStartTime,
                 enteringWindow = finalEnteringWindow,
                 totalTime = finalTotalTime,
-                questions = state.questions
+                questions = state.questions,
+                resultVisibility = state.resultVisibility
             ).onSuccess {
                 _events.emit(CreateQuizEvent.ShowMessage("Quiz created successfully!"))
                 _events.emit(CreateQuizEvent.QuizSaved)

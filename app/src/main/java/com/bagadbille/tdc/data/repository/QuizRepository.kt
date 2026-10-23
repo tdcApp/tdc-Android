@@ -45,7 +45,8 @@ interface QuizRepository {
         startTime: String? = null,
         enteringWindow: Int? = 15,
         totalTime: Int = 30,
-        questions: List<QuizQuestionDraft>
+        questions: List<QuizQuestionDraft>,
+        resultVisibility: String = "PUBLIC"
     ): Result<Quiz>
     suspend fun deleteQuiz(quizId: String): Result<Unit>
     suspend fun getQuizStats(quizId: String): Result<QuizStats>
@@ -269,18 +270,21 @@ class QuizRepositoryImpl @Inject constructor(
                 quizId = cached.quizId ?: quizId,
                 score = cached.score,
                 totalQuestions = cached.totalQuestions,
-                submittedAt = cached.submittedAt
+                submittedAt = cached.submittedAt,
+                isPrivate = false
             )
         }
         val currentUid = dataStoreManager.firebaseUid.firstOrNull().orEmpty()
         val userScopedQuizKey = if (currentUid.isNotBlank()) "${currentUid}_${quizId}" else quizId
         val sub = quizApi.getMySubmission(quizId)
         dataStoreManager.markQuizSubmitted(userScopedQuizKey)
+        val isPrivate = sub.isPrivate || (sub.isPrivateSnake == true)
         QuizResult(
             quizId = sub.quizId ?: quizId,
-            score = sub.score,
-            totalQuestions = sub.totalQuestions,
-            submittedAt = sub.submittedAt
+            score = sub.score ?: 0,
+            totalQuestions = if (sub.totalQuestions > 0) sub.totalQuestions else (sub.totalQuestionsSnake ?: 0),
+            submittedAt = sub.submittedAt ?: sub.submittedAtSnake,
+            isPrivate = isPrivate
         )
     }
 
@@ -292,7 +296,8 @@ class QuizRepositoryImpl @Inject constructor(
         startTime: String?,
         enteringWindow: Int?,
         totalTime: Int,
-        questions: List<QuizQuestionDraft>
+        questions: List<QuizQuestionDraft>,
+        resultVisibility: String
     ): Result<Quiz> = runCatching {
         val finalAudience = if (!classId.isNullOrBlank()) "CLASS" else audience.trim().uppercase()
         val finalClassId = if (finalAudience == "CLASS") classId?.trim() else null
@@ -306,6 +311,7 @@ class QuizRepositoryImpl @Inject constructor(
             startTime = startTime?.trim()?.ifBlank { null },
             enteringWindow = enteringWindow,
             totalTime = totalTime,
+            resultVisibility = resultVisibility.trim().uppercase(),
             questions = questions.map {
                 CreateQuizQuestionRequest(
                     question = it.question.trim(),
@@ -331,8 +337,9 @@ class QuizRepositoryImpl @Inject constructor(
             emptyList()
         }
         val totalAttempts = submissions.size
-        val avgScore = if (totalAttempts > 0) submissions.map { it.score }.average() else 0.0
-        val highestScore = submissions.maxOfOrNull { it.score } ?: 0
+        val validScores = submissions.mapNotNull { it.score }
+        val avgScore = if (validScores.isNotEmpty()) validScores.average() else 0.0
+        val highestScore = validScores.maxOrNull() ?: 0
         val totalQuestions = submissions.firstOrNull()?.totalQuestions ?: 0
 
         QuizStats(

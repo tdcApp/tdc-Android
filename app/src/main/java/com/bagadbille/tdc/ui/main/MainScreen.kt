@@ -54,12 +54,35 @@ fun MainScreen(
     onNavigateToCreateQuiz: () -> Unit,
     onNavigateToQuizResults: (String) -> Unit,
     onLogout: () -> Unit,
+    targetSection: String? = null,
+    onTargetSectionConsumed: () -> Unit = {},
     viewModel: MainViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val isMentor by viewModel.isMentor.collectAsStateWithLifecycle()
     val hasUnreadNotifications by viewModel.hasUnreadNotifications.collectAsStateWithLifecycle()
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    var homeTargetPage by remember { mutableStateOf<Int?>(null) }
+    var refreshQuizSignal by remember { mutableLongStateOf(0L) }
+    var refreshAssignmentSignal by remember { mutableLongStateOf(0L) }
+
+    LaunchedEffect(targetSection) {
+        targetSection?.let { section ->
+            when (section.uppercase()) {
+                "QUIZ" -> {
+                    selectedTab = 0
+                    homeTargetPage = 2
+                    refreshQuizSignal = System.currentTimeMillis()
+                }
+                "ASSIGNMENT" -> {
+                    selectedTab = 1
+                    refreshAssignmentSignal = System.currentTimeMillis()
+                }
+            }
+            onTargetSectionConsumed()
+        }
+    }
+
     val tabs = BottomNavItem.entries
 
     BackHandler(enabled = selectedTab != 0) {
@@ -118,7 +141,10 @@ fun MainScreen(
                             onNavigateToQuizResult = onNavigateToQuizResult,
                             onNavigateToAssignments = { selectedTab = 1 },
                             onNotificationClick = onNavigateToNotifications,
-                            hasUnreadNotifications = hasUnreadNotifications
+                            hasUnreadNotifications = hasUnreadNotifications,
+                            targetPage = homeTargetPage,
+                            onTargetPageConsumed = { homeTargetPage = null },
+                            refreshQuizSignal = refreshQuizSignal
                         )
                     }
                     1 -> if (mentor) {
@@ -132,7 +158,8 @@ fun MainScreen(
                         AssignmentsScreen(
                             onNavigateToAssignmentDetail = onNavigateToAssignmentDetail,
                             onNotificationClick = onNavigateToNotifications,
-                            hasUnreadNotifications = hasUnreadNotifications
+                            hasUnreadNotifications = hasUnreadNotifications,
+                            refreshSignal = refreshAssignmentSignal
                         )
                     }
                     2 -> ProfileScreen(

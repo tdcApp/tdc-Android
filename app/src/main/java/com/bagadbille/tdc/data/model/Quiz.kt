@@ -18,6 +18,7 @@ data class Quiz(
     val startTime: String? = null,
     val enteringWindow: Int? = null,
     val totalTime: Int = 30,
+    val resultVisibility: String = "PUBLIC",
     val activeAttempt: ActiveQuizAttempt? = null,
     val hasActiveAttempt: Boolean = false
 )
@@ -47,7 +48,8 @@ data class QuizResult(
     val quizId: String,
     val score: Int,
     val totalQuestions: Int,
-    val submittedAt: String? = null
+    val submittedAt: String? = null,
+    val isPrivate: Boolean = false
 )
 
 data class QuizQuestionDraft(

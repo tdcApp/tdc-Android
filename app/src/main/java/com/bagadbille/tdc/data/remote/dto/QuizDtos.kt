@@ -39,6 +39,8 @@ data class QuizDto(
     @SerialName("entering_window") val enteringWindowSnake: Int? = null,
     val totalTime: Int = 30,
     @SerialName("total_time") val totalTimeSnake: Int? = null,
+    val resultVisibility: String? = null,
+    @SerialName("result_visibility") val resultVisibilitySnake: String? = null,
     val hasActiveAttempt: Boolean = false,
     @SerialName("has_active_attempt") val hasActiveAttemptSnake: Boolean? = null
 ) {
@@ -60,6 +62,7 @@ data class QuizDto(
         startTime = startTime ?: startTimeSnake,
         enteringWindow = enteringWindow ?: enteringWindowSnake,
         totalTime = totalTimeSnake ?: totalTime,
+        resultVisibility = resultVisibility ?: resultVisibilitySnake ?: "PUBLIC",
         hasActiveAttempt = hasActiveAttempt || (hasActiveAttemptSnake == true)
     )
 }
@@ -138,6 +141,8 @@ data class QuizDetailDto(
     @SerialName("entering_window") val enteringWindowSnake: Int? = null,
     val totalTime: Int = 30,
     @SerialName("total_time") val totalTimeSnake: Int? = null,
+    val resultVisibility: String? = null,
+    @SerialName("result_visibility") val resultVisibilitySnake: String? = null,
     val activeAttempt: ActiveQuizAttemptDto? = null,
     @SerialName("active_attempt") val activeAttemptSnake: ActiveQuizAttemptDto? = null,
     val questions: List<QuizQuestionDto> = emptyList()
@@ -157,6 +162,7 @@ data class QuizDetailDto(
             startTime = startTime ?: startTimeSnake,
             enteringWindow = enteringWindow ?: enteringWindowSnake,
             totalTime = totalTimeSnake ?: totalTime,
+            resultVisibility = resultVisibility ?: resultVisibilitySnake ?: "PUBLIC",
             activeAttempt = attempt,
             hasActiveAttempt = attempt != null
         )
@@ -197,6 +203,8 @@ data class CreateQuizRequest(
     val startTime: String? = null,
     val enteringWindow: Int? = null,
     val totalTime: Int = 30,
+    val resultVisibility: String? = null,
+    @SerialName("result_visibility") val resultVisibilitySnake: String? = null,
     val questions: List<CreateQuizQuestionRequest>
 )
 
@@ -231,7 +239,7 @@ data class QuizSubmissionDto(
     @SerialName("quiz_id") val quizIdSnake: String? = null,
     val studentUid: String? = null,
     @SerialName("student_uid") val studentUidSnake: String? = null,
-    val score: Int = 0,
+    val score: Int? = 0,
     val totalQuestions: Int = 0,
     @SerialName("total_questions") val totalQuestionsSnake: Int? = null,
     val clientSubmissionId: String? = null,
@@ -248,12 +256,14 @@ data class QuizSubmissionDto(
     val startedAt: String? = null,
     @SerialName("started_at") val startedAtSnake: String? = null,
     val timeTakenSeconds: Int? = null,
-    @SerialName("time_taken_seconds") val timeTakenSecondsSnake: Int? = null
+    @SerialName("time_taken_seconds") val timeTakenSecondsSnake: Int? = null,
+    val isPrivate: Boolean = false,
+    @SerialName("is_private") val isPrivateSnake: Boolean? = null
 ) {
     fun toDomain(): QuizSubmission = QuizSubmission(
         quizId = quizId ?: quizIdSnake ?: "",
         studentUid = studentUid ?: studentUidSnake ?: "",
-        score = score,
+        score = score ?: 0,
         totalQuestions = if (totalQuestions > 0) totalQuestions else (totalQuestionsSnake ?: 0),
         clientSubmissionId = clientSubmissionId ?: clientSubmissionIdSnake,
         submittedAt = submittedAt ?: submittedAtSnake ?: "",

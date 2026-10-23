@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.selection.DisableSelection
 import com.bagadbille.tdc.ui.theme.CyberPrimaryGradient
 import com.bagadbille.tdc.ui.theme.NeonEmerald
 import com.bagadbille.tdc.ui.theme.NeonCyan
@@ -45,40 +46,47 @@ fun TdcHeader(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Official Logo (Light theme uses tdc_logo_light with black middle slash)
-        val logoRes = if (isDark) com.bagadbille.tdc.R.drawable.tdc_logo else com.bagadbille.tdc.R.drawable.tdc_logo_light
-        androidx.compose.foundation.Image(
-            painter = androidx.compose.ui.res.painterResource(id = logoRes),
-            contentDescription = "TDC Logo",
-            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-            modifier = Modifier.size(36.dp)
-        )
-
-        Spacer(Modifier.width(12.dp))
-
-        // Center / Brand Title
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.Center
-        ) {
-            val titleColor = if (isDark) Color.White else Color.Black
-
-            Text(
-                text = "TDC",
-                style = TextStyle(
-                    color = titleColor,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 2.sp
+        DisableSelection {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Official Logo (Light theme uses tdc_logo_light with black middle slash)
+                val logoRes = if (isDark) com.bagadbille.tdc.R.drawable.tdc_logo else com.bagadbille.tdc.R.drawable.tdc_logo_light
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(id = logoRes),
+                    contentDescription = "TDC Logo",
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    modifier = Modifier.size(36.dp)
                 )
-            )
-            Text(
-                text = "TIT Developer Community",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium
-            )
+
+                Spacer(Modifier.width(12.dp))
+
+                // Center / Brand Title
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    val titleColor = if (isDark) Color.White else Color.Black
+
+                    Text(
+                        text = "TDC",
+                        style = TextStyle(
+                            color = titleColor,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 2.sp
+                        )
+                    )
+                    Text(
+                        text = "TIT Developer Community",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
         }
 
         // Action Buttons: Refresh & Notifications in modern elevated circles with visible outlines

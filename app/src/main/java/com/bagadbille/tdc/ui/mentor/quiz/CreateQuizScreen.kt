@@ -33,6 +33,8 @@ import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.UploadFile
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -495,6 +497,57 @@ fun CreateQuizScreen(
                                     label = { Text("${mins}m", style = MaterialTheme.typography.labelSmall) }
                                 )
                             }
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        // Result Visibility Section
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Result Visibility",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                if (uiState.resultVisibility == "PUBLIC") "Public (Instant)" else "Private (Confidential)",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        Text(
+                            if (uiState.resultVisibility == "PUBLIC")
+                                "Students see scores and answer breakdown immediately upon submission."
+                            else
+                                "Scores remain confidential until announced or published by teacher.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            FilterChip(
+                                selected = uiState.resultVisibility == "PUBLIC",
+                                onClick = { viewModel.updateResultVisibility("PUBLIC") },
+                                leadingIcon = {
+                                    Icon(Icons.Outlined.Visibility, contentDescription = null, modifier = Modifier.size(16.dp))
+                                },
+                                label = { Text("Public", style = MaterialTheme.typography.labelSmall) }
+                            )
+                            FilterChip(
+                                selected = uiState.resultVisibility == "PRIVATE",
+                                onClick = { viewModel.updateResultVisibility("PRIVATE") },
+                                leadingIcon = {
+                                    Icon(Icons.Outlined.VisibilityOff, contentDescription = null, modifier = Modifier.size(16.dp))
+                                },
+                                label = { Text("Private", style = MaterialTheme.typography.labelSmall) }
+                            )
                         }
                     }
                 }

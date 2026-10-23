@@ -36,11 +36,17 @@ object CsvExporter {
             val safeFilter = filterLabel.replace(Regex("[^a-zA-Z0-9_-]"), "_")
             val fileName = "Quiz_${safeQuizTitle}_${safeFilter}_$dateStamp.csv"
 
+            val sortedList = submissions.sortedWith(
+                compareByDescending<QuizSubmissionDetail> { it.submission.score }
+                    .thenBy { it.submission.timeTakenSeconds ?: Int.MAX_VALUE }
+                    .thenBy { it.submission.submittedAt }
+            )
+
             val csvContent = buildString {
                 // UTF-8 BOM so Excel opens with proper character encoding
                 append("\uFEFF")
                 append("Rank,Student Name,Email,Enrollment,Score,Total Questions,Percentage,Status,Entering Time,Exit Time,Total Time Taken\n")
-                submissions.forEachIndexed { index, item ->
+                sortedList.forEachIndexed { index, item ->
                     val rank = index + 1
                     val name = escapeCsv(item.studentName.ifBlank { "N/A" })
                     val email = escapeCsv(item.studentEmail.ifBlank { "N/A" })

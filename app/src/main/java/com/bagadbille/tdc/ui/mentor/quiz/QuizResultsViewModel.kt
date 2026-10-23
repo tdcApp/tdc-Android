@@ -59,7 +59,13 @@ class QuizResultsViewModel @Inject constructor(
                 val stats = quizRepository.getQuizStats(quizId).getOrDefault(
                     QuizStats(quizId, 0, 0.0, 0, 0)
                 )
-                val submissions = quizRepository.getQuizSubmissionsWithDetails(quizId).getOrDefault(emptyList())
+                val submissions = quizRepository.getQuizSubmissionsWithDetails(quizId)
+                    .getOrDefault(emptyList())
+                    .sortedWith(
+                        compareByDescending<QuizSubmissionDetail> { it.submission.score }
+                            .thenBy { it.submission.timeTakenSeconds ?: Int.MAX_VALUE }
+                            .thenBy { it.submission.submittedAt }
+                    )
 
                 _uiState.value = QuizResultsUiState.Success(
                     QuizResultsUiData(

@@ -201,11 +201,28 @@ fun QuizListScreen(
                 if (s.quizzes.isEmpty()) {
                     EmptyStateScreen(Icons.Outlined.Quiz, "No Quizzes", "No quizzes available right now.")
                 } else {
+                    val activeQuizzes = remember(s.quizzes, submittedQuizIds, nowMillis) {
+                        s.quizzes.filter { quiz ->
+                            val isCompleted = quiz.isSubmitted || quiz.id in submittedQuizIds
+                            val schedule = getQuizScheduleInfo(quiz, nowMillis)
+                            !isCompleted && (schedule.status != QuizScheduleStatus.ENTRY_CLOSED || quiz.hasActiveAttempt)
+                        }
+                    }
+
+                    val historyQuizzes = remember(s.quizzes, submittedQuizIds, nowMillis) {
+                        s.quizzes.filter { quiz ->
+                            val isCompleted = quiz.isSubmitted || quiz.id in submittedQuizIds
+                            val schedule = getQuizScheduleInfo(quiz, nowMillis)
+                            isCompleted || (schedule.status == QuizScheduleStatus.ENTRY_CLOSED && !quiz.hasActiveAttempt)
+                        }
+                    }
+
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        // ─── Available Quizzes Section ───
                         item {
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
@@ -223,7 +240,7 @@ fun QuizListScreen(
                                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                                 ) {
                                     Text(
-                                        "${s.quizzes.size}",
+                                        "${activeQuizzes.size}",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.primary,
@@ -232,38 +249,156 @@ fun QuizListScreen(
                                 }
                             }
                         }
-                        items(s.quizzes, key = { it.id }) { quiz ->
-                            val isCompleted = quiz.isSubmitted || quiz.id in submittedQuizIds
-                            val isSpecialAdminQuiz = quiz.creatorRole?.equals("ADMIN", ignoreCase = true) == true ||
-                                                     quiz.title.contains("Coding Quest", ignoreCase = true) ||
-                                                     quiz.title.contains("Quest", ignoreCase = true)
 
-                            if (isSpecialAdminQuiz) {
-                                SpecialAdminQuizCard(
-                                    quiz = quiz,
-                                    isCompleted = isCompleted,
-                                    nowMillis = nowMillis,
-                                    onClick = {
-                                        if (isCompleted) {
-                                            onNavigateToQuizResult(quiz.id)
-                                        } else {
-                                            onNavigateToQuizTaking(quiz.id)
+                        if (activeQuizzes.isEmpty()) {
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                                    )
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            Icons.Outlined.CheckCircle,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Spacer(Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                "You're All Caught Up!",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                "No active tests pending right now.",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
                                         }
                                     }
-                                )
-                            } else {
-                                QuizCard(
-                                    quiz = quiz,
-                                    isCompleted = isCompleted,
-                                    nowMillis = nowMillis,
-                                    onClick = {
-                                        if (isCompleted) {
-                                            onNavigateToQuizResult(quiz.id)
-                                        } else {
-                                            onNavigateToQuizTaking(quiz.id)
+                                }
+                            }
+                        } else {
+                            items(activeQuizzes, key = { it.id }) { quiz ->
+                                val isCompleted = quiz.isSubmitted || quiz.id in submittedQuizIds
+                                val isSpecialAdminQuiz = quiz.creatorRole?.equals("ADMIN", ignoreCase = true) == true ||
+                                                         quiz.title.contains("Coding Quest", ignoreCase = true) ||
+                                                         quiz.title.contains("Quest", ignoreCase = true)
+
+                                if (isSpecialAdminQuiz) {
+                                    SpecialAdminQuizCard(
+                                        quiz = quiz,
+                                        isCompleted = isCompleted,
+                                        nowMillis = nowMillis,
+                                        onClick = {
+                                            if (isCompleted) {
+                                                onNavigateToQuizResult(quiz.id)
+                                            } else {
+                                                onNavigateToQuizTaking(quiz.id)
+                                            }
                                         }
+                                    )
+                                } else {
+                                    QuizCard(
+                                        quiz = quiz,
+                                        isCompleted = isCompleted,
+                                        nowMillis = nowMillis,
+                                        onClick = {
+                                            if (isCompleted) {
+                                                onNavigateToQuizResult(quiz.id)
+                                            } else {
+                                                onNavigateToQuizTaking(quiz.id)
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // ─── Quiz History Section (Mid-Bottom) ───
+                        if (historyQuizzes.isNotEmpty()) {
+                            item {
+                                Spacer(Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.History,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        "Quiz History",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Surface(
+                                        shape = MaterialTheme.shapes.small,
+                                        color = MaterialTheme.colorScheme.surfaceVariant
+                                    ) {
+                                        Text(
+                                            "${historyQuizzes.size}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                        )
                                     }
+                                }
+                                Text(
+                                    "Past submissions and completed assessments",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    modifier = Modifier.padding(bottom = 4.dp)
                                 )
+                            }
+
+                            items(historyQuizzes, key = { "history_${it.id}" }) { quiz ->
+                                val isCompleted = quiz.isSubmitted || quiz.id in submittedQuizIds
+                                val isSpecialAdminQuiz = quiz.creatorRole?.equals("ADMIN", ignoreCase = true) == true ||
+                                                         quiz.title.contains("Coding Quest", ignoreCase = true) ||
+                                                         quiz.title.contains("Quest", ignoreCase = true)
+
+                                if (isSpecialAdminQuiz) {
+                                    SpecialAdminQuizCard(
+                                        quiz = quiz,
+                                        isCompleted = isCompleted,
+                                        nowMillis = nowMillis,
+                                        onClick = {
+                                            if (isCompleted) {
+                                                onNavigateToQuizResult(quiz.id)
+                                            } else {
+                                                onNavigateToQuizTaking(quiz.id)
+                                            }
+                                        }
+                                    )
+                                } else {
+                                    QuizCard(
+                                        quiz = quiz,
+                                        isCompleted = isCompleted,
+                                        nowMillis = nowMillis,
+                                        onClick = {
+                                            if (isCompleted) {
+                                                onNavigateToQuizResult(quiz.id)
+                                            } else {
+                                                onNavigateToQuizTaking(quiz.id)
+                                            }
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -575,52 +710,61 @@ private fun QuizCard(
             Spacer(Modifier.width(14.dp))
 
             Column(Modifier.weight(1f)) {
-                Text(
-                    quiz.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Title and inline tags (Teacher Card fix - tags placed beside quiz title)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        quiz.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
                     Surface(
                         shape = MaterialTheme.shapes.small,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                     ) {
                         Text(
                             quiz.audience.replaceFirstChar { it.uppercase() },
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                         )
                     }
                     quiz.targetYears?.let { years ->
-                        Spacer(Modifier.width(6.dp))
                         Surface(
                             shape = MaterialTheme.shapes.small,
                             color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
                         ) {
                             Text(
                                 years,
-                                style = MaterialTheme.typography.labelSmall,
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                 color = MaterialTheme.colorScheme.tertiary,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                             )
                         }
                     }
-                    quiz.createdAt?.let {
-                        Spacer(Modifier.width(8.dp))
+                }
+
+                // Dedicated Date Row
+                quiz.createdAt?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             Icons.Outlined.AccessTime,
-                            null,
-                            Modifier.size(12.dp),
+                            contentDescription = null,
+                            modifier = Modifier.size(11.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
                             it.take(10),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
                         )
                     }
                 }
@@ -1911,7 +2055,8 @@ private fun QuizContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                        .displayCutoutPadding()
+                        .padding(top = 28.dp, bottom = 10.dp, start = 14.dp, end = 14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -2669,6 +2814,11 @@ fun QuizResultScreen(
 ) {
     val studentName by viewModel.userName.collectAsStateWithLifecycle()
     val studentEmail by viewModel.userEmail.collectAsStateWithLifecycle()
+    val resultState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(quizId) {
+        viewModel.loadResults(quizId)
+    }
 
     Scaffold(
         topBar = {
@@ -2843,12 +2993,20 @@ fun QuizResultScreen(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         shape = MaterialTheme.shapes.medium
                     ) {
+                        val message = when {
+                            isDisqualified -> "Your test was automatically submitted because you navigated away or exited the application 3 times.\n\nYour responses have been recorded and flagged for administrative review."
+                            resultState is QuizResultUiState.Success -> {
+                                val res = (resultState as QuizResultUiState.Success).result
+                                if (res.isPrivate) {
+                                    "Your responses have been recorded successfully.\n\nNote: Individual scores are confidential for this quiz and only visible to the instructor/administration."
+                                } else {
+                                    "Score: ${res.score} / ${res.totalQuestions}\n\nGreat effort! Your test score and responses have been evaluated and recorded."
+                                }
+                            }
+                            else -> "Your quiz responses have been submitted for evaluation."
+                        }
                         Text(
-                            if (isDisqualified) {
-                                "Your test was automatically submitted because you navigated away or exited the application 3 times.\n\nYour responses have been recorded and flagged for administrative review."
-                            } else {
-                                "Your quiz responses have been submitted for evaluation.\n\nNote: Individual scores are confidential and only visible to the administration.\n\nShortlisted candidates (Top 50–70) will be contacted directly after evaluation."
-                            },
+                            message,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,

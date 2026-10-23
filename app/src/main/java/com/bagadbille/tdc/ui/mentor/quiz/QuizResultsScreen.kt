@@ -80,7 +80,7 @@ fun QuizResultsScreen(
                             is DynamicResultFilter.Disqualified -> disqualifiedSubmissions
                         }
 
-                        // Export CSV Action
+                        // Share Action (exports CSV to Downloads and opens native Android Share sheet)
                         IconButton(onClick = {
                             CsvExporter.exportQuizResults(
                                 context = context,
@@ -91,26 +91,10 @@ fun QuizResultsScreen(
                             )
                         }) {
                             Icon(
-                                Icons.Outlined.FileDownload,
-                                contentDescription = "Export CSV",
+                                Icons.Outlined.Share,
+                                contentDescription = "Share Results",
                                 tint = MaterialTheme.colorScheme.primary
                             )
-                        }
-
-                        // Copy Shortlist Action
-                        IconButton(onClick = {
-                            if (displayedList.isEmpty()) {
-                                Toast.makeText(context, "No candidates in this filter", Toast.LENGTH_SHORT).show()
-                                return@IconButton
-                            }
-                            val text = displayedList.mapIndexed { i, s ->
-                                val scoreText = if (s.submission.score >= 0) "${s.submission.score}/${data.stats.totalQuestions}" else "Disqualified"
-                                "${i + 1}. ${s.studentName} (${s.studentEmail}) - Score: $scoreText"
-                            }.joinToString("\n")
-                            clipboardManager.setText(AnnotatedString(text))
-                            Toast.makeText(context, "Copied ${displayedList.size} candidate(s) to clipboard", Toast.LENGTH_SHORT).show()
-                        }) {
-                            Icon(Icons.Outlined.ContentCopy, contentDescription = "Copy Shortlist", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     IconButton(onClick = { viewModel.load() }) {
@@ -324,11 +308,11 @@ fun QuizResultsScreen(
                                             totalQuestions = stats.totalQuestions
                                         )
                                     },
-                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                                 ) {
-                                    Icon(Icons.Outlined.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("Export CSV", style = MaterialTheme.typography.labelMedium)
+                                    Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Share", style = MaterialTheme.typography.labelMedium)
                                 }
                             }
                         }

@@ -1,7 +1,7 @@
 package com.bagadbille.tdc.navigation
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -58,23 +58,28 @@ fun TdcNavGraph(
                 onSetupComplete = { navController.navigate(Screen.Main.route) { popUpTo(Screen.Setup.route) { inclusive = true } } }
             )
         }
-        composable(Screen.Main.route) {
+        composable(Screen.Main.route) { backStackEntry ->
+            var directNavTarget by remember { mutableStateOf<String?>(null) }
+
+            val poppedTarget by backStackEntry.savedStateHandle
+                .getStateFlow<String?>("NAV_SECTION", null)
+                .collectAsStateWithLifecycle()
+
+            LaunchedEffect(poppedTarget) {
+                poppedTarget?.let {
+                    directNavTarget = it
+                    backStackEntry.savedStateHandle.remove<String>("NAV_SECTION")
+                }
+            }
+
             LaunchedEffect(pendingNotification) {
-                pendingNotification?.let { (type, id) ->
+                pendingNotification?.let { (type, _) ->
                     when (type.uppercase()) {
                         "QUIZ" -> {
-                            if (id.isNotBlank()) {
-                                navController.navigate("quizTaking/$id")
-                            } else {
-                                navController.navigate(Screen.Notifications.route)
-                            }
+                            directNavTarget = "QUIZ"
                         }
                         "ASSIGNMENT" -> {
-                            if (id.isNotBlank()) {
-                                navController.navigate(Screen.AssignmentDetail.createRoute(id))
-                            } else {
-                                navController.navigate(Screen.Notifications.route)
-                            }
+                            directNavTarget = "ASSIGNMENT"
                         }
                         "ANNOUNCEMENT" -> {
                             navController.navigate(Screen.Notifications.route)
@@ -96,7 +101,9 @@ fun TdcNavGraph(
                 onNavigateToAssignmentSubmissions = { navController.navigate(Screen.AssignmentSubmissions.createRoute(it)) },
                 onNavigateToCreateQuiz = { navController.navigate(Screen.CreateQuiz.route) },
                 onNavigateToQuizResults = { navController.navigate(Screen.QuizResults.createRoute(it)) },
-                onLogout = { navController.navigate(Screen.Login.route) { popUpTo(Screen.Main.route) { inclusive = true } } }
+                onLogout = { navController.navigate(Screen.Login.route) { popUpTo(Screen.Main.route) { inclusive = true } } },
+                targetSection = directNavTarget,
+                onTargetSectionConsumed = { directNavTarget = null }
             )
         }
         composable("quizTaking/{quizId}", arguments = listOf(navArgument("quizId") { type = NavType.StringType })) {
@@ -129,19 +136,13 @@ fun TdcNavGraph(
         composable(Screen.Notifications.route) {
             NotificationsScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToQuiz = { quizId ->
-                    if (quizId.isNotBlank()) {
-                        navController.navigate("quizTaking/$quizId")
-                    } else {
-                        navController.popBackStack(Screen.Main.route, inclusive = false)
-                    }
+                onNavigateToQuiz = { _ ->
+                    navController.previousBackStackEntry?.savedStateHandle?.set("NAV_SECTION", "QUIZ")
+                    navController.popBackStack(Screen.Main.route, inclusive = false)
                 },
-                onNavigateToAssignment = { assignmentId ->
-                    if (assignmentId.isNotBlank()) {
-                        navController.navigate(Screen.AssignmentDetail.createRoute(assignmentId))
-                    } else {
-                        navController.popBackStack(Screen.Main.route, inclusive = false)
-                    }
+                onNavigateToAssignment = { _ ->
+                    navController.previousBackStackEntry?.savedStateHandle?.set("NAV_SECTION", "ASSIGNMENT")
+                    navController.popBackStack(Screen.Main.route, inclusive = false)
                 },
                 onNavigateToSchedule = {
                     navController.popBackStack(Screen.Main.route, inclusive = false)

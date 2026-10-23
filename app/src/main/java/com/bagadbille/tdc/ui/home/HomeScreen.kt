@@ -14,10 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -38,7 +35,10 @@ fun HomeScreen(
     onNavigateToQuizResult: (String) -> Unit,
     onNavigateToAssignments: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
-    hasUnreadNotifications: Boolean = false
+    hasUnreadNotifications: Boolean = false,
+    targetPage: Int? = null,
+    onTargetPageConsumed: () -> Unit = {},
+    refreshQuizSignal: Long = 0L
 ) {
     val tabs = listOf("Overview", "Classes", "Quiz")
     val pagerState = rememberPagerState(pageCount = { tabs.size })
@@ -53,6 +53,19 @@ fun HomeScreen(
     val generalViewModel: GeneralViewModel = hiltViewModel()
     val classesViewModel: ClassesViewModel = hiltViewModel()
     val quizViewModel: QuizViewModel = hiltViewModel()
+
+    LaunchedEffect(targetPage) {
+        targetPage?.let { page ->
+            pagerState.scrollToPage(page)
+            onTargetPageConsumed()
+        }
+    }
+
+    LaunchedEffect(refreshQuizSignal) {
+        if (refreshQuizSignal > 0L) {
+            quizViewModel.loadQuizzes(isPullToRefresh = true)
+        }
+    }
 
     Column(Modifier.fillMaxSize()) {
         com.bagadbille.tdc.ui.components.TdcHeader(
