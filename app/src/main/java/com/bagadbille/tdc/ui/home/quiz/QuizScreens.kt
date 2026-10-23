@@ -76,6 +76,102 @@ import com.bagadbille.tdc.ui.theme.DarkBackground
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+// =============== QUIZ SCHEDULE HELPERS ===============
+enum class QuizScheduleStatus {
+    IMMEDIATE,
+    UPCOMING,
+    LIVE,
+    ENTRY_CLOSED
+}
+
+data class QuizScheduleInfo(
+    val status: QuizScheduleStatus,
+    val startMillis: Long?,
+    val endWindowMillis: Long?,
+    val remainingMillisToStart: Long,
+    val remainingMillisToWindowEnd: Long
+)
+
+fun getQuizScheduleInfo(quiz: Quiz, now: Long = System.currentTimeMillis()): QuizScheduleInfo {
+    val startIso = quiz.startTime
+    if (startIso.isNullOrBlank()) {
+        return QuizScheduleInfo(QuizScheduleStatus.IMMEDIATE, null, null, 0L, 0L)
+    }
+    val startMillis = try {
+        java.time.Instant.parse(startIso).toEpochMilli()
+    } catch (_: Exception) {
+        null
+    } ?: return QuizScheduleInfo(QuizScheduleStatus.IMMEDIATE, null, null, 0L, 0L)
+
+    val windowMinutes = quiz.enteringWindow ?: 15
+    val endWindowMillis = startMillis + (windowMinutes * 60 * 1000L)
+
+    return when {
+        now < startMillis -> {
+            QuizScheduleInfo(
+                QuizScheduleStatus.UPCOMING,
+                startMillis,
+                endWindowMillis,
+                remainingMillisToStart = startMillis - now,
+                remainingMillisToWindowEnd = endWindowMillis - now
+            )
+        }
+        quiz.hasActiveAttempt -> {
+            QuizScheduleInfo(
+                QuizScheduleStatus.LIVE,
+                startMillis,
+                endWindowMillis,
+                remainingMillisToStart = 0L,
+                remainingMillisToWindowEnd = maxOf(0L, endWindowMillis - now)
+            )
+        }
+        now <= endWindowMillis -> {
+            QuizScheduleInfo(
+                QuizScheduleStatus.LIVE,
+                startMillis,
+                endWindowMillis,
+                remainingMillisToStart = 0L,
+                remainingMillisToWindowEnd = endWindowMillis - now
+            )
+        }
+        else -> {
+            QuizScheduleInfo(
+                QuizScheduleStatus.ENTRY_CLOSED,
+                startMillis,
+                endWindowMillis,
+                remainingMillisToStart = 0L,
+                remainingMillisToWindowEnd = 0L
+            )
+        }
+    }
+}
+
+fun formatCountdown(millis: Long): String {
+    if (millis <= 0) return "00:00"
+    val totalSeconds = millis / 1000
+    val days = totalSeconds / 86400
+    val hours = (totalSeconds % 86400) / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return when {
+        days > 0 -> "${days}d ${hours}h ${minutes}m"
+        hours > 0 -> String.format(java.util.Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+        else -> String.format(java.util.Locale.US, "%02d:%02d", minutes, seconds)
+    }
+}
+
+fun formatScheduleDateTime(isoString: String): String {
+    return try {
+        val instant = java.time.Instant.parse(isoString)
+        val zone = java.time.ZoneId.systemDefault()
+        val zonedDateTime = instant.atZone(zone)
+        val formatter = java.time.format.DateTimeFormatter.ofPattern("dd MMM, hh:mm a", java.util.Locale.US)
+        zonedDateTime.format(formatter)
+    } catch (_: Exception) {
+        isoString.take(16).replace("T", " ")
+    }
+}
+
 // =============== QUIZ LIST ===============
 @Composable
 fun QuizListScreen(
@@ -85,6 +181,14 @@ fun QuizListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val submittedQuizIds by viewModel.submittedQuizIds.collectAsStateWithLifecycle()
+
+    var nowMillis by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000)
+            nowMillis = System.currentTimeMillis()
+        }
+    }
 
     when (val s = uiState) {
         is QuizUiState.Loading -> LoadingScreen()
@@ -138,6 +242,7 @@ fun QuizListScreen(
                                 SpecialAdminQuizCard(
                                     quiz = quiz,
                                     isCompleted = isCompleted,
+                                    nowMillis = nowMillis,
                                     onClick = {
                                         if (isCompleted) {
                                             onNavigateToQuizResult(quiz.id)
@@ -150,6 +255,7 @@ fun QuizListScreen(
                                 QuizCard(
                                     quiz = quiz,
                                     isCompleted = isCompleted,
+                                    nowMillis = nowMillis,
                                     onClick = {
                                         if (isCompleted) {
                                             onNavigateToQuizResult(quiz.id)
@@ -171,12 +277,14 @@ fun QuizListScreen(
 private fun SpecialAdminQuizCard(
     quiz: Quiz,
     isCompleted: Boolean,
+    nowMillis: Long,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
     val isDark = MaterialTheme.colorScheme.background == DarkBackground
     val isComingSoon = quiz.questionCount == 0 || quiz.title.contains("Coming Soon", ignoreCase = true)
     val formUrl = "https://forms.gle/nkSmmE9EU31os5UU8"
+    val scheduleInfo = remember(quiz, nowMillis) { getQuizScheduleInfo(quiz, nowMillis) }
 
     CyberCard(
         onClick = {
@@ -244,6 +352,8 @@ private fun SpecialAdminQuizCard(
                         isCompleted -> BrandCyan.copy(alpha = 0.18f)
                         quiz.hasActiveAttempt -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.22f)
                         isComingSoon -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.18f)
+                        scheduleInfo.status == QuizScheduleStatus.UPCOMING -> BrandOrange.copy(alpha = 0.2f)
+                        scheduleInfo.status == QuizScheduleStatus.ENTRY_CLOSED -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                         else -> BrandOrange.copy(alpha = 0.2f)
                     },
                     border = BorderStroke(
@@ -252,6 +362,8 @@ private fun SpecialAdminQuizCard(
                             isCompleted -> BrandCyan.copy(alpha = 0.45f)
                             quiz.hasActiveAttempt -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.6f)
                             isComingSoon -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.45f)
+                            scheduleInfo.status == QuizScheduleStatus.UPCOMING -> BrandOrange.copy(alpha = 0.6f)
+                            scheduleInfo.status == QuizScheduleStatus.ENTRY_CLOSED -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
                             else -> BrandOrange.copy(alpha = 0.6f)
                         }
                     )
@@ -261,6 +373,8 @@ private fun SpecialAdminQuizCard(
                             isCompleted -> "COMPLETED"
                             quiz.hasActiveAttempt -> "⚡ IN PROGRESS"
                             isComingSoon -> "COMING SOON"
+                            scheduleInfo.status == QuizScheduleStatus.UPCOMING -> "⏳ IN ${formatCountdown(scheduleInfo.remainingMillisToStart)}"
+                            scheduleInfo.status == QuizScheduleStatus.ENTRY_CLOSED -> "⛔ ENTRY CLOSED"
                             else -> "⚡ LIVE NOW"
                         },
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
@@ -268,6 +382,8 @@ private fun SpecialAdminQuizCard(
                             isCompleted -> BrandCyan
                             quiz.hasActiveAttempt -> MaterialTheme.colorScheme.tertiary
                             isComingSoon -> MaterialTheme.colorScheme.tertiary
+                            scheduleInfo.status == QuizScheduleStatus.UPCOMING -> BrandOrange
+                            scheduleInfo.status == QuizScheduleStatus.ENTRY_CLOSED -> MaterialTheme.colorScheme.onSurfaceVariant
                             else -> BrandOrange
                         },
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -286,6 +402,26 @@ private fun SpecialAdminQuizCard(
                 ),
                 color = if (isDark) Color.White else Color(0xFF0F172A)
             )
+
+            // Scheduled timing banner if quiz has startTime
+            if (!quiz.startTime.isNullOrBlank()) {
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Outlined.Schedule,
+                        contentDescription = null,
+                        modifier = Modifier.size(13.dp),
+                        tint = if (scheduleInfo.status == QuizScheduleStatus.UPCOMING) BrandOrange else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        "Starts: ${formatScheduleDateTime(quiz.startTime)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = if (scheduleInfo.status == QuizScheduleStatus.UPCOMING) FontWeight.Bold else FontWeight.Medium,
+                        color = if (scheduleInfo.status == QuizScheduleStatus.UPCOMING) BrandOrange else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    )
+                }
+            }
 
             Spacer(Modifier.height(8.dp))
 
@@ -370,6 +506,23 @@ private fun SpecialAdminQuizCard(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+                scheduleInfo.status == QuizScheduleStatus.UPCOMING -> {
+                    TdcButton(
+                        text = "🔒 Opens in ${formatCountdown(scheduleInfo.remainingMillisToStart)}",
+                        icon = Icons.Outlined.LockClock,
+                        onClick = onClick,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                scheduleInfo.status == QuizScheduleStatus.ENTRY_CLOSED -> {
+                    OutlinedButton(
+                        onClick = onClick,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(26.dp)
+                    ) {
+                        Text("Entry Window Expired", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
                 else -> {
                     TdcButton(
                         text = if (quiz.hasActiveAttempt) "Resume Quiz Now" else "Join Challenge Now",
@@ -387,8 +540,11 @@ private fun SpecialAdminQuizCard(
 private fun QuizCard(
     quiz: Quiz,
     isCompleted: Boolean,
+    nowMillis: Long,
     onClick: () -> Unit
 ) {
+    val scheduleInfo = remember(quiz, nowMillis) { getQuizScheduleInfo(quiz, nowMillis) }
+
     CyberCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -400,13 +556,19 @@ private fun QuizCard(
         ) {
             Surface(
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
-                color = if (isCompleted) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
+                color = if (isCompleted) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                        else if (scheduleInfo.status == QuizScheduleStatus.UPCOMING) BrandOrange.copy(alpha = 0.12f)
+                        else MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
             ) {
                 Icon(
-                    if (isCompleted) Icons.Outlined.CheckCircle else Icons.Outlined.Quiz,
+                    if (isCompleted) Icons.Outlined.CheckCircle
+                    else if (scheduleInfo.status == QuizScheduleStatus.UPCOMING) Icons.Outlined.LockClock
+                    else Icons.Outlined.Quiz,
                     contentDescription = null,
                     modifier = Modifier.padding(12.dp).size(24.dp),
-                    tint = if (isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary
+                    tint = if (isCompleted) MaterialTheme.colorScheme.primary
+                           else if (scheduleInfo.status == QuizScheduleStatus.UPCOMING) BrandOrange
+                           else MaterialTheme.colorScheme.tertiary
                 )
             }
 
@@ -463,6 +625,27 @@ private fun QuizCard(
                     }
                 }
 
+                // Scheduled start time
+                if (!quiz.startTime.isNullOrBlank()) {
+                    Spacer(Modifier.height(3.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Outlined.Schedule,
+                            contentDescription = null,
+                            modifier = Modifier.size(11.dp),
+                            tint = if (scheduleInfo.status == QuizScheduleStatus.UPCOMING) BrandOrange else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                        Spacer(Modifier.width(3.dp))
+                        Text(
+                            if (scheduleInfo.status == QuizScheduleStatus.UPCOMING) "Starts: ${formatScheduleDateTime(quiz.startTime)}"
+                            else "Start: ${formatScheduleDateTime(quiz.startTime)}",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = if (scheduleInfo.status == QuizScheduleStatus.UPCOMING) BrandOrange else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                            fontWeight = if (scheduleInfo.status == QuizScheduleStatus.UPCOMING) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+
                 // Creator name: ADMIN or Teacher name
                 val creator = quiz.createdByName?.ifBlank { null }
                 if (!creator.isNullOrBlank()) {
@@ -488,43 +671,86 @@ private fun QuizCard(
             }
 
             Spacer(Modifier.width(8.dp))
-            if (isCompleted) {
-                Surface(
-                    shape = MaterialTheme.shapes.small,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+            when {
+                isCompleted -> {
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
                     ) {
-                        Icon(
-                            Icons.Outlined.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(13.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(Modifier.width(4.dp))
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Outlined.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(13.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                "Completed",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+                scheduleInfo.status == QuizScheduleStatus.UPCOMING -> {
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = BrandOrange.copy(alpha = 0.15f),
+                        border = BorderStroke(1.dp, BrandOrange.copy(alpha = 0.4f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Outlined.Lock,
+                                contentDescription = null,
+                                modifier = Modifier.size(12.dp),
+                                tint = BrandOrange
+                            )
+                            Spacer(Modifier.width(3.dp))
+                            Text(
+                                formatCountdown(scheduleInfo.remainingMillisToStart),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = BrandOrange
+                            )
+                        }
+                    }
+                }
+                scheduleInfo.status == QuizScheduleStatus.ENTRY_CLOSED -> {
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                    ) {
                         Text(
-                            "Completed",
+                            "Closed",
                             style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                         )
                     }
                 }
-            } else {
-                Surface(
-                    shape = MaterialTheme.shapes.small,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                ) {
-                    Text(
-                        if (quiz.hasActiveAttempt) "Resume" else "Start",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
+                else -> {
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                    ) {
+                        Text(
+                            if (quiz.hasActiveAttempt) "Resume" else "Start",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
                 }
             }
         }
@@ -827,6 +1053,22 @@ fun QuizTakingScreen(
     when (val s = uiState) {
         is QuizTakingUiState.Loading -> LoadingScreen("Preparing test environment...")
         is QuizTakingUiState.Error -> ErrorScreen(s.message, onRetry = { viewModel.loadQuiz(quizId) })
+        is QuizTakingUiState.Scheduled -> {
+            QuizScheduledContent(
+                quizTitle = s.quizTitle,
+                startTimeIso = s.startTimeIso,
+                enteringWindowMinutes = s.enteringWindowMinutes,
+                onBack = onNavigateBack,
+                onCheckNow = { viewModel.loadQuiz(quizId) }
+            )
+        }
+        is QuizTakingUiState.EntryClosed -> {
+            QuizEntryClosedContent(
+                quizTitle = s.quizTitle,
+                startTimeIso = s.startTimeIso,
+                onBack = onNavigateBack
+            )
+        }
         is QuizTakingUiState.Confirmation -> QuizConfirmationContent(
             quiz = s.quiz,
             questionCount = s.questions.size,
@@ -860,6 +1102,305 @@ fun QuizTakingScreen(
                 onViewResult = { onQuizSubmitted(false) },
                 onBack = onNavigateBack
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun QuizScheduledContent(
+    quizTitle: String,
+    startTimeIso: String,
+    enteringWindowMinutes: Int,
+    onBack: () -> Unit,
+    onCheckNow: () -> Unit
+) {
+    val startMillis = remember(startTimeIso) {
+        try { java.time.Instant.parse(startTimeIso).toEpochMilli() } catch (_: Exception) { null }
+    }
+    var nowMillis by remember { mutableStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(startMillis) {
+        while (true) {
+            delay(1000)
+            nowMillis = System.currentTimeMillis()
+            if (startMillis != null && nowMillis >= startMillis) {
+                onCheckNow()
+                break
+            }
+        }
+    }
+
+    val remainingMillis = if (startMillis != null) maxOf(0L, startMillis - nowMillis) else 0L
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Scheduled Quiz", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+            )
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                border = BorderStroke(1.dp, BrandOrange.copy(alpha = 0.45f))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Surface(
+                        modifier = Modifier.size(72.dp),
+                        shape = CircleShape,
+                        color = BrandOrange.copy(alpha = 0.15f),
+                        border = BorderStroke(2.dp, BrandOrange.copy(alpha = 0.35f))
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Outlined.Schedule,
+                                contentDescription = null,
+                                modifier = Modifier.size(40.dp),
+                                tint = BrandOrange
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(18.dp))
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = BrandOrange.copy(alpha = 0.18f),
+                        border = BorderStroke(1.dp, BrandOrange.copy(alpha = 0.45f))
+                    ) {
+                        Text(
+                            "⏳ UPCOMING SCHEDULED QUIZ",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 0.8.sp
+                            ),
+                            color = BrandOrange,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    Text(
+                        quizTitle,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Text(
+                        "Starts: ${formatScheduleDateTime(startTimeIso)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(Modifier.height(20.dp))
+
+                    // Digital Countdown Display
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "QUIZ STARTS IN",
+                                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.sp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                formatCountdown(remainingMillis),
+                                style = MaterialTheme.typography.headlineLarge.copy(
+                                    fontWeight = FontWeight.Black,
+                                    letterSpacing = 2.sp,
+                                    fontFamily = FontFamily.Monospace
+                                ),
+                                color = BrandOrange
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = BrandCyan.copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, BrandCyan.copy(alpha = 0.3f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Outlined.Info,
+                                contentDescription = null,
+                                tint = BrandCyan,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                "Entry window: You have $enteringWindowMinutes minutes to join after start time. Once the countdown hits zero, this test will unlock automatically.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(24.dp))
+
+                    TdcButton(
+                        text = "Check Status Now",
+                        onClick = onCheckNow,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(Modifier.height(10.dp))
+
+                    OutlinedButton(
+                        onClick = onBack,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Back to Quizzes")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun QuizEntryClosedContent(
+    quizTitle: String,
+    startTimeIso: String,
+    onBack: () -> Unit
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Quiz Closed", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+            )
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Surface(
+                        modifier = Modifier.size(72.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+                        border = BorderStroke(2.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.35f))
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Outlined.LockClock,
+                                contentDescription = null,
+                                modifier = Modifier.size(38.dp),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(18.dp))
+
+                    Text(
+                        "Entry Window Expired",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Text(
+                        quizTitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(Modifier.height(12.dp))
+
+                    Text(
+                        "The entry window for this scheduled quiz started at ${formatScheduleDateTime(startTimeIso)} and has closed. Late entries are not permitted.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(Modifier.height(24.dp))
+
+                    TdcButton(
+                        text = "Back to Quizzes",
+                        onClick = onBack,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
         }
     }
 }

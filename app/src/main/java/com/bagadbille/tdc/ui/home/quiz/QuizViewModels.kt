@@ -71,6 +71,8 @@ class QuizViewModel @Inject constructor(
 // --- QuizTaking ---
 sealed class QuizTakingUiState {
     data object Loading : QuizTakingUiState()
+    data class Scheduled(val quizTitle: String, val startTimeIso: String, val enteringWindowMinutes: Int) : QuizTakingUiState()
+    data class EntryClosed(val quizTitle: String, val startTimeIso: String) : QuizTakingUiState()
     data class Confirmation(val quiz: Quiz?, val questions: List<QuizQuestion>) : QuizTakingUiState()
     data class InProgress(val questions: List<QuizQuestion>) : QuizTakingUiState()
     data object Submitting : QuizTakingUiState()
@@ -137,6 +139,34 @@ class QuizTakingViewModel @Inject constructor(
 
                     val isAttemptInProgress = (active != null && !active.isDisqualified) || (localStartedAt != null && localStartedAt > 0)
 
+                    // Enforce Scheduled Start Time & Entry Window
+                    val now = System.currentTimeMillis()
+                    val startMillis = quiz.startTime?.let {
+                        try { java.time.Instant.parse(it).toEpochMilli() } catch (_: Exception) { null }
+                    }
+
+                    if (startMillis != null) {
+                        val windowMinutes = quiz.enteringWindow ?: 15
+                        val endWindowMillis = startMillis + (windowMinutes * 60 * 1000L)
+
+                        if (now < startMillis) {
+                            _uiState.value = QuizTakingUiState.Scheduled(
+                                quizTitle = quiz.title,
+                                startTimeIso = quiz.startTime,
+                                enteringWindowMinutes = windowMinutes
+                            )
+                            return@launch
+                        }
+
+                        if (now > endWindowMillis && !isAttemptInProgress) {
+                            _uiState.value = QuizTakingUiState.EntryClosed(
+                                quizTitle = quiz.title,
+                                startTimeIso = quiz.startTime
+                            )
+                            return@launch
+                        }
+                    }
+
                     if (isAttemptInProgress) {
                         val effectiveStrikes = maxOf(active?.warningCount ?: 0, localStrikes)
                         _warningCount.value = effectiveStrikes
@@ -201,6 +231,20 @@ class QuizTakingViewModel @Inject constructor(
     }
 
     fun startQuiz() {
+        val quiz = loadedQuiz
+        val now = System.currentTimeMillis()
+        val startMillis = quiz?.startTime?.let {
+            try { java.time.Instant.parse(it).toEpochMilli() } catch (_: Exception) { null }
+        }
+        if (startMillis != null && now < startMillis) {
+            _uiState.value = QuizTakingUiState.Scheduled(
+                quizTitle = quiz?.title ?: "",
+                startTimeIso = quiz?.startTime ?: "",
+                enteringWindowMinutes = quiz?.enteringWindow ?: 15
+            )
+            return
+        }
+
         if (loadedQuestions.isNotEmpty()) {
             viewModelScope.launch {
                 _uiState.value = QuizTakingUiState.Loading
