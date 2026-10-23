@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2.9.0] — 2026-10-23
+
+### Added
+- **Proctored Navigation Lock**: System back gestures/presses are intercepted during active tests, displaying a clear strike warning dialog and preventing accidental test quits.
+- **Result Visibility Control**: Added `result_visibility` (`PUBLIC` | `PRIVATE`) support across backend models and frontend quiz creation.
+- **Confidential Quiz Evaluation**: Individual scores, question breakdowns, and points are strictly masked for students when visibility is private.
+- **Collapsible Quiz History**: Added collapsible section with live count badges and smooth expansion toggles to declutter the quiz tab.
+- **Dynamic Assessment Banner**: Prioritizes live and newly created assessments on the home screen hero card.
+- **CyberCard Submission Screen**: Complete redesign of `QuizResultScreen` with glowing status emblems, confidential verification seals, candidate identity verification, and score visualization.
+- **Punch-Hole & Notch Clearance**: Lowered quiz proctoring header padding to avoid obstruction from modern front cameras.
+
+### Fixed
+- **Private Score Leak**: Masked `score` on submission and neutralized hardcoded `isPrivate = false` cache in `QuizRepository`.
+- **Notification Direct Entry**: Clicking notifications now directs students safely to overview screens without auto-entering tests.
+
+---
+
 ## [0.4.0] — 2026-10-06
 
 ### Added

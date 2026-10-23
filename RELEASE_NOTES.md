@@ -2,6 +2,55 @@
 
 ---
 
+## 🚀 Version 2.9.0 (Build 10)
+**Release Date:** October 23, 2026  
+**Target SDK:** Android 14 (API 36) | **Min SDK:** Android 9.0 (API 28)
+
+---
+
+### 📱 Google Play Store — "What's New" (Ready to Copy)
+```
+What's new in v2.9.0:
+• Enhanced Exam Lockdown: System back navigation is now securely locked during tests to prevent accidental exits, with clear strike warning alerts.
+• Confidential Assessments: Teachers can now conduct private tests where individual scores remain confidential to students until officially published.
+• Redesigned Submission Overview: Brand-new CyberCard results screen with glowing status indicators, verification seals, and performance tier statistics.
+• Collapsible Quiz History: Easily expand and collapse your completed assessments to keep your dashboard clean.
+• Prioritized Assessment Banner: The latest live quizzes and upcoming assessments are now featured directly on the home screen hero banner.
+• Smart Notification Routing: Notification clicks navigate to respective screens without automatically launching active tests prematurely.
+• Notch & Cutout Clearance: Lowered top proctoring header padding for seamless visibility on camera-notch and punch-hole displays.
+• Performance optimizations and stability improvements.
+```
+
+---
+
+### 🌟 Key Highlights & Major Features
+
+#### 1. 🛡️ Exam Security & Navigation Lockdown
+* **System Back Navigation Interception:** When inside an active quiz, the Android system back gesture and button are strictly intercepted and locked. Students cannot leave or navigate back accidentally, eliminating unintended quits.
+* **Informative Strike Alert Dialog:** Pressing back triggers a prominent warning dialog explaining that back navigation is locked and that minimizing the app or leaving the proctored screen records an integrity strike (with automatic disqualification upon reaching 3 strikes).
+* **Camera Cutout & Notch Clearance:** Adjusted proctoring header spacing and padding (`statusBarsPadding()`, `displayCutoutPadding()`, top offset) so timer, strikes, and exit controls never get obstructed by punch-hole selfie cameras.
+
+#### 2. 🔒 Quiz Privacy & Result Visibility Controls
+* **Public vs. Private Assessment Modes:** Teachers can specify `result_visibility` (`PUBLIC` or `PRIVATE`) when creating quizzes.
+* **Zero Score Leaks for Students:** For private tests, scores, point breakdowns, and answer keys are masked across all submission responses and cached models, ensuring complete confidentiality until results are released.
+* **Authoritative Confidential Evaluation Seal:** Private tests display a dedicated security lock emblem, integrity verification chips, and reassurance that responses were safely encrypted and submitted to faculty.
+
+#### 3. 📂 Collapsible Quiz History Section
+* **Interactive Section Toggle:** Added an interactive card for "Quiz History" with an item count badge and smooth chevron expand/collapse indicators.
+* **Decluttered View:** Keeps the primary quiz list focused on active tests while offering one-tap access to review completed assessments and past attempts.
+
+#### 4. ⚡ Dynamic Latest Assessment Hero Banner
+* **Priority Sorting:** Quizzes are now sorted newest-first (`createdAt` descending) across both backend APIs and mobile clients.
+* **Hero Banner Integration:** The home screen banner dynamically spotlights active attempts or the latest live test with an `⚡ LATEST ASSESSMENT` badge, question counts, and duration metadata.
+
+#### 5. 🎨 Modernized Submission Overview (`QuizResultScreen`)
+* **Responsive Status Emblems:** Features custom glowing icons for every state: Emerald Checkmark for evaluated tests, Amber Security Shield for confidential submissions, and Crimson Cancel for proctoring disqualifications.
+* **Glassmorphic CyberCard Container:** Displays test metadata, conductor attribution, score ratio, percentage accuracy, and motivational performance tiers.
+* **Verified Candidate Identity Card:** Displays candidate name, email, and "Attempt 1/1 Verified" badge.
+* **Native Share Sheet:** Students taking public assessments can share their achievements with a single tap.
+
+---
+
 ## 🚀 Version 2.7.0 (Build 8)
 **Release Date:** October 22, 2026  
 **Target SDK:** Android 14 (API 36) | **Min SDK:** Android 9.0 (API 28)
