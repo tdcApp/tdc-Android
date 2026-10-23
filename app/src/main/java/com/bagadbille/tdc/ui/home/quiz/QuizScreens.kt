@@ -1045,7 +1045,7 @@ fun QuizTakingScreen(
         }
     }
 
-    // Back Attempt Warning Dialog
+    // Back Attempt Warning Dialog - Blocks exit and warns user about strikes
     if (showBackAttemptDialog) {
         AlertDialog(
             onDismissRequest = {
@@ -1055,30 +1055,46 @@ fun QuizTakingScreen(
                     viewModel.isInternalDialogActive = false
                 }
             },
-            icon = { Icon(Icons.Outlined.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(36.dp)) },
-            title = { Text("Leaving Quiz Forbidden", fontWeight = FontWeight.Bold) },
-            text = {
-                Text("You cannot leave or navigate back during the quiz. Exiting the app will record an integrity strike.\n\n3 strikes will immediately terminate, auto-submit, and disqualify your test.")
+            icon = {
+                Icon(
+                    Icons.Outlined.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(38.dp)
+                )
             },
-            confirmButton = {
-                Button(onClick = {
-                    showBackAttemptDialog = false
-                    coroutineScope.launch {
-                        delay(300)
-                        viewModel.isInternalDialogActive = false
-                    }
-                }) {
-                    Text("Stay in Quiz")
+            title = {
+                Text("Navigation Locked", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column {
+                    Text(
+                        "You cannot exit the test environment using the back button.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "⚠️ Leaving or minimizing the app, switching windows, or exiting will result in an integrity strike.\n\nAccumulating 3 strikes will immediately auto-submit and disqualify your test.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 18.sp
+                    )
                 }
             },
-            dismissButton = {
-                TextButton(onClick = {
-                    showBackAttemptDialog = false
-                    viewModel.isInternalDialogActive = false
-                    viewModel.exitWithStrike()
-                    onNavigateBack()
-                }) {
-                    Text("Exit Quiz (Strike +1)", color = MaterialTheme.colorScheme.error)
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showBackAttemptDialog = false
+                        coroutineScope.launch {
+                            delay(300)
+                            viewModel.isInternalDialogActive = false
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Return to Test")
                 }
             }
         )
