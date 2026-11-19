@@ -11,6 +11,8 @@ data class UserProfile(
     val isProfileComplete: Boolean = false,
     val languageClassId: String? = null,
     val technologyClassId: String? = null,
+    val gender: String? = null,
+    val bio: String? = null,
     val createdAt: String? = null,
     val updatedAt: String? = null
 ) {
@@ -49,6 +51,8 @@ fun com.bagadbille.tdc.data.remote.dto.UserProfileDto.toDomain(
         isProfileComplete = complete,
         languageClassId = effectiveLanguageClassId,
         technologyClassId = effectiveTechnologyClassId,
+        gender = gender,
+        bio = bio,
         createdAt = createdAt ?: createdAtSnake,
         updatedAt = updatedAt ?: updatedAtSnake
     )

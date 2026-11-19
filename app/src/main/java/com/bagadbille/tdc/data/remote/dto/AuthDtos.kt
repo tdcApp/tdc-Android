@@ -60,6 +60,8 @@ data class UserProfileDto(
     @SerialName("language_class_id") val languageClassIdSnake: String? = null,
     @SerialName("technologyClassId") val technologyClassId: String? = null,
     @SerialName("technology_class_id") val technologyClassIdSnake: String? = null,
+    val gender: String? = null,
+    val bio: String? = null,
     @SerialName("createdAt") val createdAt: String? = null,
     @SerialName("created_at") val createdAtSnake: String? = null,
     @SerialName("updatedAt") val updatedAt: String? = null,
@@ -104,5 +106,7 @@ data class UpdateProfileRequest(
     val name: String? = null,
     val mobileNumber: String? = null,
     val year: String? = null,
-    @SerialName("enrollment_number") val enrollmentNumber: String? = null
+    @SerialName("enrollment_number") val enrollmentNumber: String? = null,
+    val gender: String? = null,
+    val bio: String? = null
 )

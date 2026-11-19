@@ -27,7 +27,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bagadbille.tdc.data.model.ClassInfo
 import com.bagadbille.tdc.data.model.UserProfile
+import com.bagadbille.tdc.data.remote.dto.TeacherUserDto
 import com.bagadbille.tdc.ui.components.CyberCard
 import com.bagadbille.tdc.ui.components.ErrorScreen
 import com.bagadbille.tdc.ui.components.LoadingScreen
@@ -37,13 +39,19 @@ import com.bagadbille.tdc.ui.theme.BrandOrange
 @Composable
 fun RosterTab(viewModel: RosterViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isAdmin by viewModel.isAdmin.collectAsStateWithLifecycle()
+    val teachers by viewModel.teachers.collectAsStateWithLifecycle()
 
     when (val s = uiState) {
         is RosterUiState.Loading -> LoadingScreen("Loading classes...")
         is RosterUiState.Error -> ErrorScreen(s.message, onRetry = { viewModel.load() })
         is RosterUiState.Success -> RosterNavigationContainer(
             batches = s.batches,
+            isAdmin = isAdmin,
+            teachers = teachers,
             onLoadStudents = { viewModel.loadStudentsForBatch(it) },
+            onCreateBatch = { name, type, mentorUid, cb -> viewModel.createClass(name, type, mentorUid, cb) },
+            onUpdateBatch = { id, name, type, mentorUid, cb -> viewModel.updateClass(id, name, type, mentorUid, cb) },
             onRefresh = { viewModel.load() }
         )
     }
@@ -52,10 +60,16 @@ fun RosterTab(viewModel: RosterViewModel = hiltViewModel()) {
 @Composable
 private fun RosterNavigationContainer(
     batches: List<BatchItem>,
+    isAdmin: Boolean,
+    teachers: List<TeacherUserDto>,
     onLoadStudents: (String) -> Unit,
+    onCreateBatch: (String, String, String, (Boolean, String?) -> Unit) -> Unit,
+    onUpdateBatch: (String, String, String, String, (Boolean, String?) -> Unit) -> Unit,
     onRefresh: () -> Unit
 ) {
     var selectedBatchId by remember { mutableStateOf<String?>(null) }
+    var editingBatch by remember { mutableStateOf<ClassInfo?>(null) }
+    var showAddBatchDialog by remember { mutableStateOf(false) }
 
     // Find the currently selected batch if any
     val currentBatch = remember(selectedBatchId, batches) {
@@ -79,9 +93,38 @@ private fun RosterNavigationContainer(
     } else {
         ClassesListScreen(
             batches = batches,
+            isAdmin = isAdmin,
             onBatchClick = { batch ->
                 selectedBatchId = batch.classInfo.id
                 onLoadStudents(batch.classInfo.id)
+            },
+            onAddBatchClick = { showAddBatchDialog = true },
+            onEditBatchClick = { batch -> editingBatch = batch.classInfo }
+        )
+    }
+
+    if (showAddBatchDialog) {
+        EditBatchDialog(
+            initialClass = null,
+            teachers = teachers,
+            onDismiss = { showAddBatchDialog = false },
+            onSave = { name, type, mentorUid ->
+                onCreateBatch(name, type, mentorUid) { success, _ ->
+                    if (success) showAddBatchDialog = false
+                }
+            }
+        )
+    }
+
+    editingBatch?.let { cls ->
+        EditBatchDialog(
+            initialClass = cls,
+            teachers = teachers,
+            onDismiss = { editingBatch = null },
+            onSave = { name, type, mentorUid ->
+                onUpdateBatch(cls.id, name, type, mentorUid) { success, _ ->
+                    if (success) editingBatch = null
+                }
             }
         )
     }
@@ -94,7 +137,10 @@ private fun RosterNavigationContainer(
 @Composable
 private fun ClassesListScreen(
     batches: List<BatchItem>,
-    onBatchClick: (BatchItem) -> Unit
+    isAdmin: Boolean,
+    onBatchClick: (BatchItem) -> Unit,
+    onAddBatchClick: () -> Unit,
+    onEditBatchClick: (BatchItem) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -102,20 +148,33 @@ private fun ClassesListScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Column(modifier = Modifier.padding(bottom = 4.dp)) {
-                Text(
-                    text = "Enrolled Classes",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Select a class to view all enrolled students and their details",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(bottom = 4.dp)) {
+                    Text(
+                        text = "Enrolled Classes",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Select a class to view all enrolled students and their details",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (isAdmin) {
+                    TextButton(onClick = onAddBatchClick) {
+                        Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = BrandCyan)
+                        Spacer(Modifier.width(4.dp))
+                        Text("Add Batch", style = MaterialTheme.typography.labelMedium, color = BrandCyan)
+                    }
+                }
             }
         }
 
@@ -159,7 +218,9 @@ private fun ClassesListScreen(
         items(batches, key = { it.classInfo.id }) { batch ->
             ClassOverviewCard(
                 batch = batch,
-                onClick = { onBatchClick(batch) }
+                isAdmin = isAdmin,
+                onClick = { onBatchClick(batch) },
+                onEditClick = { onEditBatchClick(batch) }
             )
         }
     }
@@ -168,7 +229,9 @@ private fun ClassesListScreen(
 @Composable
 private fun ClassOverviewCard(
     batch: BatchItem,
-    onClick: () -> Unit
+    isAdmin: Boolean = false,
+    onClick: () -> Unit,
+    onEditClick: () -> Unit = {}
 ) {
     val isLanguage = batch.classInfo.type == "language"
     val accentColor = if (isLanguage) BrandCyan else BrandOrange
@@ -256,15 +319,59 @@ private fun ClassOverviewCard(
                         )
                     }
                 }
+
+                // Teacher contact info
+                if (!batch.classInfo.mentorName.isNullOrBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(13.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Teacher: ${batch.classInfo.mentorName}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (!batch.classInfo.mentorPhone.isNullOrBlank()) {
+                            Text(
+                                text = "• ${batch.classInfo.mentorPhone}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                }
             }
 
-            // Arrow right
-            Icon(
-                imageVector = Icons.Outlined.ChevronRight,
-                contentDescription = "View Students",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                modifier = Modifier.size(22.dp)
-            )
+            if (isAdmin) {
+                IconButton(
+                    onClick = onEditClick,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = "Edit Class",
+                        tint = BrandCyan,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            } else {
+                // Arrow right
+                Icon(
+                    imageVector = Icons.Outlined.ChevronRight,
+                    contentDescription = "View Students",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
         }
     }
 }
@@ -703,4 +810,128 @@ private fun DetailInfoChip(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditBatchDialog(
+    initialClass: ClassInfo? = null,
+    teachers: List<TeacherUserDto>,
+    onDismiss: () -> Unit,
+    onSave: (name: String, type: String, mentorUid: String) -> Unit
+) {
+    var name by remember { mutableStateOf(initialClass?.name ?: "") }
+    var type by remember { mutableStateOf(initialClass?.type?.uppercase() ?: "LANGUAGE") }
+    var selectedMentorUid by remember { mutableStateOf(initialClass?.mentorUid ?: teachers.firstOrNull()?.effectiveUid ?: "") }
+    var teacherDropdownExpanded by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    val selectedTeacher = teachers.find { it.effectiveUid == selectedMentorUid }
+    val selectedTeacherName = if (selectedTeacher != null) {
+        "${selectedTeacher.name ?: "Unknown"} (${selectedTeacher.effectiveMobile})"
+    } else {
+        "Select Teacher"
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (initialClass != null) "Edit Batch" else "Add New Batch") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it; error = null },
+                    label = { Text("Batch / Subject Name") },
+                    placeholder = { Text("e.g. C++, Python, AI/ML") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(14.dp))
+
+                Text("Track Type", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = type == "LANGUAGE",
+                        onClick = { type = "LANGUAGE" },
+                        label = { Text("Language") }
+                    )
+                    FilterChip(
+                        selected = type == "TECHNOLOGY",
+                        onClick = { type = "TECHNOLOGY" },
+                        label = { Text("Technology") }
+                    )
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                ExposedDropdownMenuBox(
+                    expanded = teacherDropdownExpanded,
+                    onExpandedChange = { teacherDropdownExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = selectedTeacherName,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Assigned Teacher *") },
+                        leadingIcon = { Icon(Icons.Outlined.Person, contentDescription = null) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = teacherDropdownExpanded) },
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    )
+                    ExposedDropdownMenu(
+                        expanded = teacherDropdownExpanded,
+                        onDismissRequest = { teacherDropdownExpanded = false }
+                    ) {
+                        teachers.forEach { teacher ->
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(teacher.name ?: "Teacher (${teacher.email})", fontWeight = FontWeight.SemiBold)
+                                        Text("${teacher.email} • ${teacher.effectiveMobile}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                },
+                                onClick = {
+                                    selectedMentorUid = teacher.effectiveUid
+                                    teacherDropdownExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                error?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (name.isBlank()) {
+                        error = "Batch name cannot be empty"
+                        return@Button
+                    }
+                    if (selectedMentorUid.isBlank()) {
+                        error = "Please select an assigned teacher"
+                        return@Button
+                    }
+                    onSave(name.trim(), type, selectedMentorUid)
+                }
+            ) {
+                Text(if (initialClass != null) "Save Changes" else "Create Batch")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }

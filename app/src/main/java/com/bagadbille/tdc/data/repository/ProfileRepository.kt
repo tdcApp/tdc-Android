@@ -24,7 +24,14 @@ interface ProfileRepository {
         mobileNumber: String? = null
     ): Result<UserProfile>
     suspend fun setupProfile(name: String, enrollmentNumber: String, year: String): Result<UserProfile>
-    suspend fun updateProfile(name: String?, phone: String?, year: String? = null, enrollmentNumber: String? = null): Result<UserProfile>
+    suspend fun updateProfile(
+        name: String?,
+        phone: String?,
+        year: String? = null,
+        enrollmentNumber: String? = null,
+        gender: String? = null,
+        bio: String? = null
+    ): Result<UserProfile>
 }
 
 @Singleton
@@ -205,18 +212,29 @@ class ProfileRepositoryImpl @Inject constructor(
     override suspend fun setupProfile(name: String, enrollmentNumber: String, year: String): Result<UserProfile> =
         setupProfile(name, null, null, enrollmentNumber, year)
 
-    override suspend fun updateProfile(name: String?, phone: String?, year: String?, enrollmentNumber: String?): Result<UserProfile> = runCatching {
+    override suspend fun updateProfile(
+        name: String?,
+        phone: String?,
+        year: String?,
+        enrollmentNumber: String?,
+        gender: String?,
+        bio: String?
+    ): Result<UserProfile> = runCatching {
         val cleanName = name?.trim()
         val cleanPhone = phone?.trim()
         val cleanYear = year?.trim()?.ifBlank { null }
         val cleanEnrollment = enrollmentNumber?.trim()?.ifBlank { null }
+        val cleanGender = gender?.trim()?.ifBlank { null }
+        val cleanBio = bio?.trim()?.ifBlank { null }
 
         val updatedDto = profileApi.updateProfile(
             UpdateProfileRequest(
                 name = cleanName,
                 mobileNumber = cleanPhone,
                 year = cleanYear,
-                enrollmentNumber = cleanEnrollment
+                enrollmentNumber = cleanEnrollment,
+                gender = cleanGender,
+                bio = cleanBio
             )
         )
         dataStoreManager.saveUserName(updatedDto.name ?: cleanName ?: "")

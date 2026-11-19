@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bagadbille.tdc.data.model.Announcement
+import com.bagadbille.tdc.data.model.ClassChangeRequest
 import com.bagadbille.tdc.data.model.Schedule
 import com.bagadbille.tdc.ui.components.CyberCard
 import com.bagadbille.tdc.ui.components.ErrorScreen
@@ -80,7 +82,8 @@ fun OverviewTab(
                     onAddScheduleClick = { showAddScheduleDialog = true },
                     onEditBannerClick = { showEditBannerDialog = true },
                     onDeleteAnnouncement = { deleteAnnouncementTarget = it },
-                    onDeleteSchedule = { deleteScheduleTarget = it }
+                    onDeleteSchedule = { deleteScheduleTarget = it },
+                    onReviewChangeRequest = { id, approved -> viewModel.reviewChangeRequest(id, approved) }
                 )
             }
         }
@@ -179,7 +182,8 @@ private fun OverviewContent(
     onAddScheduleClick: () -> Unit,
     onEditBannerClick: () -> Unit,
     onDeleteAnnouncement: (String) -> Unit,
-    onDeleteSchedule: (String) -> Unit
+    onDeleteSchedule: (String) -> Unit,
+    onReviewChangeRequest: (String, Boolean) -> Unit
 ) {
     val todayDow = LocalDate.now().dayOfWeek.value % 7 // 1=Mon … 6=Sat, 0=Sun
     var selectedDayIndex by remember { mutableIntStateOf(0) } // 0 = Today, 1..7 = Mon..Sun
@@ -255,6 +259,181 @@ private fun OverviewContent(
                         accentColor = BrandOrange,
                         onClick = onEditBannerClick
                     )
+                }
+            }
+        }
+
+        // ── Track Change Requests Section ──
+        if (data.changeRequests.isNotEmpty()) {
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SectionTitle("Track Change Requests")
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = NeonAmber.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            text = "${data.changeRequests.size} Pending",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = NeonAmber,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+
+            items(data.changeRequests, key = { it.id }) { req ->
+                CyberCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    borderColor = NeonAmber.copy(alpha = 0.35f)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = req.studentName ?: "Student",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                val studentInfo = listOfNotNull(
+                                    req.studentEnrollmentNumber?.takeIf { it.isNotBlank() },
+                                    req.studentYear?.takeIf { it.isNotBlank() },
+                                    req.studentEmail?.takeIf { it.isNotBlank() }
+                                ).joinToString(" • ")
+                                if (studentInfo.isNotBlank()) {
+                                    Text(
+                                        text = studentInfo,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(10.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        Spacer(Modifier.height(8.dp))
+
+                        if (req.requestedLanguageClassName != null) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Language Track:",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.width(110.dp)
+                                )
+                                Text(
+                                    text = req.currentLanguageClassName ?: "None",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .padding(horizontal = 6.dp)
+                                        .size(12.dp),
+                                    tint = BrandCyan
+                                )
+                                Text(
+                                    text = req.requestedLanguageClassName,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BrandCyan
+                                )
+                            }
+                            Spacer(Modifier.height(4.dp))
+                        }
+
+                        if (req.requestedTechnologyClassName != null) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Technology Track:",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.width(110.dp)
+                                )
+                                Text(
+                                    text = req.currentTechnologyClassName ?: "None",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .padding(horizontal = 6.dp)
+                                        .size(12.dp),
+                                    tint = BrandOrange
+                                )
+                                Text(
+                                    text = req.requestedTechnologyClassName,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BrandOrange
+                                )
+                            }
+                            Spacer(Modifier.height(4.dp))
+                        }
+
+                        if (!req.reason.isNullOrBlank()) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = "Reason: ${req.reason}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            OutlinedButton(
+                                onClick = { onReviewChangeRequest(req.id, false) },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                                modifier = Modifier.height(36.dp),
+                                contentPadding = PaddingValues(horizontal = 14.dp)
+                            ) {
+                                Text("Reject", style = MaterialTheme.typography.labelMedium)
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Button(
+                                onClick = { onReviewChangeRequest(req.id, true) },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = NeonEmerald),
+                                modifier = Modifier.height(36.dp),
+                                contentPadding = PaddingValues(horizontal = 14.dp)
+                            ) {
+                                Text("Approve", style = MaterialTheme.typography.labelMedium, color = Color.Black)
+                            }
+                        }
+                    }
                 }
             }
         }

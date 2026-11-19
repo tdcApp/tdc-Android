@@ -3,6 +3,7 @@ package com.bagadbille.tdc.ui.mentor.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bagadbille.tdc.data.model.Announcement
+import com.bagadbille.tdc.data.model.ClassChangeRequest
 import com.bagadbille.tdc.data.model.ClassInfo
 import com.bagadbille.tdc.data.model.HeroBanner
 import com.bagadbille.tdc.data.model.Schedule
@@ -30,6 +31,7 @@ data class OverviewUiData(
     val todaySchedules: List<Schedule> = emptyList(),
     val weekSchedules: List<Schedule> = emptyList(),
     val announcements: List<Announcement> = emptyList(),
+    val changeRequests: List<ClassChangeRequest> = emptyList(),
     val pendingSubmissions: Int = 0,
     val classNames: Map<String, String> = emptyMap(),
     val classList: List<ClassInfo> = emptyList(),
@@ -76,6 +78,7 @@ class OverviewViewModel @Inject constructor(
                 val classList: List<ClassInfo>
                 val submissionList: List<com.bagadbille.tdc.data.model.AssignmentSubmission>
                 val mentorAssignmentList: List<com.bagadbille.tdc.data.model.Assignment>
+                val changeRequestList: List<ClassChangeRequest>
                 val banner: HeroBanner?
 
                 coroutineScope {
@@ -84,6 +87,7 @@ class OverviewViewModel @Inject constructor(
                     val cDef = async { classRepo.getClasses().getOrDefault(emptyList()) }
                     val subDef = async { assignmentRepo.getAllSubmissions().getOrDefault(emptyList()) }
                     val maDef = async { assignmentRepo.getMentorAssignments().getOrDefault(emptyList()) }
+                    val crDef = async { classRepo.getChangeRequests("PENDING").getOrDefault(emptyList()) }
                     val bDef = async { heroBannerRepo.getHeroBanner().getOrNull() }
 
                     scheduleList = sDef.await()
@@ -91,6 +95,7 @@ class OverviewViewModel @Inject constructor(
                     classList = cDef.await()
                     submissionList = subDef.await()
                     mentorAssignmentList = maDef.await()
+                    changeRequestList = crDef.await()
                     banner = bDef.await()
                 }
 
@@ -107,6 +112,7 @@ class OverviewViewModel @Inject constructor(
                         todaySchedules = todaySchedules,
                         weekSchedules = scheduleList.sortedWith(compareBy({ it.dayOfWeek }, { it.startTime })),
                         announcements = announcementList.take(5),
+                        changeRequests = changeRequestList,
                         pendingSubmissions = pendingCount,
                         classNames = classNames,
                         classList = classList,
@@ -235,6 +241,18 @@ class OverviewViewModel @Inject constructor(
                 .onFailure {
                     _events.emit(OverviewEvent.ShowMessage(it.message ?: "Failed to delete schedule"))
                 }
+        }
+    }
+
+    fun reviewChangeRequest(id: String, approved: Boolean) {
+        viewModelScope.launch {
+            val result = classRepo.reviewChangeRequest(id, approved)
+            result.onSuccess {
+                _events.emit(OverviewEvent.ShowMessage(if (approved) "Track change approved" else "Track change rejected"))
+                load()
+            }.onFailure {
+                _events.emit(OverviewEvent.ShowMessage(it.message ?: "Failed to review change request"))
+            }
         }
     }
 }
