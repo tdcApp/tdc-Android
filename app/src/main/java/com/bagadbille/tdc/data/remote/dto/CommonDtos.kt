@@ -3,6 +3,7 @@ package com.bagadbille.tdc.data.remote.dto
 import com.bagadbille.tdc.data.model.Announcement
 import com.bagadbille.tdc.data.model.Assignment
 import com.bagadbille.tdc.data.model.AssignmentSubmission
+import com.bagadbille.tdc.data.model.HeroBanner
 import com.bagadbille.tdc.data.model.Schedule
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -232,4 +233,47 @@ data class RegisterFcmTokenRequest(
     val token: String,
     val platform: String = "ANDROID"
 )
+
+@Serializable
+data class HeroBannerDto(
+    val id: String? = null,
+    val title: String = "",
+    val subtitle: String? = null,
+    val tag: String = "COMING SOON",
+    val badgeText: String? = null,
+    @SerialName("badge_text") val badgeTextSnake: String? = null,
+    val buttonText: String = "Register Now",
+    @SerialName("button_text") val buttonTextSnake: String? = null,
+    val actionUrl: String? = null,
+    @SerialName("action_url") val actionUrlSnake: String? = null,
+    val actionType: String = "URL",
+    @SerialName("action_type") val actionTypeSnake: String? = null,
+    val isActive: Boolean = true,
+    @SerialName("is_active") val isActiveSnake: Boolean? = null
+) {
+    fun toDomain(): HeroBanner = HeroBanner(
+        id = id,
+        title = title,
+        subtitle = subtitle,
+        tag = tag,
+        badgeText = badgeText ?: badgeTextSnake,
+        buttonText = buttonText.ifBlank { buttonTextSnake ?: "Register Now" },
+        actionUrl = actionUrl ?: actionUrlSnake,
+        actionType = actionType.ifBlank { actionTypeSnake ?: "URL" },
+        isActive = isActiveSnake ?: isActive
+    )
+}
+
+@Serializable
+data class UpdateHeroBannerRequest(
+    val title: String,
+    val subtitle: String? = null,
+    val tag: String = "COMING SOON",
+    val badgeText: String? = null,
+    val buttonText: String = "Register Now",
+    val actionUrl: String? = null,
+    val actionType: String = "URL",
+    val isActive: Boolean
+)
+
 

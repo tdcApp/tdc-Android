@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bagadbille.tdc.data.local.DataStoreManager
 import com.bagadbille.tdc.data.model.Announcement
+import com.bagadbille.tdc.data.model.HeroBanner
 import com.bagadbille.tdc.data.model.Quiz
 import com.bagadbille.tdc.data.model.Schedule
 import com.bagadbille.tdc.data.repository.AnnouncementRepository
+import com.bagadbille.tdc.data.repository.HeroBannerRepository
 import com.bagadbille.tdc.data.repository.ProfileRepository
 import com.bagadbille.tdc.data.repository.QuizRepository
 import com.bagadbille.tdc.data.repository.ScheduleRepository
@@ -25,7 +27,8 @@ data class DashboardData(
     val schedules: List<Schedule> = emptyList(),
     val upcomingQuizzes: List<Quiz> = emptyList(),
     val recentAnnouncements: List<Announcement> = emptyList(),
-    val specialQuiz: Quiz? = null
+    val specialQuiz: Quiz? = null,
+    val heroBanner: HeroBanner? = null
 )
 
 sealed class GeneralUiState {
@@ -40,6 +43,7 @@ class GeneralViewModel @Inject constructor(
     private val quizRepository: QuizRepository,
     private val profileRepository: ProfileRepository,
     private val announcementRepository: AnnouncementRepository,
+    private val heroBannerRepository: HeroBannerRepository,
     private val dataStoreManager: DataStoreManager
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<GeneralUiState>(GeneralUiState.Loading)
@@ -55,6 +59,7 @@ class GeneralViewModel @Inject constructor(
                     val cachedName = dataStoreManager.userName.firstOrNull()?.trim()?.split(" ")?.firstOrNull()
                     val sDef = async { scheduleRepository.getSchedules().getOrDefault(emptyList()) }
                     val qDef = async { quizRepository.getQuizzes().getOrDefault(emptyList()) }
+                    val bDef = async { heroBannerRepository.getHeroBanner().getOrNull() }
                     val pDef = if (cachedName.isNullOrBlank()) {
                         async { profileRepository.getProfile().getOrNull()?.name?.trim()?.split(" ")?.firstOrNull() }
                     } else null
@@ -62,6 +67,7 @@ class GeneralViewModel @Inject constructor(
 
                     val schedules = sDef.await()
                     val quizzes = qDef.await()
+                    val banner = bDef.await()
                     val userName = cachedName ?: pDef?.await() ?: ""
                     val announcements = aDef.await()
 
@@ -77,7 +83,8 @@ class GeneralViewModel @Inject constructor(
                             schedules = schedules,
                             upcomingQuizzes = sortedQuizzes.filter { !it.isSubmitted }.take(3).ifEmpty { sortedQuizzes.take(3) },
                             recentAnnouncements = announcements.take(3),
-                            specialQuiz = specialQuiz
+                            specialQuiz = specialQuiz,
+                            heroBanner = banner
                         )
                     )
                 }

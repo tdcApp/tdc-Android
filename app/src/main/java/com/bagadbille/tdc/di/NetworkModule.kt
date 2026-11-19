@@ -8,6 +8,7 @@ import com.bagadbille.tdc.data.remote.api.AuthApi
 import com.bagadbille.tdc.data.remote.api.ClassApi
 import com.bagadbille.tdc.data.remote.api.FirebaseAuthApi
 import com.bagadbille.tdc.data.remote.api.FirebaseTokenApi
+import com.bagadbille.tdc.data.remote.api.HeroBannerApi
 import com.bagadbille.tdc.data.remote.api.NotificationApi
 import com.bagadbille.tdc.data.remote.api.ProfileApi
 import com.bagadbille.tdc.data.remote.api.QuizApi
@@ -198,4 +199,7 @@ object NetworkModule {
 
     @Provides @Singleton
     fun provideAssignmentApi(retrofit: Retrofit): AssignmentApi = retrofit.create(AssignmentApi::class.java)
+
+    @Provides @Singleton
+    fun provideHeroBannerApi(retrofit: Retrofit): HeroBannerApi = retrofit.create(HeroBannerApi::class.java)
 }

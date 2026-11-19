@@ -4,10 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bagadbille.tdc.data.model.Announcement
 import com.bagadbille.tdc.data.model.ClassInfo
+import com.bagadbille.tdc.data.model.HeroBanner
 import com.bagadbille.tdc.data.model.Schedule
+import com.bagadbille.tdc.data.remote.dto.UpdateHeroBannerRequest
 import com.bagadbille.tdc.data.repository.AnnouncementRepository
 import com.bagadbille.tdc.data.repository.AssignmentRepository
 import com.bagadbille.tdc.data.repository.ClassRepository
+import com.bagadbille.tdc.data.repository.HeroBannerRepository
 import com.bagadbille.tdc.data.repository.ScheduleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -30,7 +33,9 @@ data class OverviewUiData(
     val pendingSubmissions: Int = 0,
     val classNames: Map<String, String> = emptyMap(),
     val classList: List<ClassInfo> = emptyList(),
-    val isPostingAnnouncement: Boolean = false
+    val isPostingAnnouncement: Boolean = false,
+    val heroBanner: HeroBanner? = null,
+    val isUpdatingBanner: Boolean = false
 )
 
 sealed class OverviewUiState {
@@ -48,7 +53,8 @@ class OverviewViewModel @Inject constructor(
     private val scheduleRepo: ScheduleRepository,
     private val announcementRepo: AnnouncementRepository,
     private val assignmentRepo: AssignmentRepository,
-    private val classRepo: ClassRepository
+    private val classRepo: ClassRepository,
+    private val heroBannerRepo: HeroBannerRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<OverviewUiState>(OverviewUiState.Loading)
@@ -70,6 +76,7 @@ class OverviewViewModel @Inject constructor(
                 val classList: List<ClassInfo>
                 val submissionList: List<com.bagadbille.tdc.data.model.AssignmentSubmission>
                 val mentorAssignmentList: List<com.bagadbille.tdc.data.model.Assignment>
+                val banner: HeroBanner?
 
                 coroutineScope {
                     val sDef = async { scheduleRepo.getSchedules().getOrDefault(emptyList()) }
@@ -77,12 +84,14 @@ class OverviewViewModel @Inject constructor(
                     val cDef = async { classRepo.getClasses().getOrDefault(emptyList()) }
                     val subDef = async { assignmentRepo.getAllSubmissions().getOrDefault(emptyList()) }
                     val maDef = async { assignmentRepo.getMentorAssignments().getOrDefault(emptyList()) }
+                    val bDef = async { heroBannerRepo.getHeroBanner().getOrNull() }
 
                     scheduleList = sDef.await()
                     announcementList = aDef.await()
                     classList = cDef.await()
                     submissionList = subDef.await()
                     mentorAssignmentList = maDef.await()
+                    banner = bDef.await()
                 }
 
                 val classNames = classList.associate { it.id to it.name }
@@ -100,11 +109,47 @@ class OverviewViewModel @Inject constructor(
                         announcements = announcementList.take(5),
                         pendingSubmissions = pendingCount,
                         classNames = classNames,
-                        classList = classList
+                        classList = classList,
+                        heroBanner = banner
                     )
                 )
             } catch (e: Exception) {
                 _uiState.value = OverviewUiState.Error(e.message ?: "Failed to load overview")
+            }
+        }
+    }
+
+    fun updateHeroBanner(
+        title: String,
+        subtitle: String?,
+        tag: String,
+        badgeText: String?,
+        buttonText: String,
+        actionUrl: String?,
+        actionType: String,
+        isActive: Boolean
+    ) {
+        val current = (_uiState.value as? OverviewUiState.Success)?.data ?: return
+        viewModelScope.launch {
+            _uiState.value = OverviewUiState.Success(current.copy(isUpdatingBanner = true))
+            val result = heroBannerRepo.updateHeroBanner(
+                UpdateHeroBannerRequest(
+                    title = title,
+                    subtitle = subtitle,
+                    tag = tag,
+                    badgeText = badgeText,
+                    buttonText = buttonText,
+                    actionUrl = actionUrl,
+                    actionType = actionType,
+                    isActive = isActive
+                )
+            )
+            result.onSuccess { updated ->
+                _uiState.value = OverviewUiState.Success(current.copy(isUpdatingBanner = false, heroBanner = updated))
+                _events.emit(OverviewEvent.ShowMessage(if (isActive) "Hero card updated and visible on Home Screen!" else "Hero card hidden from Home Screen."))
+            }.onFailure { err ->
+                _uiState.value = OverviewUiState.Success(current.copy(isUpdatingBanner = false))
+                _events.emit(OverviewEvent.ShowMessage(err.message ?: "Failed to update hero card"))
             }
         }
     }

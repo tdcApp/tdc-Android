@@ -146,151 +146,179 @@ private fun DashboardContent(
             }
         }
 
-        // ─── 2. TDC CODING QUEST HERO BANNER ───
-        item {
-            val isDark = MaterialTheme.colorScheme.background == DarkBackground
-            val specialQuiz = data.specialQuiz
-            val isComingSoon = specialQuiz == null || 
-                               specialQuiz.title.contains("Coming Soon", ignoreCase = true) ||
-                               specialQuiz.questionCount == 0
-            val isCompleted = specialQuiz?.isSubmitted == true
-            val isQuizReady = specialQuiz != null && !isComingSoon && !isCompleted
-            val formUrl = "https://forms.gle/nkSmmE9EU31os5UU8"
+        // ─── 2. TDC HERO / EVENT BANNER (DYNAMIC & CUSTOMIZABLE FROM ADMIN) ───
+        val banner = data.heroBanner
+        val isBannerActive = banner?.isActive == true
+        val specialQuiz = data.specialQuiz
+        val hasActiveAttempt = specialQuiz?.hasActiveAttempt == true
 
-            CyberCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                backgroundBrush = if (isDark) {
-                    Brush.linearGradient(
-                        listOf(Color(0xFF0F2B33), Color(0xFF2C1910), Color(0xFF17191E))
+        // Display card if either:
+        // 1. Admin enabled the hero banner (for hackathons, coding quest, etc.)
+        // 2. OR student has an active quiz attempt they need to resume
+        if (isBannerActive || hasActiveAttempt) {
+            item {
+                val isDark = MaterialTheme.colorScheme.background == DarkBackground
+                val isCompleted = specialQuiz?.isSubmitted == true && banner?.actionType.equals("QUIZ", ignoreCase = true)
+                val isQuizAction = banner?.actionType.equals("QUIZ", ignoreCase = true) && specialQuiz != null
+                val targetUrl = banner?.actionUrl?.takeIf { it.isNotBlank() } ?: "https://forms.gle/nkSmmE9EU31os5UU8"
+
+                CyberCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    backgroundBrush = if (isDark) {
+                        Brush.linearGradient(
+                            listOf(Color(0xFF0F2B33), Color(0xFF2C1910), Color(0xFF17191E))
+                        )
+                    } else {
+                        Brush.linearGradient(
+                            listOf(Color(0xFFF0FDFA), Color(0xFFFFF7ED), Color(0xFFFFFFFF))
+                        )
+                    },
+                    borderBrush = Brush.horizontalGradient(
+                        listOf(
+                            BrandCyan.copy(alpha = if (isDark) 0.8f else 0.5f),
+                            BrandOrange.copy(alpha = if (isDark) 0.8f else 0.5f)
+                        )
                     )
-                } else {
-                    Brush.linearGradient(
-                        listOf(Color(0xFFF0FDFA), Color(0xFFFFF7ED), Color(0xFFFFFFFF))
-                    )
-                },
-                borderBrush = Brush.horizontalGradient(
-                    listOf(
-                        BrandCyan.copy(alpha = if (isDark) 0.8f else 0.5f),
-                        BrandOrange.copy(alpha = if (isDark) 0.8f else 0.5f)
-                    )
-                )
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(
-                                    when {
-                                        isCompleted -> BrandCyan.copy(alpha = 0.2f)
-                                        specialQuiz?.hasActiveAttempt == true -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.25f)
-                                        isQuizReady -> BrandOrange.copy(alpha = 0.25f)
-                                        else -> if (isDark) BrandOrange.copy(alpha = 0.2f) else Color(0xFFFFEDD5)
-                                    }
-                                )
-                                .border(
-                                    1.dp,
-                                    when {
-                                        isCompleted -> BrandCyan.copy(alpha = 0.5f)
-                                        specialQuiz?.hasActiveAttempt == true -> MaterialTheme.colorScheme.tertiary
-                                        isQuizReady -> BrandOrange
-                                        else -> if (isDark) BrandOrange.copy(alpha = 0.4f) else Color(0xFFFDBA74)
-                                    },
-                                    RoundedCornerShape(8.dp)
-                                )
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = when {
-                                    isCompleted -> "ASSESSMENT COMPLETED"
-                                    specialQuiz?.hasActiveAttempt == true -> "⚡ IN PROGRESS"
-                                    isQuizReady -> "⚡ LATEST ASSESSMENT"
-                                    else -> "COMING SOON"
-                                },
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.ExtraBold,
-                                    letterSpacing = 1.sp
-                                ),
-                                color = when {
-                                    isCompleted -> BrandCyan
-                                    specialQuiz?.hasActiveAttempt == true -> MaterialTheme.colorScheme.tertiary
-                                    isQuizReady -> if (isDark) BrandOrange else Color(0xFFC2410C)
-                                    else -> if (isDark) BrandOrange else Color(0xFFC2410C)
-                                }
-                            )
-                        }
+                            val badgeLabel = when {
+                                hasActiveAttempt -> "⚡ IN PROGRESS"
+                                isCompleted -> "ASSESSMENT COMPLETED"
+                                else -> banner?.tag?.ifBlank { null } ?: "EVENT"
+                            }
 
-                        if (specialQuiz != null && specialQuiz.questionCount > 0) {
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = BrandCyan.copy(alpha = 0.15f),
-                                border = BorderStroke(1.dp, BrandCyan.copy(alpha = 0.35f))
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(
+                                        when {
+                                            hasActiveAttempt -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.25f)
+                                            isCompleted -> BrandCyan.copy(alpha = 0.2f)
+                                            else -> if (isDark) BrandOrange.copy(alpha = 0.2f) else Color(0xFFFFEDD5)
+                                        }
+                                    )
+                                    .border(
+                                        1.dp,
+                                        when {
+                                            hasActiveAttempt -> MaterialTheme.colorScheme.tertiary
+                                            isCompleted -> BrandCyan.copy(alpha = 0.5f)
+                                            else -> if (isDark) BrandOrange.copy(alpha = 0.4f) else Color(0xFFFDBA74)
+                                        },
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    text = "${specialQuiz.questionCount} Questions",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = BrandCyan,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    text = badgeLabel,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.ExtraBold,
+                                        letterSpacing = 1.sp
+                                    ),
+                                    color = when {
+                                        hasActiveAttempt -> MaterialTheme.colorScheme.tertiary
+                                        isCompleted -> BrandCyan
+                                        else -> if (isDark) BrandOrange else Color(0xFFC2410C)
+                                    }
                                 )
                             }
+
+                            val secondaryBadge = when {
+                                !banner?.badgeText.isNullOrBlank() -> banner?.badgeText
+                                isQuizAction && specialQuiz.questionCount > 0 -> "${specialQuiz.questionCount} Questions"
+                                else -> null
+                            }
+
+                            if (!secondaryBadge.isNullOrBlank()) {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = BrandCyan.copy(alpha = 0.15f),
+                                    border = BorderStroke(1.dp, BrandCyan.copy(alpha = 0.35f))
+                                ) {
+                                    Text(
+                                        text = secondaryBadge,
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = BrandCyan,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    )
+                                }
+                            }
                         }
-                    }
 
-                    Spacer(Modifier.height(14.dp))
+                        Spacer(Modifier.height(14.dp))
 
-                    Text(
-                        text = specialQuiz?.title?.ifBlank { null } ?: "TDC Coding Quest Season 3",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 22.sp
-                        ),
-                        color = if (isDark) Color.White else Color(0xFF0F172A)
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = when {
+                        val displayTitle = when {
+                            hasActiveAttempt -> specialQuiz?.title?.ifBlank { null } ?: "Assessment in Progress"
+                            !banner?.title.isNullOrBlank() -> banner.title
+                            else -> "TDC Coding Quest Season 3"
+                        }
+
+                        Text(
+                            text = displayTitle,
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 22.sp
+                            ),
+                            color = if (isDark) Color.White else Color(0xFF0F172A)
+                        )
+                        Spacer(Modifier.height(4.dp))
+
+                        val displaySubtitle = when {
+                            hasActiveAttempt -> "You have an active test session • Tap below to resume"
                             isCompleted -> "Your responses have been securely submitted • Evaluation in progress"
-                            isQuizReady -> "New test available! Tap below to start your proctored assessment."
+                            !banner?.subtitle.isNullOrBlank() -> banner.subtitle
                             else -> "Innovate • Build • Collaborate"
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (isDark) Color.White.copy(alpha = 0.8f) else Color(0xFF475569)
-                    )
-
-                    Spacer(Modifier.height(18.dp))
-
-                    when {
-                        isCompleted -> {
-                            TdcButton(
-                                text = "View Result",
-                                trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
-                                onClick = { onQuizResultClick(specialQuiz.id) },
-                                modifier = Modifier.wrapContentWidth()
-                            )
                         }
-                        isQuizReady -> {
-                            TdcButton(
-                                text = if (specialQuiz.hasActiveAttempt) "Resume Quiz" else "Join Now",
-                                trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
-                                onClick = { onQuizClick(specialQuiz.id) },
-                                modifier = Modifier.wrapContentWidth()
-                            )
-                        }
-                        else -> {
-                            TdcButton(
-                                text = "Register Now",
-                                trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
-                                onClick = {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(formUrl))
-                                    context.startActivity(intent)
-                                },
-                                modifier = Modifier.wrapContentWidth()
-                            )
+
+                        Text(
+                            text = displaySubtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (isDark) Color.White.copy(alpha = 0.8f) else Color(0xFF475569)
+                        )
+
+                        Spacer(Modifier.height(18.dp))
+
+                        when {
+                            hasActiveAttempt -> {
+                                TdcButton(
+                                    text = "Resume Quiz",
+                                    trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
+                                    onClick = { onQuizClick(specialQuiz.id) },
+                                    modifier = Modifier.wrapContentWidth()
+                                )
+                            }
+                            isCompleted -> {
+                                TdcButton(
+                                    text = "View Result",
+                                    trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
+                                    onClick = { onQuizResultClick(specialQuiz.id) },
+                                    modifier = Modifier.wrapContentWidth()
+                                )
+                            }
+                            isQuizAction -> {
+                                TdcButton(
+                                    text = banner?.buttonText?.ifBlank { null } ?: "Join Now",
+                                    trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
+                                    onClick = { onQuizClick(specialQuiz.id) },
+                                    modifier = Modifier.wrapContentWidth()
+                                )
+                            }
+                            else -> {
+                                TdcButton(
+                                    text = banner?.buttonText?.ifBlank { null } ?: "Register Now",
+                                    trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
+                                    onClick = {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl))
+                                        context.startActivity(intent)
+                                    },
+                                    modifier = Modifier.wrapContentWidth()
+                                )
+                            }
                         }
                     }
                 }

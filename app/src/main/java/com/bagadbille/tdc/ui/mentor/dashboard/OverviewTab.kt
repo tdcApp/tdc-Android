@@ -52,6 +52,7 @@ fun OverviewTab(
     val snackbar = remember { SnackbarHostState() }
     var showPostDialog by remember { mutableStateOf(false) }
     var showAddScheduleDialog by remember { mutableStateOf(false) }
+    var showEditBannerDialog by remember { mutableStateOf(false) }
     var deleteAnnouncementTarget by remember { mutableStateOf<String?>(null) }
     var deleteScheduleTarget by remember { mutableStateOf<String?>(null) }
 
@@ -77,6 +78,7 @@ fun OverviewTab(
                     onNavigateToQuiz = onNavigateToQuiz,
                     onPostClick = { showPostDialog = true },
                     onAddScheduleClick = { showAddScheduleDialog = true },
+                    onEditBannerClick = { showEditBannerDialog = true },
                     onDeleteAnnouncement = { deleteAnnouncementTarget = it },
                     onDeleteSchedule = { deleteScheduleTarget = it }
                 )
@@ -153,6 +155,19 @@ fun OverviewTab(
             }
         )
     }
+
+    if (showEditBannerDialog) {
+        val successData = (uiState as? OverviewUiState.Success)?.data
+        EditHeroBannerDialog(
+            banner = successData?.heroBanner,
+            isUpdating = successData?.isUpdatingBanner == true,
+            onDismiss = { showEditBannerDialog = false },
+            onSave = { title, subtitle, tag, badgeText, buttonText, actionUrl, actionType, isActive ->
+                viewModel.updateHeroBanner(title, subtitle, tag, badgeText, buttonText, actionUrl, actionType, isActive)
+                showEditBannerDialog = false
+            }
+        )
+    }
 }
 
 @Composable
@@ -162,6 +177,7 @@ private fun OverviewContent(
     onNavigateToQuiz: () -> Unit,
     onPostClick: () -> Unit,
     onAddScheduleClick: () -> Unit,
+    onEditBannerClick: () -> Unit,
     onDeleteAnnouncement: (String) -> Unit,
     onDeleteSchedule: (String) -> Unit
 ) {
@@ -209,7 +225,7 @@ private fun OverviewContent(
                 Spacer(Modifier.height(10.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     QuickActionButton(
                         modifier = Modifier.weight(1f),
@@ -231,6 +247,13 @@ private fun OverviewContent(
                         label = "Announce",
                         accentColor = NeonAmber,
                         onClick = onPostClick
+                    )
+                    QuickActionButton(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Outlined.AutoAwesome,
+                        label = "Hero Card",
+                        accentColor = BrandOrange,
+                        onClick = onEditBannerClick
                     )
                 }
             }
@@ -1020,3 +1043,163 @@ private fun PostAnnouncementDialog(
         }
     )
 }
+
+@Composable
+private fun EditHeroBannerDialog(
+    banner: com.bagadbille.tdc.data.model.HeroBanner?,
+    isUpdating: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (title: String, subtitle: String?, tag: String, badgeText: String?, buttonText: String, actionUrl: String?, actionType: String, isActive: Boolean) -> Unit
+) {
+    var isActive by remember(banner) { mutableStateOf(banner?.isActive ?: true) }
+    var title by remember(banner) { mutableStateOf(banner?.title ?: "TDC Coding Quest Season 3") }
+    var subtitle by remember(banner) { mutableStateOf(banner?.subtitle ?: "Innovate • Build • Collaborate") }
+    var tag by remember(banner) { mutableStateOf(banner?.tag ?: "COMING SOON") }
+    var badgeText by remember(banner) { mutableStateOf(banner?.badgeText ?: "") }
+    var buttonText by remember(banner) { mutableStateOf(banner?.buttonText ?: "Register Now") }
+    var actionUrl by remember(banner) { mutableStateOf(banner?.actionUrl ?: "https://forms.gle/nkSmmE9EU31os5UU8") }
+    var actionType by remember(banner) { mutableStateOf(banner?.actionType ?: "URL") }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Customize Hero Card", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Show/Hide Toggle
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    border = BorderStroke(1.dp, if (isActive) NeonEmerald.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (isActive) "Visible on Home Screen" else "Hidden from Home Screen",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isActive) NeonEmerald else MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = if (isActive) "Card is currently shown to students" else "Card is hidden from students",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = isActive,
+                            onCheckedChange = { isActive = it }
+                        )
+                    }
+                }
+
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it; error = null },
+                    label = { Text("Card Title *") },
+                    placeholder = { Text("e.g. TDC Hackathon 2026") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = subtitle,
+                    onValueChange = { subtitle = it },
+                    label = { Text("Subtitle / Tagline") },
+                    placeholder = { Text("e.g. Innovate • Build • Collaborate") },
+                    maxLines = 2,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = tag,
+                        onValueChange = { tag = it },
+                        label = { Text("Status Tag") },
+                        placeholder = { Text("HACKATHON") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = badgeText,
+                        onValueChange = { badgeText = it },
+                        label = { Text("Extra Badge") },
+                        placeholder = { Text("e.g. 48h") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = buttonText,
+                        onValueChange = { buttonText = it },
+                        label = { Text("Button Text") },
+                        placeholder = { Text("Register Now") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                OutlinedTextField(
+                    value = actionUrl,
+                    onValueChange = { actionUrl = it },
+                    label = { Text("Registration Link / URL") },
+                    placeholder = { Text("https://forms.gle/...") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                error?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (title.isBlank()) {
+                        error = "Title cannot be empty"
+                        return@Button
+                    }
+                    onSave(
+                        title.trim(),
+                        subtitle.trim().ifEmpty { null },
+                        tag.trim().ifEmpty { "EVENT" },
+                        badgeText.trim().ifEmpty { null },
+                        buttonText.trim().ifEmpty { "Register Now" },
+                        actionUrl.trim().ifEmpty { null },
+                        actionType,
+                        isActive
+                    )
+                },
+                enabled = !isUpdating
+            ) {
+                if (isUpdating) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                } else {
+                    Text("Save Changes")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isUpdating) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
