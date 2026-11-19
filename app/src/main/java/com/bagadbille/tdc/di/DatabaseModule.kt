@@ -23,7 +23,7 @@ object DatabaseModule {
     @Singleton
     fun provideTdcDatabase(@ApplicationContext context: Context): TdcDatabase =
         Room.databaseBuilder(context, TdcDatabase::class.java, "tdc_database")
-            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigrationOnDowngrade()
             .build()
 
     @Provides

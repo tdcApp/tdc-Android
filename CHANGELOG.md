@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [3.0.1] — 2026-11-19
+
+### Added
+- **Release Signing Automation**: Configured production `signingConfigs` in `build.gradle.kts` with environment variable support (`KEYSTORE_PATH`) and automated debug-keystore fallback for local and CI builds.
+- **Assignment Update Sync**: Added `@PUT("assignments/{id}")` API integration, allowing mentors to update existing assignment titles, descriptions, due dates, and class IDs with immediate cloud and local persistence.
+- **Fast Token Caching**: In-memory token cache in `DataStoreManager` eliminates thread-blocking `runBlocking` calls in OkHttp interceptors.
+- **Hardware Token Encryption**: Android Keystore AES-256 GCM cryptographic storage (`CryptoManager`) for tokens at rest with automatic legacy token migration.
+
+### Fixed
+- **Submission Link Crash Safeguard**: Added URL validation, HTTP/HTTPS prefix enforcement, and graceful try-catch error handling when mentors open student assignment submission links.
+- **Sunday Schedule Resolution**: Standardized day-of-week indexing across mentor creation (`OverviewTab`), student schedule widget (`GeneralScreen`), live class detection (`MeetingHelper`), and notifications (`NotificationRepository`).
+- **Profile N+1 API Storm**: Eliminated redundant sequential HTTP 404 queries on the profile screen by evaluating submitted quiz status directly from cached list data.
+- **Mentor Submissions Latency**: Parallelized assignment submission queries with coroutines (`async`/`awaitAll`), eliminating sequential network bottlenecks.
+- **FileProvider Directory Scoping**: Scoped content URI export paths in `file_paths.xml` strictly to `exports/` rather than exposing root storage directories.
+- **Data Backup Security**: Added explicit exclusion rules in `data_extraction_rules.xml` and `backup_rules.xml` to prevent extraction of sensitive DataStore preferences and local Room databases.
+- **Session Purge on Logout**: Enhanced `DataStoreManager.clearSession()` to purge all user-specific active quiz answers, timer states, and integrity strikes.
+- **Logcat Token Sanitization**: Masked FCM device registration tokens in `MainActivity.kt` to prevent leaking device tokens in production logs.
+
+---
+
 ## [2.9.0] — 2026-10-23
 
 ### Added

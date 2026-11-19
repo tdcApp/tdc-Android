@@ -251,20 +251,29 @@ class CreateQuizViewModel @Inject constructor(
     companion object {
         const val SAMPLE_QUIZ_JSON_TEMPLATE = """[
   {
-    "question": "What is the capital of France?",
-    "optionA": "Berlin",
-    "optionB": "Madrid",
-    "optionC": "Paris",
-    "optionD": "Rome",
+    "question": "Which data structure operates on a LIFO (Last In First Out) principle?",
+    "optionA": "Queue",
+    "optionB": "Stack",
+    "optionC": "Array",
+    "optionD": "Linked List",
+    "correctOption": "B"
+  },
+  {
+    "question": "What is the return value of this algorithm when arr = [4, 1, 8, 3]?",
+    "code": "Algorithm FindMax(arr, n):\n  max = arr[0]\n  for i = 1 to n - 1 do:\n    if arr[i] > max then:\n      max = arr[i]\n  return max",
+    "optionA": "4",
+    "optionB": "1",
+    "optionC": "8",
+    "optionD": "3",
     "correctOption": "C"
   },
   {
-    "question": "Which data type is immutable in Python?",
-    "optionA": "List",
-    "optionB": "Dictionary",
-    "optionC": "Set",
-    "optionD": "Tuple",
-    "correctOption": "D"
+    "question": "What is the time complexity of the following procedure?\n\n```\nProcedure Solve(n):\n  while n > 1 do:\n    n = n / 2\n```",
+    "optionA": "O(1)",
+    "optionB": "O(log n)",
+    "optionC": "O(n)",
+    "optionD": "O(n^2)",
+    "correctOption": "B"
   }
 ]"""
 
@@ -306,13 +315,39 @@ class CreateQuizViewModel @Inject constructor(
                 val qObj = jsonArray.optJSONObject(i)
                     ?: throw IllegalArgumentException("Item #${i + 1} is not a valid question object")
 
-                val question = qObj.optString("question", "")
+                val rawQuestion = qObj.optString("question", "")
                     .ifBlank { qObj.optString("prompt", "") }
                     .ifBlank { qObj.optString("q", "") }
                     .trim()
 
+                val rawCode = qObj.optString("code", "")
+                    .ifBlank { qObj.optString("algorithm", "") }
+                    .ifBlank { qObj.optString("algo", "") }
+                    .ifBlank { qObj.optString("snippet", "") }
+                    .trim()
+
+                val rawTag = qObj.optString("tag", "")
+                    .ifBlank { qObj.optString("language", "") }
+                    .ifBlank { qObj.optString("lang", "") }
+                    .trim()
+
+                val question = if (rawCode.isNotBlank()) {
+                    if (rawQuestion.contains("```")) {
+                        rawQuestion
+                    } else {
+                        val headerTag = if (rawTag.isNotBlank()) rawTag else ""
+                        if (rawQuestion.isNotBlank()) {
+                            "$rawQuestion\n\n```$headerTag\n$rawCode\n```"
+                        } else {
+                            "```$headerTag\n$rawCode\n```"
+                        }
+                    }
+                } else {
+                    rawQuestion
+                }
+
                 if (question.isBlank()) {
-                    throw IllegalArgumentException("Question #${i + 1}: Question prompt is required and cannot be empty")
+                    throw IllegalArgumentException("Question #${i + 1}: Question prompt or code/algorithm is required and cannot be empty")
                 }
 
                 val optionA = qObj.optString("optionA", "")

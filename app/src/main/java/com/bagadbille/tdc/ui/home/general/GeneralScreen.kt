@@ -118,7 +118,7 @@ private fun DashboardContent(
                 (today + 1) % 7 -> "Tomorrow"
                 else -> dayFullNames[day]
             }
-            val dayItems = data.schedules.filter { it.dayOfWeek == day }.sortedBy { it.startTime }
+            val dayItems = data.schedules.filter { (it.dayOfWeek % 7) == day }.sortedBy { it.startTime }
             dayItems.forEach { sortedList.add(it to dayLabel) }
         }
         sortedList.take(4)
@@ -547,7 +547,7 @@ private fun WeeklyScheduleWidget(
     onNavigateToBatches: () -> Unit
 ) {
     var selectedDay by remember { mutableIntStateOf(today) }
-    val grouped = remember(schedules) { schedules.groupBy { it.dayOfWeek } }
+    val grouped = remember(schedules) { schedules.groupBy { it.dayOfWeek % 7 } }
     val selectedDaySchedules = remember(grouped, selectedDay) {
         (grouped[selectedDay] ?: emptyList()).sortedBy { it.startTime }
     }

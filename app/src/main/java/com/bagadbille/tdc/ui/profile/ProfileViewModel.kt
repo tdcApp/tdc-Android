@@ -90,12 +90,7 @@ class ProfileViewModel @Inject constructor(
             val submittedAssignments = submissionsMap.size
 
             val allQuizzes = quizRepository.getQuizzes().getOrDefault(emptyList())
-            var completedQuizzes = 0
-            for (q in allQuizzes) {
-                if (quizRepository.isQuizSubmitted(q.id)) {
-                    completedQuizzes++
-                }
-            }
+            val completedQuizzes = allQuizzes.count { it.isSubmitted }
 
             _uiState.value = ProfileUiState.Success(
                 ProfileUiData(

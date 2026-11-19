@@ -165,14 +165,15 @@ private fun OverviewContent(
     onDeleteAnnouncement: (String) -> Unit,
     onDeleteSchedule: (String) -> Unit
 ) {
-    val todayDow = LocalDate.now().dayOfWeek.value // 1=Mon … 7=Sun
+    val todayDow = LocalDate.now().dayOfWeek.value % 7 // 1=Mon … 6=Sat, 0=Sun
     var selectedDayIndex by remember { mutableIntStateOf(0) } // 0 = Today, 1..7 = Mon..Sun
 
     val displayedSchedules = remember(selectedDayIndex, data.weekSchedules, data.todaySchedules) {
         if (selectedDayIndex == 0) {
             data.todaySchedules
         } else {
-            data.weekSchedules.filter { it.dayOfWeek == selectedDayIndex }
+            val targetDow = selectedDayIndex % 7
+            data.weekSchedules.filter { (it.dayOfWeek % 7) == targetDow }
         }
     }
 
@@ -265,11 +266,12 @@ private fun OverviewContent(
                     )
                 }
                 items(DAYS.indices.toList()) { index ->
-                    val dow = index + 1
+                    val dow = (index + 1) % 7
                     val isToday = dow == todayDow
+                    val chipDayIndex = index + 1
                     FilterChip(
-                        selected = selectedDayIndex == dow,
-                        onClick = { selectedDayIndex = dow },
+                        selected = selectedDayIndex == chipDayIndex,
+                        onClick = { selectedDayIndex = chipDayIndex },
                         label = {
                             Text(
                                 if (isToday) "${DAYS[index]} (Today)" else DAYS[index],
@@ -649,7 +651,7 @@ private fun AddScheduleDialog(
                 Spacer(Modifier.height(4.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     items(DAYS.indices.toList()) { index ->
-                        val dow = index + 1
+                        val dow = (index + 1) % 7 // Mon=1..Sat=6, Sun=0
                         FilterChip(
                             selected = selectedDay == dow,
                             onClick = { selectedDay = dow },

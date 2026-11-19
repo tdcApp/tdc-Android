@@ -7,9 +7,20 @@
 -renamesourcefileattribute SourceFile
 
 # ─── TDC Data Models, Entities, and DTOs ───
--keep class com.bagadbille.tdc.data.model.** { *; }
--keep class com.bagadbille.tdc.data.remote.dto.** { *; }
--keep class com.bagadbille.tdc.data.local.entity.** { *; }
+-keepclassmembers class com.bagadbille.tdc.data.model.** { *; }
+-keepclassmembers class com.bagadbille.tdc.data.remote.dto.** { *; }
+-keepclassmembers class com.bagadbille.tdc.data.local.entity.** { *; }
+
+# ─── Crypto Keystore ───
+-keep class com.bagadbille.tdc.util.CryptoManager { *; }
+
+# ─── Strip Logcat Output in Production Release Builds ───
+-assumenosideeffects class android.util.Log {
+    public static boolean isLoggable(java.lang.String, int);
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+}
 
 # ─── Kotlinx Serialization ───
 -keepattributes *Annotation*, InnerClasses

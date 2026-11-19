@@ -89,8 +89,8 @@ class OverviewViewModel @Inject constructor(
                 val submittedIds = submissionList.map { it.assignmentId }.toSet()
                 val pendingCount = mentorAssignmentList.count { it.id !in submittedIds }
 
-                val todayDow = LocalDate.now().dayOfWeek.value // 1=Mon … 7=Sun
-                val todaySchedules = scheduleList.filter { it.dayOfWeek == todayDow }
+                val todayDow = LocalDate.now().dayOfWeek.value % 7 // 1=Mon … 6=Sat, 0=Sun
+                val todaySchedules = scheduleList.filter { (it.dayOfWeek % 7) == todayDow }
                     .sortedBy { it.startTime }
 
                 _uiState.value = OverviewUiState.Success(

@@ -45,9 +45,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bagadbille.tdc.data.model.QuizQuestionDraft
+import com.bagadbille.tdc.ui.components.FormattedQuestionContent
 import kotlinx.coroutines.flow.collectLatest
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -910,11 +912,12 @@ private fun QuestionPreviewCard(
             }
 
             Spacer(Modifier.height(8.dp))
-            Text(
-                draft.question,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+            FormattedQuestionContent(
+                text = draft.question,
+                promptStyle = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    lineHeight = 22.sp
+                )
             )
 
             Spacer(Modifier.height(10.dp))

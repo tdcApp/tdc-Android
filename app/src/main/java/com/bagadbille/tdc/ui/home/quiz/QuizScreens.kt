@@ -72,6 +72,7 @@ import com.bagadbille.tdc.ui.components.EmptyStateScreen
 import com.bagadbille.tdc.ui.components.ErrorScreen
 import com.bagadbille.tdc.ui.components.LoadingScreen
 import com.bagadbille.tdc.ui.components.TdcButton
+import com.bagadbille.tdc.ui.components.FormattedQuestionContent
 import com.bagadbille.tdc.ui.theme.BrandCyan
 import com.bagadbille.tdc.ui.theme.BrandOrange
 import com.bagadbille.tdc.ui.theme.DarkBackground
@@ -2355,13 +2356,8 @@ private fun QuizContent(
                             ),
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
                         ) {
-                            Text(
+                            FormattedQuestionContent(
                                 text = q.question,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    lineHeight = 24.sp
-                                ),
-                                color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.padding(18.dp)
                             )
                         }

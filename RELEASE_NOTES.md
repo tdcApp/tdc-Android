@@ -2,6 +2,25 @@
 
 ---
 
+## 🚀 Version 3.0.1 (Build 12)
+**Release Date:** November 19, 2026  
+**Target SDK:** Android 15 (API 35) | **Min SDK:** Android 9.0 (API 28)
+
+---
+
+### 📱 Google Play Store — "What's New" (Ready to Copy)
+```
+What's new in v3.0.1:
+• Enhanced Mentor Tools: Edit published assignments with real-time cloud sync for title, description, batch, and deadline.
+• Improved Link Safety: Secure link handling for student assignment submissions prevents crashes from unsupported links.
+• Reliable Timetables: Full support for Sunday and weekend class schedules across student and mentor dashboards.
+• Faster Performance: Instant profile loading and parallelized submission reviews eliminate loading delays.
+• Enhanced Privacy & Security: Hardware-backed keystore token encryption, hardened file export paths, and secured device backup rules protect your personal data.
+• Stability & Polish: Comprehensive bug fixes and background network optimizations.
+```
+
+---
+
 ## 🚀 Version 2.9.0 (Build 10)
 **Release Date:** October 23, 2026  
 **Target SDK:** Android 14 (API 36) | **Min SDK:** Android 9.0 (API 28)

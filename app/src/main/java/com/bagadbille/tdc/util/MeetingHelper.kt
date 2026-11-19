@@ -29,7 +29,7 @@ object MeetingHelper {
     fun isScheduleLive(schedule: Schedule): Boolean {
         val calendar = Calendar.getInstance()
         val today = calendar.get(Calendar.DAY_OF_WEEK) - 1 // 0=Sun, 1=Mon, ..., 6=Sat
-        if (schedule.dayOfWeek != today) return false
+        if ((schedule.dayOfWeek % 7) != today) return false
 
         val currentMinutes = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
         val startMin = parseTimeToMinutes(schedule.startTime) ?: return false
@@ -69,9 +69,20 @@ object MeetingHelper {
     }
 
     fun launchMeeting(context: Context, room: String?) {
-        val url = extractMeetingUrl(room) ?: "https://meet.google.com"
+        val rawUrl = extractMeetingUrl(room) ?: "https://meet.google.com"
+        val cleanUrl = if (!rawUrl.startsWith("http://", ignoreCase = true) && !rawUrl.startsWith("https://", ignoreCase = true)) {
+            "https://$rawUrl"
+        } else {
+            rawUrl
+        }
         try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            val uri = Uri.parse(cleanUrl)
+            val scheme = uri.scheme?.lowercase()
+            if (scheme != "http" && scheme != "https") {
+                Toast.makeText(context, "Invalid meeting URL scheme", Toast.LENGTH_SHORT).show()
+                return
+            }
+            val intent = Intent(Intent.ACTION_VIEW, uri).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)

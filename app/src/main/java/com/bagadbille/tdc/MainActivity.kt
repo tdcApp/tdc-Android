@@ -83,7 +83,9 @@ class MainActivity : ComponentActivity() {
                         lifecycleScope.launch {
                             notificationRepository.registerFcmToken(fcmToken).fold(
                                 onSuccess = {
-                                    Log.i("TDC_FCM", "Successfully registered FCM token with backend: $fcmToken")
+                                    if (BuildConfig.DEBUG) {
+                                        Log.d("TDC_FCM", "Successfully registered FCM token with backend")
+                                    }
                                 },
                                 onFailure = { e ->
                                     Log.e("TDC_FCM", "Failed to register FCM token with backend", e)

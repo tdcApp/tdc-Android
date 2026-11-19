@@ -15,20 +15,45 @@ android {
     defaultConfig {
         applicationId = "com.bagadbille.tdc"
         minSdk = 28
-        targetSdk = 36
-        versionCode = 10
-        versionName = "2.9.0"
+        targetSdk = 35
+        versionCode = 12
+        versionName = "3.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "BASE_URL", "\"https://tdc-backend-api-1.onrender.com/\"")
-        buildConfigField("String", "FIREBASE_API_KEY", "\"AIzaSyCb0Qn_8376chw9rfGiyij4EoJPam83Zvo\"")
+        val backendUrl = System.getenv("TDC_BACKEND_URL") ?: "https://tdc-backend-api-1.onrender.com/"
+        val firebaseApiKey = System.getenv("FIREBASE_API_KEY") ?: "AIzaSyCb0Qn_8376chw9rfGiyij4EoJPam83Zvo"
+
+        buildConfigField("String", "BASE_URL", "\"$backendUrl\"")
+        buildConfigField("String", "FIREBASE_API_KEY", "\"$firebaseApiKey\"")
+    }
+
+    signingConfigs {
+        create("release") {
+            val envKeystore = System.getenv("KEYSTORE_PATH")
+            val rootKeystore = project.rootProject.file("keystore.jks")
+            if (!envKeystore.isNullOrBlank() && file(envKeystore).exists()) {
+                storeFile = file(envKeystore)
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: System.getenv("KEY_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD") ?: System.getenv("KEYSTORE_PASSWORD")
+            } else if (rootKeystore.exists()) {
+                storeFile = rootKeystore
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "android"
+                keyAlias = System.getenv("KEY_ALIAS") ?: "android"
+                keyPassword = System.getenv("KEY_PASSWORD") ?: "android"
+            } else {
+                // Fall back gracefully to debug keystore so release builds generate valid signed APKs/AABs
+                initWith(getByName("debug"))
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

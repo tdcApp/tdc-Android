@@ -127,10 +127,18 @@ object CsvExporter {
     }
 
     private fun escapeCsv(value: String): String {
-        return if (value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r")) {
-            "\"" + value.replace("\"", "\"\"") + "\""
+        var clean = value
+        // Neutralize CSV Formula / DDE Injection (Excel / LibreOffice formula execution)
+        val trimmed = clean.trimStart()
+        if (trimmed.startsWith("=") || trimmed.startsWith("+") || trimmed.startsWith("-") ||
+            trimmed.startsWith("@") || trimmed.startsWith("\t") || trimmed.startsWith("\r")
+        ) {
+            clean = "'$clean"
+        }
+        return if (clean.contains(",") || clean.contains("\"") || clean.contains("\n") || clean.contains("\r")) {
+            "\"" + clean.replace("\"", "\"\"") + "\""
         } else {
-            value
+            clean
         }
     }
 

@@ -4,6 +4,7 @@ import com.bagadbille.tdc.data.remote.dto.AssignmentDto
 import com.bagadbille.tdc.data.remote.dto.AssignmentSubmissionDto
 import com.bagadbille.tdc.data.remote.dto.AssignmentSubmissionRequest
 import com.bagadbille.tdc.data.remote.dto.CreateAssignmentRequest
+import com.bagadbille.tdc.data.remote.dto.UpdateAssignmentRequest
 import retrofit2.http.*
 
 interface AssignmentApi {
@@ -15,6 +16,12 @@ interface AssignmentApi {
 
     @POST("assignments")
     suspend fun createAssignment(@Body request: CreateAssignmentRequest): AssignmentDto
+
+    @PUT("assignments/{id}")
+    suspend fun updateAssignment(
+        @Path("id") id: String,
+        @Body request: UpdateAssignmentRequest
+    ): AssignmentDto
 
     @POST("assignments/{id}/submit")
     suspend fun submitAssignment(

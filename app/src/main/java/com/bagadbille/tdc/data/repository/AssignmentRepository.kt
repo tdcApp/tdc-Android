@@ -7,7 +7,9 @@ import com.bagadbille.tdc.data.model.AssignmentSubmission
 import com.bagadbille.tdc.data.remote.api.AssignmentApi
 import com.bagadbille.tdc.data.remote.dto.AssignmentSubmissionRequest
 import com.bagadbille.tdc.data.remote.dto.CreateAssignmentRequest
+import com.bagadbille.tdc.data.remote.dto.UpdateAssignmentRequest
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import retrofit2.HttpException
 import javax.inject.Inject
@@ -121,8 +123,19 @@ class AssignmentRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateAssignment(assignment: Assignment): Result<Assignment> = runCatching {
-        assignmentDao.insertAssignment(AssignmentEntity.fromDomain(assignment))
-        assignment
+        val req = UpdateAssignmentRequest(
+            title = assignment.title.trim(),
+            description = assignment.description?.trim()?.ifBlank { null },
+            classId = assignment.classId.trim().ifBlank { null },
+            dueAt = assignment.dueAt?.trim()?.ifBlank { null }
+        )
+        val updated = try {
+            assignmentApi.updateAssignment(assignment.id, req).toDomain()
+        } catch (_: Exception) {
+            assignment
+        }
+        assignmentDao.insertAssignment(AssignmentEntity.fromDomain(updated))
+        updated
     }
 
     override suspend fun deleteAssignment(id: String): Result<Unit> = runCatching {
@@ -144,12 +157,17 @@ class AssignmentRepositoryImpl @Inject constructor(
         } catch (_: Exception) {
             emptyList()
         }
-        val all = mutableListOf<AssignmentSubmission>()
-        for (a in mentorAssignments) {
-            try {
-                all.addAll(assignmentApi.getAllSubmissions(a.id).map { it.toDomain() })
-            } catch (_: Exception) {}
+        if (mentorAssignments.isEmpty()) return@runCatching emptyList()
+        coroutineScope {
+            mentorAssignments.map { a ->
+                async {
+                    try {
+                        assignmentApi.getAllSubmissions(a.id).map { it.toDomain() }
+                    } catch (_: Exception) {
+                        emptyList()
+                    }
+                }
+            }.awaitAll().flatten()
         }
-        all
     }
 }

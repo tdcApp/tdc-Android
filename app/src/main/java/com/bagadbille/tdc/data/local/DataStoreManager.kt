@@ -11,9 +11,14 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import com.bagadbille.tdc.util.CryptoManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -42,9 +47,41 @@ class DataStoreManager @Inject constructor(
 
     val hasCompletedOnboarding: Flow<Boolean> = context.dataStore.data.map { it[HAS_COMPLETED_ONBOARDING_KEY] ?: false }
 
-    val authToken: Flow<String?> = context.dataStore.data.map { it[AUTH_TOKEN_KEY] }
+    @Volatile
+    private var inMemoryAuthToken: String? = null
 
-    val refreshToken: Flow<String?> = context.dataStore.data.map { it[REFRESH_TOKEN_KEY] }
+    @Volatile
+    private var inMemoryRefreshToken: String? = null
+
+    init {
+        // Eagerly pre-populate in-memory decrypted tokens on startup so OkHttp interceptors avoid thread-blocking reads
+        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+            context.dataStore.data.collect { prefs ->
+                val rawAuth = prefs[AUTH_TOKEN_KEY]
+                inMemoryAuthToken = if (!rawAuth.isNullOrBlank()) CryptoManager.decrypt(rawAuth).ifBlank { null } else null
+                val rawRefresh = prefs[REFRESH_TOKEN_KEY]
+                inMemoryRefreshToken = if (!rawRefresh.isNullOrBlank()) CryptoManager.decrypt(rawRefresh).ifBlank { null } else null
+            }
+        }
+    }
+
+    fun getCachedAuthToken(): String? = inMemoryAuthToken
+
+    fun getCachedRefreshToken(): String? = inMemoryRefreshToken
+
+    val authToken: Flow<String?> = context.dataStore.data.map {
+        val raw = it[AUTH_TOKEN_KEY]
+        val decrypted = if (!raw.isNullOrBlank()) CryptoManager.decrypt(raw).ifBlank { null } else null
+        inMemoryAuthToken = decrypted
+        decrypted
+    }
+
+    val refreshToken: Flow<String?> = context.dataStore.data.map {
+        val raw = it[REFRESH_TOKEN_KEY]
+        val decrypted = if (!raw.isNullOrBlank()) CryptoManager.decrypt(raw).ifBlank { null } else null
+        inMemoryRefreshToken = decrypted
+        decrypted
+    }
 
     val isDarkTheme: Flow<Boolean> = context.dataStore.data.map { it[IS_DARK_THEME_KEY] ?: true }
 
@@ -77,11 +114,15 @@ class DataStoreManager @Inject constructor(
     }
 
     suspend fun saveAuthToken(token: String) {
-        context.dataStore.edit { it[AUTH_TOKEN_KEY] = token }
+        inMemoryAuthToken = token
+        val encrypted = CryptoManager.encrypt(token)
+        context.dataStore.edit { it[AUTH_TOKEN_KEY] = encrypted }
     }
 
     suspend fun saveRefreshToken(token: String) {
-        context.dataStore.edit { it[REFRESH_TOKEN_KEY] = token }
+        inMemoryRefreshToken = token
+        val encrypted = CryptoManager.encrypt(token)
+        context.dataStore.edit { it[REFRESH_TOKEN_KEY] = encrypted }
     }
 
     suspend fun saveUserName(name: String) {
@@ -137,19 +178,23 @@ class DataStoreManager @Inject constructor(
     }
 
     suspend fun clearSession() {
-        context.dataStore.edit {
-            it.remove(AUTH_TOKEN_KEY)
-            it.remove(REFRESH_TOKEN_KEY)
-            it.remove(USER_ROLE_KEY)
-            it.remove(IS_PROFILE_COMPLETE_KEY)
-            it.remove(USER_EMAIL_KEY)
-            it.remove(FIREBASE_UID_KEY)
-            it.remove(USER_NAME_KEY)
-            it.remove(MOBILE_NUMBER_KEY)
-            it.remove(LANGUAGE_CLASS_ID_KEY)
-            it.remove(TECH_CLASS_ID_KEY)
-            it.remove(READ_NOTIF_IDS_KEY)
-            it.remove(SUBMITTED_QUIZ_IDS_KEY)
+        inMemoryAuthToken = null
+        inMemoryRefreshToken = null
+        context.dataStore.edit { prefs ->
+            prefs.remove(AUTH_TOKEN_KEY)
+            prefs.remove(REFRESH_TOKEN_KEY)
+            prefs.remove(USER_ROLE_KEY)
+            prefs.remove(IS_PROFILE_COMPLETE_KEY)
+            prefs.remove(USER_EMAIL_KEY)
+            prefs.remove(FIREBASE_UID_KEY)
+            prefs.remove(USER_NAME_KEY)
+            prefs.remove(MOBILE_NUMBER_KEY)
+            prefs.remove(LANGUAGE_CLASS_ID_KEY)
+            prefs.remove(TECH_CLASS_ID_KEY)
+            prefs.remove(READ_NOTIF_IDS_KEY)
+            prefs.remove(SUBMITTED_QUIZ_IDS_KEY)
+            val quizKeysToRemove = prefs.asMap().keys.filter { it.name.startsWith("quiz_") }
+            quizKeysToRemove.forEach { key -> prefs.remove(key) }
         }
     }
 

@@ -88,7 +88,8 @@ object NetworkModule {
     @Singleton
     fun provideAuthInterceptor(dataStoreManager: DataStoreManager): Interceptor =
         Interceptor { chain ->
-            val token = runBlocking { dataStoreManager.authToken.firstOrNull() }
+            val token = dataStoreManager.getCachedAuthToken()
+                ?: runBlocking { dataStoreManager.authToken.firstOrNull() }
             val original = chain.request()
             val existingAuth = original.header("Authorization")
             val request = original.newBuilder().apply {
@@ -111,7 +112,8 @@ object NetworkModule {
         Authenticator { _, response ->
             if (responseCount(response) >= 2) return@Authenticator null
 
-            val refreshToken = runBlocking { dataStoreManager.refreshToken.firstOrNull() }
+            val refreshToken = dataStoreManager.getCachedRefreshToken()
+                ?: runBlocking { dataStoreManager.refreshToken.firstOrNull() }
                 ?: return@Authenticator null
 
             val refreshedToken = runBlocking {

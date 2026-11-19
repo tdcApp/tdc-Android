@@ -88,7 +88,7 @@ class NotificationRepositoryImpl @Inject constructor(
             // 2. Convert real enrolled schedules into class update notifications
             schedules.forEach { s ->
                 val notifId = "sch_${s.id}"
-                val dayName = when (s.dayOfWeek) {
+                val dayName = when (s.dayOfWeek % 7) {
                     0 -> "Sunday"
                     1 -> "Monday"
                     2 -> "Tuesday"

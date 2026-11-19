@@ -2,6 +2,7 @@ package com.bagadbille.tdc.ui.mentor.assignments
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -225,8 +226,24 @@ private fun SubmissionsContent(state: SubmissionsUiState.Success) {
                 SubmissionCard(
                     item = item,
                     onOpenLink = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(item.submission.submissionUrl))
-                        context.startActivity(intent)
+                        val rawUrl = item.submission.submissionUrl.trim()
+                        if (rawUrl.isBlank()) {
+                            Toast.makeText(context, "No submission link provided", Toast.LENGTH_SHORT).show()
+                        } else {
+                            val cleanUrl = if (!rawUrl.startsWith("http://", ignoreCase = true) && !rawUrl.startsWith("https://", ignoreCase = true)) {
+                                "https://$rawUrl"
+                            } else {
+                                rawUrl
+                            }
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(cleanUrl)).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                Toast.makeText(context, "Could not open link: Invalid URL or no app found", Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     }
                 )
             }

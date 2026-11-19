@@ -181,6 +181,14 @@ data class CreateAssignmentRequest(
 )
 
 @Serializable
+data class UpdateAssignmentRequest(
+    val title: String? = null,
+    val description: String? = null,
+    val classId: String? = null,
+    val dueAt: String? = null
+)
+
+@Serializable
 data class AssignmentSubmissionDto(
     val assignmentId: String? = null,
     @SerialName("assignment_id") val assignmentIdSnake: String? = null,
