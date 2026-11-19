@@ -29,6 +29,7 @@ interface ClassRepository {
     suspend fun getMyChangeRequest(): Result<ClassChangeRequest?>
     suspend fun getChangeRequests(status: String? = null): Result<List<ClassChangeRequest>>
     suspend fun reviewChangeRequest(id: String, approved: Boolean): Result<ClassChangeRequest>
+    suspend fun deleteClass(id: String): Result<Unit>
 }
 
 @Singleton
@@ -159,5 +160,10 @@ class ClassRepositoryImpl @Inject constructor(
         val status = if (approved) "APPROVED" else "REJECTED"
         val dto = classApi.reviewChangeRequest(id, ReviewClassChangeRequest(status))
         dto.toDomain()
+    }
+
+    override suspend fun deleteClass(id: String): Result<Unit> = runCatching {
+        classApi.deleteClass(id)
+        classDao.clearAll()
     }
 }

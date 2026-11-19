@@ -9,6 +9,7 @@ import com.bagadbille.tdc.data.remote.dto.TeacherUserDto
 import com.bagadbille.tdc.data.remote.dto.UpdateClassRequest
 import com.bagadbille.tdc.data.remote.dto.UserProfileDto
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
@@ -51,4 +52,7 @@ interface ClassApi {
 
     @GET("users/teachers")
     suspend fun getTeachers(): List<TeacherUserDto>
+
+    @DELETE("classes/{id}")
+    suspend fun deleteClass(@Path("id") id: String)
 }

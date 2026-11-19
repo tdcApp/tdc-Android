@@ -52,6 +52,7 @@ fun RosterTab(viewModel: RosterViewModel = hiltViewModel()) {
             onLoadStudents = { viewModel.loadStudentsForBatch(it) },
             onCreateBatch = { name, type, mentorUid, cb -> viewModel.createClass(name, type, mentorUid, cb) },
             onUpdateBatch = { id, name, type, mentorUid, cb -> viewModel.updateClass(id, name, type, mentorUid, cb) },
+            onDeleteBatch = { id, cb -> viewModel.deleteClass(id, cb) },
             onRefresh = { viewModel.load() }
         )
     }
@@ -65,6 +66,7 @@ private fun RosterNavigationContainer(
     onLoadStudents: (String) -> Unit,
     onCreateBatch: (String, String, String, (Boolean, String?) -> Unit) -> Unit,
     onUpdateBatch: (String, String, String, String, (Boolean, String?) -> Unit) -> Unit,
+    onDeleteBatch: (String, (Boolean, String?) -> Unit) -> Unit,
     onRefresh: () -> Unit
 ) {
     var selectedBatchId by remember { mutableStateOf<String?>(null) }
@@ -123,6 +125,11 @@ private fun RosterNavigationContainer(
             onDismiss = { editingBatch = null },
             onSave = { name, type, mentorUid ->
                 onUpdateBatch(cls.id, name, type, mentorUid) { success, _ ->
+                    if (success) editingBatch = null
+                }
+            },
+            onDelete = { id ->
+                onDeleteBatch(id) { success, _ ->
                     if (success) editingBatch = null
                 }
             }
@@ -818,12 +825,14 @@ private fun EditBatchDialog(
     initialClass: ClassInfo? = null,
     teachers: List<TeacherUserDto>,
     onDismiss: () -> Unit,
-    onSave: (name: String, type: String, mentorUid: String) -> Unit
+    onSave: (name: String, type: String, mentorUid: String) -> Unit,
+    onDelete: ((String) -> Unit)? = null
 ) {
     var name by remember { mutableStateOf(initialClass?.name ?: "") }
     var type by remember { mutableStateOf(initialClass?.type?.uppercase() ?: "LANGUAGE") }
     var selectedMentorUid by remember { mutableStateOf(initialClass?.mentorUid ?: teachers.firstOrNull()?.effectiveUid ?: "") }
     var teacherDropdownExpanded by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
     val selectedTeacher = teachers.find { it.effectiveUid == selectedMentorUid }
@@ -931,7 +940,60 @@ private fun EditBatchDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (initialClass != null && onDelete != null) {
+                    TextButton(
+                        onClick = { showDeleteConfirmDialog = true },
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Icon(
+                            Icons.Outlined.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                }
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+            }
         }
     )
+
+    if (showDeleteConfirmDialog && initialClass != null && onDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            icon = {
+                Icon(
+                    Icons.Outlined.DeleteForever,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = { Text("Delete Batch") },
+            text = {
+                Text(
+                    "Are you sure you want to permanently delete \"${initialClass.name}\"?\n\nAll student enrollments, schedules, assignments, and test results linked to this batch will be permanently removed. This action cannot be undone."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        onDelete(initialClass.id)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete Permanently")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }

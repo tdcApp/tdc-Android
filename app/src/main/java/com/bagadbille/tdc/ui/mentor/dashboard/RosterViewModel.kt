@@ -137,4 +137,20 @@ class RosterViewModel @Inject constructor(
             }
         }
     }
+
+    fun deleteClass(
+        id: String,
+        onFinished: (Boolean, String?) -> Unit
+    ) {
+        viewModelScope.launch {
+            val result = classRepo.deleteClass(id)
+            result.onSuccess {
+                studentCache.remove(id)
+                load()
+                onFinished(true, null)
+            }.onFailure {
+                onFinished(false, it.message ?: "Failed to delete class")
+            }
+        }
+    }
 }
