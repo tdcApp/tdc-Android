@@ -237,27 +237,27 @@ data class RegisterFcmTokenRequest(
 @Serializable
 data class HeroBannerDto(
     val id: String? = null,
-    val title: String = "",
-    val subtitle: String? = null,
-    val tag: String = "COMING SOON",
+    val title: String = "TDC Hackathon & Events",
+    val subtitle: String? = "Stay tuned for upcoming hackathons, workshops, and challenges",
+    val tag: String = "UPCOMING",
     val badgeText: String? = null,
     @SerialName("badge_text") val badgeTextSnake: String? = null,
-    val buttonText: String = "Register Now",
+    val buttonText: String = "Learn More",
     @SerialName("button_text") val buttonTextSnake: String? = null,
     val actionUrl: String? = null,
     @SerialName("action_url") val actionUrlSnake: String? = null,
     val actionType: String = "URL",
     @SerialName("action_type") val actionTypeSnake: String? = null,
-    val isActive: Boolean = true,
+    val isActive: Boolean = false,
     @SerialName("is_active") val isActiveSnake: Boolean? = null
 ) {
     fun toDomain(): HeroBanner = HeroBanner(
         id = id,
-        title = title,
+        title = title.ifBlank { "TDC Hackathon & Events" },
         subtitle = subtitle,
-        tag = tag,
+        tag = tag.ifBlank { "UPCOMING" },
         badgeText = badgeText ?: badgeTextSnake,
-        buttonText = buttonText.ifBlank { buttonTextSnake ?: "Register Now" },
+        buttonText = buttonText.ifBlank { buttonTextSnake ?: "Learn More" },
         actionUrl = actionUrl ?: actionUrlSnake,
         actionType = actionType.ifBlank { actionTypeSnake ?: "URL" },
         isActive = isActiveSnake ?: isActive
@@ -268,12 +268,12 @@ data class HeroBannerDto(
 data class UpdateHeroBannerRequest(
     val title: String,
     val subtitle: String? = null,
-    val tag: String = "COMING SOON",
+    val tag: String = "UPCOMING",
     val badgeText: String? = null,
-    val buttonText: String = "Register Now",
+    val buttonText: String = "Learn More",
     val actionUrl: String? = null,
     val actionType: String = "URL",
-    val isActive: Boolean
+    val isActive: Boolean = false
 )
 
 

@@ -160,7 +160,7 @@ private fun DashboardContent(
                 val isDark = MaterialTheme.colorScheme.background == DarkBackground
                 val isCompleted = specialQuiz?.isSubmitted == true && banner?.actionType.equals("QUIZ", ignoreCase = true)
                 val isQuizAction = banner?.actionType.equals("QUIZ", ignoreCase = true) && specialQuiz != null
-                val targetUrl = banner?.actionUrl?.takeIf { it.isNotBlank() } ?: "https://forms.gle/nkSmmE9EU31os5UU8"
+                val targetUrl = banner?.actionUrl?.takeIf { it.isNotBlank() }
 
                 CyberCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -255,7 +255,7 @@ private fun DashboardContent(
                         val displayTitle = when {
                             hasActiveAttempt -> specialQuiz?.title?.ifBlank { null } ?: "Assessment in Progress"
                             !banner?.title.isNullOrBlank() -> banner.title
-                            else -> "TDC Coding Quest Season 3"
+                            else -> "TDC Hackathon & Events"
                         }
 
                         Text(
@@ -272,7 +272,7 @@ private fun DashboardContent(
                             hasActiveAttempt -> "You have an active test session • Tap below to resume"
                             isCompleted -> "Your responses have been securely submitted • Evaluation in progress"
                             !banner?.subtitle.isNullOrBlank() -> banner.subtitle
-                            else -> "Innovate • Build • Collaborate"
+                            else -> "Stay tuned for upcoming hackathons, workshops, and challenges"
                         }
 
                         Text(
@@ -310,11 +310,13 @@ private fun DashboardContent(
                             }
                             else -> {
                                 TdcButton(
-                                    text = banner?.buttonText?.ifBlank { null } ?: "Register Now",
+                                    text = banner?.buttonText?.ifBlank { null } ?: "Learn More",
                                     trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
                                     onClick = {
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl))
-                                        context.startActivity(intent)
+                                        if (!targetUrl.isNullOrBlank()) {
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl))
+                                            context.startActivity(intent)
+                                        }
                                     },
                                     modifier = Modifier.wrapContentWidth()
                                 )

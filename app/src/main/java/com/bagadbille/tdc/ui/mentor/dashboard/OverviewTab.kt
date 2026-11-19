@@ -1051,13 +1051,13 @@ private fun EditHeroBannerDialog(
     onDismiss: () -> Unit,
     onSave: (title: String, subtitle: String?, tag: String, badgeText: String?, buttonText: String, actionUrl: String?, actionType: String, isActive: Boolean) -> Unit
 ) {
-    var isActive by remember(banner) { mutableStateOf(banner?.isActive ?: true) }
-    var title by remember(banner) { mutableStateOf(banner?.title ?: "TDC Coding Quest Season 3") }
-    var subtitle by remember(banner) { mutableStateOf(banner?.subtitle ?: "Innovate • Build • Collaborate") }
-    var tag by remember(banner) { mutableStateOf(banner?.tag ?: "COMING SOON") }
+    var isActive by remember(banner) { mutableStateOf(banner?.isActive ?: false) }
+    var title by remember(banner) { mutableStateOf(banner?.title ?: "TDC Hackathon & Events") }
+    var subtitle by remember(banner) { mutableStateOf(banner?.subtitle ?: "Stay tuned for upcoming hackathons, workshops, and challenges") }
+    var tag by remember(banner) { mutableStateOf(banner?.tag ?: "UPCOMING") }
     var badgeText by remember(banner) { mutableStateOf(banner?.badgeText ?: "") }
     var buttonText by remember(banner) { mutableStateOf(banner?.buttonText ?: "Register Now") }
-    var actionUrl by remember(banner) { mutableStateOf(banner?.actionUrl ?: "https://forms.gle/nkSmmE9EU31os5UU8") }
+    var actionUrl by remember(banner) { mutableStateOf(banner?.actionUrl ?: "") }
     var actionType by remember(banner) { mutableStateOf(banner?.actionType ?: "URL") }
     var error by remember { mutableStateOf<String?>(null) }
 
